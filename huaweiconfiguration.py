@@ -47,6 +47,7 @@
 #                         '基于覆盖的同频切换开关',
 #                         '同频协同切换模式']
 import configuration
+
 EMPTY_VALUE = "NULL"
 END = "END"
 QUERY = "查询"
@@ -83,7 +84,6 @@ HUAWEI_COLS_ORDER = [
     '基于上行SINR的切换至E-UTRANB2RSRP门限1(dBm)',
     '网络架构优选的RSRP触发门限(dBm)'
 ]
-
 
 HUAWEI_DEMAND_PARAMS = [
     '基于覆盖的异频A1RSRP触发门限(dBm)',
@@ -140,11 +140,14 @@ LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_0 = ['网元', 'NR小区标识',
                                                      '基于覆盖的异频切换A5 SINR门限2(0.5dB)', '异频盲重定向A2 SINR门限(0.5dB)',
                                                      '特殊终端基于频率优先级切换的A1 RSRP门限(dBm)', '特殊终端基于频率优先级切换的A2 RSRP门限(dBm)',
                                                      '特殊终端基于频率优先级切换的A4 RSRP门限(dBm)', '基于干扰隔离的异频A5 RSRP触发门限1(dBm)']
+
+LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_2 = LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_0
+
 LST_NRINTERRATHOPARAM = ['网元', 'NR小区标识',
                          '切换方式开关',
                          'EPS FB保护定时器(100毫秒)', '异系统切换触发事件类型', 'EPS FB模式', 'EPS FB测量保护定时器(100毫秒)', '下行资源比',
                          'EPS FB等待多频点B1测量报告定时器时长(10毫秒)']
-LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0 = ['网元','NR小区标识', '异系统切换测量参数组标识', '异系统切换A1 RSRP门限(dBm)',
+LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0 = ['网元', 'NR小区标识', '异系统切换测量参数组标识', '异系统切换A1 RSRP门限(dBm)',
                                                     '异系统切换A2 RSRP门限(dBm)', '异系统切换A1A2幅度迟滞(0.5dB)',
                                                     '异系统切换A1A2时间迟滞(毫秒)', '基于覆盖的切换至E-UTRAN盲A2 RSRP门限(dBm)',
                                                     '基于覆盖的切换至E-UTRAN B2 RSRP门限1(dBm)',
@@ -186,6 +189,7 @@ LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2 = ['网元', 'NR小区标�
                                                         'EPSFB B1时间迟滞(毫秒)', 'LNR载波关断B1 RSRP门限(dBm)',
                                                         '网络架构优选的RSRP触发门限(dBm)', '基于覆盖的切换B1 RSRQ门限(0.5dB)',
                                                         'EPSFB B1 RSRQ门限(0.5dB)']
+
 # LST_NRDUCELLSRSMEAS = ['NR DU小区标识', 'NSA TDM功控触发SINR幅度迟滞(0.1dB)', 'NSA TDM功控触发SINR门限(0.1dB)', 'SRS TA测量开关',
 #                        ' NSA 上行回落到LTE SINR迟滞(0.1dB)', 'NSA 上行回落到LTE SINR门限(0.1dB)',
 #                        'Hyper Cell内TRP间切换的RSRP差值(0.5dB)', 'NSA上行路径选择SINR高门限(0.1dB)', 'NSA上行路径选择SINR低门限(0.1dB)',
@@ -238,8 +242,55 @@ LST_NRCELLQCIBEARER_QCI_9 = ['网元', 'NR小区标识', '服务质量等级', '
                              'NSA用户异频切换测量参数组标识', '低速用户同频切换测量参数组标识', '低速用户异频切换测量参数组标识',
                              'RedCap用户DRX参数组标识', '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识',
                              'QCI算法参数组标识']
+
+LST_NRCELLSERVEXP = ['网元','NR小区标识', '基于语音质量的异频切换的丢包率门限', '基于业务质量的异频切换A5 RSRP门限2(dBm)',
+                     '基于业务质量的异频切换A5 RSRQ门限(0.5dB)', '语音业务丢包率评估周期(秒)', '语音质量恢复的丢包率门限',
+                     '基于语音质量的E-UTRAN切换丢包率门限', '基于语音质量的E-UTRAN切换B1 RSRP门限(dBm)',
+                     '基于语音质量的E-UTRAN切换B1 RSRQ门限(0.5dB)', 'RRC恢复测量延迟(毫秒)', 'SpeedTurbo用户标识有效时长(秒)',
+                     '基于业务质量的异频切换A5 SINR门限(0.5dB)', 'VoNR基于空口超时的EPS FB定时器(100毫秒)']
+
+LST_GNBQCIALGOPARAMGRP = ['网元','QCI算法参数组标识', 'QCI算法开关', '业务丢包率评估周期(秒)', '基于业务质量的异频切换的丢包率门限',
+                          '基于业务质量的异系统切换的丢包率门限', '业务质量恢复的丢包率门限']
+LST_NRCELLRESELCONFIG = ['网元','NR小区标识', '最低接收电平(2dBm)', '同频测量启动门限(2dB)', '小区重选迟滞(dB)', '小区重选优先级',
+                         'E-UTRAN小区重选定时器时长(秒)', '非同频测量RSRP触发门限(2dB)', '服务频点低优先级RSRP重选门限(2dB)',
+                         '小区重选子优先级', 'SSB合并门限', '用于平均的SSB个数', 'UE最大发射功率(dBm)', '非同频测量RSRQ触发门限(dB)',
+                         '服务频点低优先级RSRQ重选门限(dB)', 'SIB可选信元指示', ' UE移动状态评估周期', 'UE进入中速状态重选次数门限',
+                         'UE进入高速状态重选次数门限', '中速UE额外迟滞值', '高速UE额外迟滞值', '中速UE重选时间比例因子', '高速UE重选时间比例因子',
+                         'RRM测量放松低速用户RSRP差值门限', 'RRM测量放松低速用户判决定时器', 'RRM测量放松非边缘用户判决RSRP门限(2dB)']
+
+LST_NRCELLFREQRELATION = ['网元','NR小区标识', 'SSB频域位置', '频带', '子载波间隔(KHz)', '小区重选优先级', '最低接收电平(2dBm)',
+                          '高优先级重选门限(2dB)', '低优先级重选门限(2dB)', '频率偏置(dB)', '连接态频率优先级', '连接态频率偏置(dB)',
+                          '流量优先级', 'SSB频域位置描述方式', 'SMTC周期(毫秒)', 'SMTC持续时间(毫秒)', '附加频带', '测量激活标识',
+                          '小区重选子优先级', 'UE最大发射功率(dBm)', '同步DAPS切换标识', '频点干扰状态', '高优先级重选RSRQ门限(dB)',
+                          '低优先级重选RSRQ门限(dB)', '最低接收信号质量(dB)', '音视频质量的频点优先级', '基于干扰的频率优先级',
+                          '异频切换触发事件类型', '聚合属性', ' 异频周期MR测量类型', 'SMTC偏置(毫秒)', '周期MR层', '高速标识',
+                          '频点控制开关', ' ANR指示', 'Idle态MLB释放比例', '盲重定向优先级', '自动NR频点关系的RSRP门限(dBm)',
+                          'Idle态MLB释放比例']
+
+LST_NRCELLEUTRANNFREQ = ['网元','NR小区标识', '下行E-UTRAN频点', 'E-UTRAN频点高优先级重选门限(2dB)', 'E-UTRAN频点低优先级重选门限(2dB)',
+                         'E-UTRAN频点重选优先级', '连接态频率偏置(dB)', '测量带宽', '最低接收电平(2dBm)', '连接态频率优先级',
+                         'E-UTRAN频点重选子优先级', 'VoLTE优先级', '聚合属性', ' 测量激活标识', '最大发射功率(dBm)',
+                         'NSA PCC频率优先级', '频点干扰标识', 'E-UTRAN高优先级重选RSRQ门限(dB)', 'E-UTRAN低优先级重选RSRQ门限(dB)',
+                         '最低接收信号质量(dB)', '频点关系属性', '高速标识', '测量类型', '频点控制开关', ' EPS FB的B1事件RSRP门限(dBm)',
+                         '自动EUTRAN频点关系的RSRP门限(dBm)']
+LST_NRDUCELLINTRFIDENT = ['网元','NR DU小区标识', '干扰识别方式', '上行干扰自动检测门限偏置(dB)', '上行干扰频段调度判决偏置(dB)',
+                          '信道测量控制开关', ' SRS SINR门限(dB)', '上行干扰偏置(dB)', '上行干扰门限(dBm)', '干扰优化方式',
+                          ' 非干扰段频谱效率加权系数', '干扰段1频谱效率加权系数', '干扰段2频谱效率加权系数', '上行干扰差值门限(dB)',
+                          '下行小区级干扰避让策略', '上行干扰避让Slot配置', '下行干扰识别偏置(dB)', '上行SRS干扰差值门限(0.5dB)',
+                          '上行阻塞干扰避让模式', '上行干扰隔离模式', '上行调度干扰避让SINR门限(dB)', '上行用户级干扰避让优化方式',
+                          '语音下行干扰占比门限', '上行干扰检测门限(dBm)', '合并增益权重', '极致IRC算法开关', '极致IRC干扰门限(dBm)',
+                          '极致IRC上行调度干扰门限(dBm)']
+LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_0 = ['网元','NR小区标识', '同频切换测量参数组标识', '同频切换的A3偏置(0.5dB)',
+                                                     '同频切换的A3幅度迟滞(0.5dB)', '同频切换的A3时间迟滞(毫秒)',
+                                                     '同频条件切换的候选邻区A3偏置(0.5dB)', '异构组网同频A3偏置(0.5dB)',
+                                                     '室内外交叠区A3偏置(0.5dB)', '同频切换覆盖扩展的A3偏置(0.5dB)']
+LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_2 = ['网元','NR小区标识', '同频切换测量参数组标识', '同频切换的A3偏置(0.5dB)',
+                                                     '同频切换的A3幅度迟滞(0.5dB)', '同频切换的A3时间迟滞(毫秒)',
+                                                     '同频条件切换的候选邻区A3偏置(0.5dB)', '异构组网同频A3偏置(0.5dB)',
+                                                     '室内外交叠区A3偏置(0.5dB)', '同频切换覆盖扩展的A3偏置(0.5dB)']
 COMMAND_LIST = [LST_NRDUCELL, LST_GNODEBFUNCTION, LST_NRCELLALGOSWITCH,
                 LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_0,
+                LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_2,
                 LST_NRINTERRATHOPARAM, LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0,
                 LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_1,
                 LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_2,
@@ -247,10 +298,16 @@ COMMAND_LIST = [LST_NRDUCELL, LST_GNODEBFUNCTION, LST_NRCELLALGOSWITCH,
                 LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_1,
                 LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2,
                 LST_NRDUCELLSRSMEAS,
-                LST_NRCELLQCIBEARER_QCI_1, LST_NRCELLQCIBEARER_QCI_5, LST_NRCELLQCIBEARER_QCI_9]
+                LST_NRCELLQCIBEARER_QCI_1, LST_NRCELLQCIBEARER_QCI_5, LST_NRCELLQCIBEARER_QCI_9,
+                LST_NRCELLSERVEXP, LST_GNBQCIALGOPARAMGRP, LST_NRCELLRESELCONFIG, LST_NRCELLFREQRELATION,
+                LST_NRCELLEUTRANNFREQ, LST_NRDUCELLINTRFIDENT,
+                LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_0,
+                LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_2]
 
 COMMAND_NAME_LIST = ['LST NRDUCELL:;', 'LST GNODEBFUNCTION:;', 'LST NRCELLALGOSWITCH:;',
-                     'LST NRCELLINTERFHOMEAGRP:INTERFREQHOMEASGROUPID=0;', 'LST NRINTERRATHOPARAM:;',
+                     'LST NRCELLINTERFHOMEAGRP:INTERFREQHOMEASGROUPID=0;',
+                     'LST NRCELLINTERFHOMEAGRP:INTERFREQHOMEASGROUPID=2;',
+                     'LST NRINTERRATHOPARAM:;',
                      'LST NRCELLINTERRHOMEAGRP:INTERRATHOMEASGROUPID=0;',
                      'LST NRCELLINTERRHOMEAGRP:INTERRATHOMEASGROUPID=1;',
                      'LST NRCELLINTERRHOMEAGRP:INTERRATHOMEASGROUPID=2;',
@@ -260,7 +317,11 @@ COMMAND_NAME_LIST = ['LST NRDUCELL:;', 'LST GNODEBFUNCTION:;', 'LST NRCELLALGOSW
                      'LST NRDUCELLSRSMEAS:;',
                      'LST NRCELLQCIBEARER:QCI=1;',
                      'LST NRCELLQCIBEARER:QCI=5;',
-                     'LST NRCELLQCIBEARER:QCI=9;']
+                     'LST NRCELLQCIBEARER:QCI=9;',
+                     'LST NRCELLSERVEXP:;', 'LST GNBQCIALGOPARAMGRP:;', 'LST NRCELLRESELCONFIG:;',
+                     'LST NRCELLFREQRELATION:;', 'LST NRCELLEUTRANNFREQ:;', 'LST NRDUCELLINTRFIDENT:;',
+                     'LST NRCELLINTRAFHOMEAGRP:INTRAFREQHOMEASGROUPID=0;',
+                     'LST NRCELLINTRAFHOMEAGRP:INTRAFREQHOMEASGROUPID=2;']
 
 # class HuaweiConfiguration:
 #

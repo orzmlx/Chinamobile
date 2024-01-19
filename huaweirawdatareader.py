@@ -213,7 +213,8 @@ class HuaweiRawDataFile(object):
                 line = f.readline()
                 continue
             splits = line.split("=")
-            col_name = splits[0].strip().replace(" ", "")
+            # 存在部分列名数据不一致，比如同样的列名，有的后面加了%,有的后面没有，在这将%干掉
+            col_name = splits[0].strip().replace(" ", "").replace("(%)", "").replace("%", "")
             value = splits[1].strip()
             # 如果col列有值,value也有值
             if len(col_name) > 0 and len(value) > 0:
@@ -254,8 +255,12 @@ class HuaweiRawDataFile(object):
         out_put_dict = {}
         for d in self.command_content_dict:
             logging.info(d)
-            file_name = d.replace(":", "").replace(";", "")
-            df = pd.DataFrame(self.command_content_dict[d])
+            # file_name = d.replace(":", "").replace(";", "")
+            file_name = d.replace(";", "")
+            try:
+                df = pd.DataFrame(self.command_content_dict[d])
+            except:
+                raise Exception("请检查" + d + "命令下的参数设置是否齐全")
             # NRDU小区改成NR小区
             if ~df.empty:
                 df.reset_index(inplace=True, drop=True)
@@ -264,20 +269,25 @@ class HuaweiRawDataFile(object):
                     df.rename(columns={"NRDU小区标识": "NR小区标识"}, inplace=True)
                 out_name = file_name + ".csv"
                 if len(out_put_dict) == 0:
+                    # out_name = huaweiutils.remove_digit(out_name, ['='])
                     out_put_dict[out_name] = df
                     continue
                 is_add = False
+                # if out_name == 'LST NRCELLINTRAFHOMEAGRPINTRAFREQHOMEASGROUPID=2.csv':
+                #     print()
                 for f, pre_df in out_put_dict.items():
                     res = ''.join(set(out_name) ^ set(f))
                     if len(res) == 0:
                         continue
-                    if res.isdigit() is True and len(out_name) == len(f):
+                    if huaweiutils.only_has_digtal_diff(out_name, f) and len(out_name) == len(f):
                         pre_df = pd.concat([pre_df, df], axis=0)
+                        # f = huaweiutils.remove_digit(f,['='])
                         out_put_dict[f] = pre_df
                         is_add = True
                         break
                 if is_add is False:
                     out_put_dict[out_name] = df
+
         self.out_put_dict = out_put_dict
 
     # 合并所需要的数据
@@ -348,7 +358,7 @@ class HuaweiRawDataFile(object):
         """
         self.__merge_same_command_data()
         for f, df in self.out_put_dict.items():
-            huaweiutils.output_csv(df, f, self.out_path)
+            huaweiutils.output_csv(df, f, self.out_path, True)
             self.files_cols_dict[f] = df.columns.tolist()
 
     def output_handover_result(self, qci):
@@ -373,7 +383,7 @@ class HuaweiRawDataFile(object):
         self.join_params(all_result)
         all_result = all_result[huaweiconfiguration.HUAWEI_COLS_ORDER]
         all_result_name = "all_result.csv"
-        huaweiutils.output_csv(all_result, all_result_name, self.out_path)
+        huaweiutils.output_csv(all_result, all_result_name, self.out_path,False)
 
     def __read_multi_unit_message(self, f, line):
         command_dict = self.command_content_dict[self.current_command]
@@ -404,11 +414,12 @@ class HuaweiRawDataFile(object):
                 line = f.readline()
                 continue
             # 第一行是列名，并且第一列加上网元列
+            # 将后面带%或者(%)的全部去掉
             if is_first_line:
                 cols = line.replace("\n", "").split("  ")
                 cols = list(filter(lambda x: x.strip() != "", cols))
                 # 去掉里面列名中的空格
-                cols = [s.replace(' ', '') for s in cols]
+                cols = [s.replace(' ', '').replace("(%)", "").replace("%", "") for s in cols]
                 cols.insert(0, '网元')
                 is_first_line = False
             else:
@@ -450,8 +461,9 @@ class HuaweiRawDataFile(object):
 
 
 if __name__ == "__main__":
-    #rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\QCI\\华为5G-QCI-159\\MML任务结果_gt_20231226_112108.txt"
-    rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\MML任务结果_gt_20231225_155211.txt"
+    rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
+    # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\QCI\\华为5G-QCI-159\\MML任务结果_gt_20231226_112108.txt"
+    # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\MML任务结果_gt_20231225_155211.txt"
     commandPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt"
     outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result"
     # 工参表路径
@@ -462,4 +474,3 @@ if __name__ == "__main__":
     # rawFile.output_handover_result(qci=9)
     rawFile.output_content_dict()
     rawFile.output_handover_result(9)
-

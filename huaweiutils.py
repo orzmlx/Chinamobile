@@ -3,8 +3,13 @@ import logging
 import pkgutil
 import os
 from copy import deepcopy
-import huaweiconfiguration
-def output_csv(df, file_name, out_path):
+from difflib import SequenceMatcher
+
+
+
+def output_csv(df, file_name, out_path, is_format):
+    if is_format:
+        file_name = remove_digit(file_name, ['='])
     file_out_path = os.path.join(out_path, file_name)
     if file_name in os.listdir(out_path):
         df.to_csv(file_out_path, index=False, mode='a', header=False)
@@ -40,6 +45,23 @@ def output_csv(df, file_name, out_path):
 #     result = result.merge(intereutra, how='left', on=['网元', 'NR小区标识'])
 #     result = result.merge(srsmeas, how='left', on=['网元', 'NR小区标识'])
 #     return result
+def only_has_digtal_diff(str1, str2):
+    """
+        判断两个字符串不相同的部分
+    """
+    matcher = SequenceMatcher(None, str1, str2)
+    match_codes = matcher.get_opcodes()
+    replace_num = 0
+    for tag, i, j, m, n in match_codes:
+        if tag == 'delete' or tag == 'insert':
+            return False
+        if tag == 'replace':
+            replace_num = replace_num + 1
+            if not str1[i].isdigit() or not str2[m].isdigit():
+                return False
+    if replace_num > 1:
+        return False
+    return True
 
 
 def add_cgi(ducell_df, gnodeb_df):
@@ -48,6 +70,20 @@ def add_cgi(ducell_df, gnodeb_df):
 
     print(ducell_df.shape)
     return ducell_df
+
+
+def remove_digit(str, add_characters):
+    """
+        去除数字和其它
+    """
+    result = ""
+    if add_characters is None:
+        add_characters = []
+    for c in str:
+        if c.isdigit() or c in add_characters:
+            continue
+        result += c
+    return result
 
 
 def remove_name(x):
@@ -65,7 +101,7 @@ def remove_name(x):
 def flatten_features(df, c):
     # 取所有数据的第一行，看是否有子列
     # cols = df.columns.tolist()
-    df1 =deepcopy(df)
+    df1 = deepcopy(df)
     values = str(df1[c].iloc[0])
     if values.find("&") >= 0 or (values.find(":") >= 0 and values.find("开关") >= 0):
         edit_df = df1[c]
@@ -176,12 +212,17 @@ def add_judgement(x, original_name, c):
 
 
 if __name__ == "__main__":
-    report_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\all_result.csv"
-    report_df = pd.read_csv(report_path)
-    report_df['频带'] = report_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
-    strategy_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数策略.xlsx"
-    g5_data_strategy, g45_data_strategy = parse_strategy_file(strategy_path)
-    report = add_strategy_info(g5_data_strategy, g45_data_strategy, report_df)
-    report_cols = report.columns.tolist()
-    report.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\report_strategy.csv",
-                  index=False, encoding='utf_8_sig')
+    # report_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\all_result.csv"
+    # report_df = pd.read_csv(report_path)
+    # report_df['频带'] = report_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
+    # strategy_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数策略.xlsx"
+    # g5_data_strategy, g45_data_strategy = parse_strategy_file(strategy_path)
+    # report = add_strategy_info(g5_data_strategy, g45_data_strategy, report_df)
+    # report_cols = report.columns.tolist()
+    # report.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\report_strategy.csv",
+    #               index=False, encoding='utf_8_sig')
+    str1 = 'LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=2'
+    # str2 = 'LST NRCELLINTRAFHOMEAGRPINTRAFREQHOMEASGROUPID=2.csv'
+    str2 = 'LST NRCELLQCIBEARER:QCI=5'
+    # print(only_has_digtal_diff(str1, str2))
+    print(remove_digit(str1, ['=']))
