@@ -8,13 +8,14 @@ import huaweiutils
 
 
 class HuaweiRawDataFile(object):
-    def __init__(self, raw_data_inpath, command_file_path, out_path, common_table, need_params):
+    def __init__(self, raw_data_inpath, command_file_path, out_path, common_table, need_params, standard_path):
         self.to_be_continue = False
         self.demand_params, self.merge_params = self.parse_param(need_params)
         self.out_put_dict = {}
         self.common_table = common_table
         self.checked_unit_number = 0
         self.command_col_dict = {}
+        self.standard_path = standard_path
         self.__word__method = {"成功条数": "get_success_number",
                                "失败条数": "get_fail_number",
                                huaweiconfiguration.COMMAND: "get_command",
@@ -337,10 +338,10 @@ class HuaweiRawDataFile(object):
         """
             获取基本信息列
         """
-        ducell_df = out_put_dict['LST NRDUCELL.csv']
-        gnode_df = out_put_dict['LST GNODEBFUNCTION.csv']
+        ducell_df = out_put_dict['LST NRDUCELL:.csv']
+        gnode_df = out_put_dict['LST GNODEBFUNCTION:.csv']
         ducell_df = huaweiutils.add_cgi(ducell_df, gnode_df)
-        common_table = pd.read_csv(self.common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市'], encoding='gbk')
+        common_table = pd.read_csv(self.common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市', '工作频段'], encoding='gbk')
         # 覆盖类型中，室内外和空白，归为室外
         common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
         common_table['覆盖类型'].fillna("室外", inplace=True)
@@ -357,9 +358,22 @@ class HuaweiRawDataFile(object):
             华为按命令行导出数据
         """
         self.__merge_same_command_data()
+        baseinfo = self.get_base_info(self.out_put_dict)[['网元', 'NR小区标识', '工作频段']]
         for f, df in self.out_put_dict.items():
+            # 如果是频点级别的命令，那么把小区的源频段加上
+            # standard_df = pd.read_excel(self.standard_path, sheet_name='4G点对点推荐值', true_values=["是"],
+            #                             false_values=["否"], dtype=str)
+            #self.add_resource_frequency(f, df, standard_df, baseinfo)
             huaweiutils.output_csv(df, f, self.out_path, True)
             self.files_cols_dict[f] = df.columns.tolist()
+
+    def add_resource_frequency(self, file_name, df, standard_df, baseinfo):
+        commands = standard_df['主命令'].unique().tolist()
+        file_name = huaweiutils.remove_digit(file_name, ['=', ':'])
+        file_name = file_name.replace(".csv", "")
+        if file_name in commands:
+            df = df.merge(baseinfo, how='left', on=['网元', 'NR小区标识'])
+        return df
 
     def output_handover_result(self, qci):
         """
@@ -383,7 +397,7 @@ class HuaweiRawDataFile(object):
         self.join_params(all_result)
         all_result = all_result[huaweiconfiguration.HUAWEI_COLS_ORDER]
         all_result_name = "all_result.csv"
-        huaweiutils.output_csv(all_result, all_result_name, self.out_path,False)
+        huaweiutils.output_csv(all_result, all_result_name, self.out_path, False)
 
     def __read_multi_unit_message(self, f, line):
         command_dict = self.command_content_dict[self.current_command]
@@ -468,9 +482,10 @@ if __name__ == "__main__":
     outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result"
     # 工参表路径
     common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
+    standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
     rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, common_table,
-                                huaweiconfiguration.HUAWEI_DEMAND_PARAMS)
+                                huaweiconfiguration.HUAWEI_DEMAND_PARAMS, standard_path)
     rawFile.read_huawei_txt()
     # rawFile.output_handover_result(qci=9)
     rawFile.output_content_dict()
-    rawFile.output_handover_result(9)
+    # rawFile.output_handover_result(9)

@@ -4,12 +4,14 @@ import pkgutil
 import os
 from copy import deepcopy
 from difflib import SequenceMatcher
+import numpy as np
 
+replace_char = ['秒', 'dB']
 
 
 def output_csv(df, file_name, out_path, is_format):
     if is_format:
-        file_name = remove_digit(file_name, ['='])
+        file_name = remove_digit(file_name, ['=', ":"])
     file_out_path = os.path.join(out_path, file_name)
     if file_name in os.listdir(out_path):
         df.to_csv(file_out_path, index=False, mode='a', header=False)
@@ -183,6 +185,100 @@ def add_strategy_info(g5_data_strategy_df, g45_data_strategy_df, report_df):
     return report[diff_cols]
 
 
+def freq_judge(df, param):
+    judge_res = []
+    df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
+    for recommand, value in zip(df[param + "#推荐值"], df[param]):
+        value = str(value)
+        recommand = str(recommand)
+        if value == 'nan':
+            judge_res.append("没有找到参考值")
+            continue
+        if recommand.find('[') >= 0 and recommand.find(']') >= 0:
+            judge_res.append(range_judge(value, recommand))
+        elif recommand.find(',') >= 0:
+            judge_res.append(list_judge(value, recommand))
+        else:
+            judge_res.append(single_value_judge(value, recommand))
+    return judge_res
+
+
+def mapToBand(x, band_dict):
+    for key, item in band_dict.items():
+        if str(x) in item:  # 证明该频段是4G频段
+            return key
+    return '其他频段'
+
+
+def generate_4g_frequency_band_dict(g4_common_table):
+    df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
+    df.dropna(axis=0, inplace=True, how='any')
+
+    g4_freq_band_dict = {}
+    for band, offset, SSB in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
+        if pd.isna(band):
+            continue
+        band = str(band)
+        band = band.replace('频段', '')
+        if band.find('FDD') >= 0:
+            band = offset
+            # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
+            if offset.find('FDD') < 0:
+                band = remove_digit(band, [])
+        value_set = g4_freq_band_dict.get(band, set())
+        value_set.add(str(SSB))
+        g4_freq_band_dict[band] = value_set
+    return g4_freq_band_dict
+
+
+def merge_dfs(list, on):
+    init_df = list[0]
+    for i in range(len(list)):
+        if i == 0:
+            continue
+        init_df = init_df.merge(list[i], how='left', on=on)
+    return init_df
+
+
+def single_value_judge(x, standard):
+    try:
+        for c in replace_char:
+            x = str(x).replace(c, "")
+        return str(x) == standard
+    except:
+        print()
+
+
+def list_judge(x, standard):
+    for c in replace_char:
+        x = str(x).replace(c, "")
+    splits = standard.split(',')
+    return True if str(x) in splits else  False
+
+
+def range_judge(x, standard):
+    for c in replace_char:
+        x = str(x).replace(c, "")
+    standard = standard.replace("[", "").replace("]", "")
+    splits = standard.split(",")
+    if len(splits) != 2:
+        raise Exception("范围推荐值:【" + standard + "】格式不符合要求")
+    else:
+        try:
+            min = int(splits[0])
+            max = int(splits[1])
+            if min > max:
+                temp = max
+                max = min
+                min = temp
+            if min <= int(x) <= max:
+                return True
+            else:
+                return False
+        except:
+            raise Exception("范围推荐值:【" + standard + "】无法转换为数字")
+
+
 def add_judgement(x, original_name, c):
     judgement_value = str(x[c])
     original_value = x[original_name]
@@ -197,18 +293,19 @@ def add_judgement(x, original_name, c):
             value_1 = value_0
             value_0 = temp
         if value_0 < original_value < value_1:
-            return "是"
+            return True
         elif value_0 == judgement_value or value_1 == judgement_value:
-            return "是"
+            return judgement_value, True
         else:
-            return "否"
+            return False
     elif judgement_value == 'nan':
-        return '是'
+        return True
     elif judgement_value.find("[") >= 0 and judgement_value.find("]") >= 0:
         judgement_value.replace("[", "").replace("]", "")
     else:
 
-        return "是" if int(float(judgement_value)) == int(float(original_value)) else "否"
+        return True if int(float(judgement_value)) == int(
+            float(original_value)) else  False
 
 
 if __name__ == "__main__":
