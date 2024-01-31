@@ -8,10 +8,9 @@ import huaweiutils
 
 
 class HuaweiRawDataFile(object):
-    def __init__(self, raw_data_inpath, command_file_path, out_path, need_params, system):
+    def __init__(self, raw_data_inpath, command_file_path, out_path, system):
         self.to_be_continue = False
         self.system = system
-        self.demand_params, self.merge_params = self.parse_param(need_params)
         self.out_put_dict = {}
         self.checked_unit_number = 0
         self.command_col_dict = {}
@@ -298,48 +297,7 @@ class HuaweiRawDataFile(object):
 
         self.out_put_dict = out_put_dict
 
-    # 合并所需要的数据
-    def find_params(self, out_put_dict, key_col, exclude):
-        res = pd.DataFrame()
-        for f, df in out_put_dict.items():
-            if len(exclude) > 0 and f in exclude:
-                continue
-            if len(df) == 0:
-                continue
-            find = False
-            output_cols = ['网元']
-            cols = df.columns.tolist()
-            first_row = df.iloc[0]
-            common_intersection = list(set(cols) & set(self.demand_params))
-            key_intersection = list(set(cols) & set(key_col))
-            if len(common_intersection) > 0:
-                find = True
-                output_cols.extend(common_intersection)
-            if len(key_intersection) > 0:
-                find = True
-                output_cols.extend(key_intersection)
-            if self.cell_identity in cols:
-                output_cols.append(self.cell_identity)
-            main_col_result = df[output_cols]
 
-            for c in cols:
-                cell = first_row[c]
-                for param in self.demand_params:
-                    find_result = str(cell).find(param)
-                    if int(find_result) >= 0:
-                        find = True
-                        flatten_df = huaweiutils.flatten_features(df, c)
-                        children_cols = ['网元', param]
-                        if self.cell_identity in cols:
-                            children_cols.append(self.cell_identity)
-                        flatten_df = flatten_df[children_cols]
-                        main_col_result = main_col_result.merge(flatten_df, how='left', on=['网元', self.cell_identity])
-            if find is True:
-                if res.empty:
-                    res = main_col_result
-                else:
-                    res = res.merge(main_col_result, how='left', on=['网元', self.cell_identity])
-        return res
 
     def output_content_dict(self):
         """
@@ -418,24 +376,6 @@ class HuaweiRawDataFile(object):
             line = f.readline()
         return fact_number
 
-    def join_params(self, all_result):
-        for col_name, params in self.merge_params.items():
-            if col_name in params:
-                all_result[col_name] = all_result[col_name].map({"开": True, "关": False})
-                skip_name = col_name
-            else:
-                all_result[col_name] = all_result[params[0]].map({"开": True, "关": False})
-                skip_name = params[0]
-            for index, p in enumerate(params):
-                if p == skip_name:
-                    continue
-                all_result[p] = all_result[p].map({"开": True, "关": False})
-                all_result[p].fillna(True, inplace=True)
-                all_result[col_name] = all_result[col_name] & all_result[p]
-                all_result[col_name] = all_result[col_name].map({True: "开", False: "关"})
-                all_result.drop(p, axis=1, inplace=True)
-        return all_result
-
 
 if __name__ == "__main__":
     rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_nb_20240126_093224.txt'
@@ -448,8 +388,7 @@ if __name__ == "__main__":
     # 工参表路径
     # common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath,
-                                huaweiconfiguration.HUAWEI_DEMAND_PARAMS, '4G')
+    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, '4G')
     rawFile.read_huawei_txt()
     # rawFile.output_handover_result(qci=9)
     rawFile.output_content_dict()

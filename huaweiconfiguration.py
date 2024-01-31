@@ -6,56 +6,8 @@ COMMAND = "命令"
 MESSAGE = "报文"
 G5_CELL_IDENTITY = 'NR小区标识'
 G4_CELL_IDENTITY = '本地小区标识'
-HUAWEI_COLS_ORDER = [
-    '地市',
-    '网元',
-    'NR小区标识',
-    'NRDU小区名称',
-    'CGI',
-    '频带',
-    '双工模式',
-    '覆盖类型',
-    '覆盖场景',
-    '厂家',
-    '服务质量等级',
-    '基于覆盖的异频A1RSRP触发门限(dBm)',
-    '基于覆盖的异频A2RSRP触发门限(dBm)',
-    '基于覆盖的异频A5RSRP触发门限1(dBm)',
-    '基于覆盖的异频A5RSRP触发门限2(dBm)',
-    '异系统切换A1RSRP门限(dBm)',
-    '异系统切换A2RSRP门限(dBm)',
-    '异系统切换触发事件类型',
-    '基于覆盖的切换至E-UTRANB2RSRP门限1(dBm)',
-    '基于覆盖的切换B1RSRP门限(dBm)',
-    '基于频率优先级的异频切换开关',
-    '基于频率优先级的异频切换A1RSRP门限(dBm)',
-    '基于频率优先级的异频切换A4RSRP门限(dBm)',
-    '基于上行SINR移动至EUTRAN开关',
-    # '基于上行SINR移动至EUTRAN开关',
-    'NR迁移到E-UTRAN的上行SINR低门限(0.1dB)',
-    '基于上行SINR的切换至E-UTRANB2RSRP门限1(dBm)',
-    '网络架构优选的RSRP触发门限(dBm)'
-]
 
-HUAWEI_DEMAND_PARAMS = [
-    '基于覆盖的异频A1RSRP触发门限(dBm)',
-    '基于覆盖的异频A2RSRP触发门限(dBm)',
-    '基于覆盖的异频A5RSRP触发门限1(dBm)',
-    '基于覆盖的异频A5RSRP触发门限2(dBm)',
-    '异系统切换A1RSRP门限(dBm)',
-    '异系统切换A2RSRP门限(dBm)',
-    '异系统切换触发事件类型',
-    '基于覆盖的切换至E-UTRAN B2 RSRP门限1(dBm)',
-    '基于覆盖的切换B1RSRP门限(dBm)',
-    '基于频率优先级的异频切换开关',
-    '基于频率优先级的异频切换A1RSRP门限(dBm)',
-    '基于频率优先级的异频切换A4RSRP门限(dBm)',
-    '基于上行SINR移动至EUTRAN开关:移动至E-UTRAN开关&基于上行SINR移动至EUTRAN开关',
-    # '基于上行SINR移动至EUTRAN开关',
-    'NR迁移到E-UTRAN的上行SINR低门限(0.1dB)',
-    '基于上行SINR的切换至E-UTRANB2RSRP门限1(dBm)',
-    '网络架构优选的RSRP触发门限(dBm)'
-]
+
 LST_NRCELLALGOSWITCH = ['网元', 'NR小区标识', 'NSA DC开关', '语音策略开关', ' 系统间业务移动性算法开关', ' 邻区自配置开关',
                         ' 异频切换算法开关', ' VoNR开关', ' ROHC头压缩开关', ' ROHC子协议开关', ' 终端节能开关',
                         ' INACTIVE策略开关', '测量策略开关', '负载均衡算法开关', ' 基于RFSP的算法开关', ' 视频直播开关',
@@ -142,16 +94,6 @@ LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2 = ['网元', 'NR小区标�
                                                         '网络架构优选的RSRP触发门限(dBm)', '基于覆盖的切换B1 RSRQ门限(0.5dB)',
                                                         'EPSFB B1 RSRQ门限(0.5dB)']
 
-# LST_NRDUCELLSRSMEAS = ['NR DU小区标识', 'NSA TDM功控触发SINR幅度迟滞(0.1dB)', 'NSA TDM功控触发SINR门限(0.1dB)', 'SRS TA测量开关',
-#                        ' NSA 上行回落到LTE SINR迟滞(0.1dB)', 'NSA 上行回落到LTE SINR门限(0.1dB)',
-#                        'Hyper Cell内TRP间切换的RSRP差值(0.5dB)', 'NSA上行路径选择SINR高门限(0.1dB)', 'NSA上行路径选择SINR低门限(0.1dB)',
-#                        'NSA分流用户上行路径选择SINR门限(0.1dB)', 'NSA上行路径选择SINR幅度迟滞(0.1dB)', 'NSA上行路径选择SINR时间迟滞(100毫秒)',
-#                        'NSA上行路径变更至LTE速率比', 'NSA上行路径变更至NR速率比', 'NSA上行小包返回NR后惩罚时长(秒)', 'NSA 上行回落到LTE SINR时间迟滞(100毫秒)',
-#                        'NSA上行回落到LTE SINR优化开关', 'UL ROHC的SINR门限(0.1dB)', 'UL ROHC的SINR幅度迟滞(0.1dB)',
-#                        'DMM TRP选择RSRP差值门限(dB)', '上行SRS测量值使用开关', 'SRS干扰门限(dB)', 'NR迁移到E-UTRAN的上行SINR低门限(0.1dB)',
-#                        'E-UTRAN迁移到NR的SINR高门限(0.1dB)', 'SRS TA异常保护门限(Ts)', 'SRS均衡前信干噪比低门限(0.2dB)', 'SRS测量优化策略',
-#                        ' SRS RSRP异常门限(dB)', 'DMRS TA的SINR判决门限(dB)', 'SRS和DMRS TA差值门限(Ts)', 'SRS测量扩展开关',
-#                        ' SRS干扰下TA测量优化开关']
 LST_NRDUCELLSRSMEAS = ['网元', 'NR DU小区标识', 'NSA TDM功控触发SINR幅度迟滞(0.1dB)',
                        'NSA TDM功控触发SINR门限(0.1dB)', 'SRS TA测量开关',
                        ' NSA 上行回落到LTE SINR迟滞(0.1dB)', 'NSA 上行回落到LTE SINR门限(0.1dB)',
