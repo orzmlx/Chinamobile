@@ -65,8 +65,11 @@ def only_has_digtal_diff(str1, str2):
         return False
     return True
 
+def add_4g_cgi(cell_df, enode_df):
+    cell_df = pd.merge(cell_df, enode_df[['网元', 'eNodeB标识']], on='网元')
+    return cell_df
 
-def add_cgi(ducell_df, gnodeb_df):
+def add_5g_cgi(ducell_df, gnodeb_df):
     ducell_df = pd.merge(ducell_df, gnodeb_df[['网元', 'gNodeB标识']], on='网元')
     ducell_df.rename(columns={'NRDU小区标识': 'NR小区标识'}, inplace=True)
 
@@ -205,30 +208,33 @@ def freq_judge(df, param):
 
 def mapToBand(x, band_dict):
     for key, item in band_dict.items():
-        if str(x) in item:  # 证明该频段是4G频段
+        if str(x) in list(item):  # 证明该频段是4G频段
             return key
     return '其他频段'
 
 
-def generate_4g_frequency_band_dict(g4_common_table):
-    df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
-    df.dropna(axis=0, inplace=True, how='any')
 
+
+def generate_4g_frequency_band_dict(df):
+
+    # df.dropna(axis=0, inplace=True, how='any')
+    band_list=[]
     g4_freq_band_dict = {}
     for band, offset, SSB in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
+        band = str(band)
         if pd.isna(band):
             continue
-        band = str(band)
         band = band.replace('频段', '')
         if band.find('FDD') >= 0:
-            band = offset
+            band = str(offset)
             # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
-            if offset.find('FDD') < 0:
+            if str(offset).find('FDD') < 0:
                 band = remove_digit(band, [])
+        band_list.append(band)
         value_set = g4_freq_band_dict.get(band, set())
         value_set.add(str(SSB))
         g4_freq_band_dict[band] = value_set
-    return g4_freq_band_dict
+    return g4_freq_band_dict,band_list
 
 
 def merge_dfs(list, on):
@@ -323,3 +329,5 @@ if __name__ == "__main__":
     str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # print(only_has_digtal_diff(str1, str2))
     print(remove_digit(str1, ['=']))
+
+

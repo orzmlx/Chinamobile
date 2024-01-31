@@ -8,14 +8,13 @@ import huaweiutils
 
 
 class HuaweiRawDataFile(object):
-    def __init__(self, raw_data_inpath, command_file_path, out_path, common_table, need_params, standard_path):
+    def __init__(self, raw_data_inpath, command_file_path, out_path, need_params, system):
         self.to_be_continue = False
+        self.system = system
         self.demand_params, self.merge_params = self.parse_param(need_params)
         self.out_put_dict = {}
-        self.common_table = common_table
         self.checked_unit_number = 0
         self.command_col_dict = {}
-        self.standard_path = standard_path
         self.__word__method = {"成功条数": "get_success_number",
                                "失败条数": "get_fail_number",
                                huaweiconfiguration.COMMAND: "get_command",
@@ -37,8 +36,15 @@ class HuaweiRawDataFile(object):
         self.content_dict = {}
         self.command_path = command_file_path
         self.command_list = self.read_command_list()
-        assert len(self.command_list) == len(huaweiconfiguration.COMMAND_LIST), "配置和输入命令长度不相等"
-        self.init_table()
+        if system == '5G':
+            assert len(self.command_list) == len(huaweiconfiguration.G5_COMMAND_COLS_LIST), "配置和输入命令长度不相等"
+            self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
+            self.init_table(huaweiconfiguration.G5_COMMAND_COLS_LIST, huaweiconfiguration.G5_COMMAND_NAME_LIST)
+        else:
+            assert len(self.command_list) == len(huaweiconfiguration.G4_COMMAND_COLS_LIST), "配置和输入命令长度不相等"
+            self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
+            self.init_table(huaweiconfiguration.G4_COMMAND_COLS_LIST, huaweiconfiguration.G4_COMMAND_NAME_LIST)
+
         self.current_command = ""
         self.exist_cols = []
         self.current_network_element = ""
@@ -66,17 +72,18 @@ class HuaweiRawDataFile(object):
             if e not in new_dict:
                 new_dict[e] = []
 
-    def init_table(self):
+    def init_table(self, col_list, command_name_list):
         """
             初始化基本信息
         """
-        for i in range(len(huaweiconfiguration.COMMAND_LIST)):
+
+        for i in range(len(col_list)):
             new_dict = {}
-            e = huaweiconfiguration.COMMAND_LIST[i]
+            e = col_list[i]
             # 去掉列名中的空格
             e = [s.replace(' ', '') for s in e]
             self.init_dict(e, new_dict)
-            key = huaweiconfiguration.COMMAND_NAME_LIST[i]
+            key = command_name_list[i]
             self.command_content_dict[key] = new_dict
             self.command_col_dict[key] = e
 
@@ -261,13 +268,13 @@ class HuaweiRawDataFile(object):
             try:
                 df = pd.DataFrame(self.command_content_dict[d])
             except:
-                raise Exception("请检查" + d + "命令下的参数设置是否齐全")
+                raise Exception("请检查【" + d + "】命令下的参数设置是否齐全,当前的列的数量:【" + str(list(self.command_content_dict[d].keys())) + '】')
             # NRDU小区改成NR小区
             if ~df.empty:
                 df.reset_index(inplace=True, drop=True)
                 cols = df.columns.tolist()
                 if "NRDU小区标识" in cols:
-                    df.rename(columns={"NRDU小区标识": "NR小区标识"}, inplace=True)
+                    df.rename(columns={"NRDU小区标识": self.cell_identity}, inplace=True)
                 out_name = file_name + ".csv"
                 if len(out_put_dict) == 0:
                     # out_name = huaweiutils.remove_digit(out_name, ['='])
@@ -311,8 +318,8 @@ class HuaweiRawDataFile(object):
             if len(key_intersection) > 0:
                 find = True
                 output_cols.extend(key_intersection)
-            if 'NR小区标识' in cols:
-                output_cols.append('NR小区标识')
+            if self.cell_identity in cols:
+                output_cols.append(self.cell_identity)
             main_col_result = df[output_cols]
 
             for c in cols:
@@ -323,47 +330,27 @@ class HuaweiRawDataFile(object):
                         find = True
                         flatten_df = huaweiutils.flatten_features(df, c)
                         children_cols = ['网元', param]
-                        if 'NR小区标识' in cols:
-                            children_cols.append('NR小区标识')
+                        if self.cell_identity in cols:
+                            children_cols.append(self.cell_identity)
                         flatten_df = flatten_df[children_cols]
-                        main_col_result = main_col_result.merge(flatten_df, how='left', on=['网元', 'NR小区标识'])
+                        main_col_result = main_col_result.merge(flatten_df, how='left', on=['网元', self.cell_identity])
             if find is True:
                 if res.empty:
                     res = main_col_result
                 else:
-                    res = res.merge(main_col_result, how='left', on=['网元', 'NR小区标识'])
+                    res = res.merge(main_col_result, how='left', on=['网元', self.cell_identity])
         return res
-
-    def get_base_info(self, out_put_dict):
-        """
-            获取基本信息列
-        """
-        ducell_df = out_put_dict['LST NRDUCELL:.csv']
-        gnode_df = out_put_dict['LST GNODEBFUNCTION:.csv']
-        ducell_df = huaweiutils.add_cgi(ducell_df, gnode_df)
-        common_table = pd.read_csv(self.common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市', '工作频段'], encoding='gbk')
-        # 覆盖类型中，室内外和空白，归为室外
-        common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
-        common_table['覆盖类型'].fillna("室外", inplace=True)
-        # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
-        ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df["NR小区标识"].apply(str)
-        base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带', '双工模式']]
-        # base_info_df = base_info_df.rename(columns={'NRDU小区标识': 'NR小区标识'})
-        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
-        base_info_df['厂家'] = '华为'
-        return base_info_df
 
     def output_content_dict(self):
         """
             华为按命令行导出数据
         """
         self.__merge_same_command_data()
-        baseinfo = self.get_base_info(self.out_put_dict)[['网元', 'NR小区标识', '工作频段']]
         for f, df in self.out_put_dict.items():
             # 如果是频点级别的命令，那么把小区的源频段加上
             # standard_df = pd.read_excel(self.standard_path, sheet_name='4G点对点推荐值', true_values=["是"],
             #                             false_values=["否"], dtype=str)
-            #self.add_resource_frequency(f, df, standard_df, baseinfo)
+            # self.add_resource_frequency(f, df, standard_df, baseinfo)
             huaweiutils.output_csv(df, f, self.out_path, True)
             self.files_cols_dict[f] = df.columns.tolist()
 
@@ -372,32 +359,8 @@ class HuaweiRawDataFile(object):
         file_name = huaweiutils.remove_digit(file_name, ['=', ':'])
         file_name = file_name.replace(".csv", "")
         if file_name in commands:
-            df = df.merge(baseinfo, how='left', on=['网元', 'NR小区标识'])
+            df = df.merge(baseinfo, how='left', on=['网元', self.cell_identity])
         return df
-
-    def output_handover_result(self, qci):
-        """
-            根据输入的核查参数名字，输出切换参数并输出结果
-        """
-        # 过滤出需要的列,并且合成一张表
-        base_info_df = self.get_base_info(self.out_put_dict)
-        key_col = ['异系统切换至E-UTRAN测量参数组标识', '异频切换测量参数组标识', '异系统切换测量参数组标识']
-        result = self.find_params(self.out_put_dict, key_col, ['LST NRCELLQCIBEARERQCI=1.csv'])
-        key_col_qci = ['服务质量等级', '异系统切换测量参数组标识', '异系统切换至E-UTRAN测量参数组标识', '异频切换测量参数组标识']
-        qci_result = self.find_params(
-            {'LST NRCELLQCIBEARERQCI=1.csv': self.out_put_dict['LST NRCELLQCIBEARERQCI=1.csv']},
-            key_col_qci, [])
-        if qci_result.empty is True:
-            raise Exception("QCI数据为空,请检查数据!")
-        qci_result = qci_result[qci_result['服务质量等级'] == str(qci)]
-        qci_result = qci_result.merge(result, how='left',
-                                      on=['网元', 'NR小区标识', '异系统切换测量参数组标识', '异系统切换至E-UTRAN测量参数组标识', '异频切换测量参数组标识'])
-        all_result = qci_result.merge(base_info_df, how='left', on=['网元', 'NR小区标识'])
-        # 合并参数
-        self.join_params(all_result)
-        all_result = all_result[huaweiconfiguration.HUAWEI_COLS_ORDER]
-        all_result_name = "all_result.csv"
-        huaweiutils.output_csv(all_result, all_result_name, self.out_path, False)
 
     def __read_multi_unit_message(self, f, line):
         command_dict = self.command_content_dict[self.current_command]
@@ -475,16 +438,18 @@ class HuaweiRawDataFile(object):
 
 
 if __name__ == "__main__":
-    rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
+    rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_nb_20240126_093224.txt'
+    # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
     # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\QCI\\华为5G-QCI-159\\MML任务结果_gt_20231226_112108.txt"
     # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\MML任务结果_gt_20231225_155211.txt"
-    commandPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt"
-    outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result"
+   # commandPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt"
+    commandPath ="C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
+    outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G"
     # 工参表路径
-    common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
-    standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, common_table,
-                                huaweiconfiguration.HUAWEI_DEMAND_PARAMS, standard_path)
+    # common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
+    # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
+    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath,
+                                huaweiconfiguration.HUAWEI_DEMAND_PARAMS, '4G')
     rawFile.read_huawei_txt()
     # rawFile.output_handover_result(qci=9)
     rawFile.output_content_dict()
