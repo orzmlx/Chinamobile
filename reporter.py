@@ -1,11 +1,13 @@
 import pandas as pd
 import openpyxl
 from openpyxl.chart.series import Series
-
+import numpy as np
 from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
 from openpyxl.chart import BarChart, Reference
 from openpyxl import load_workbook
-
+import math
+import huaweiutils
+import os
 
 class reporter:
 
@@ -14,16 +16,20 @@ class reporter:
         self.outpath = outpath
         self.cities = cities
         self.standard_path = standard_path
-        self.point_standard_df = pd.read_excel(self.standard_path, sheet_name='4G自身推荐', true_values=["是"],
+        self.point_standard_df = pd.read_excel(self.standard_path, sheet_name='小区级别核查配置', true_values=["是"],
                                                false_values=["否"], dtype=str)
-        self.multi_standard_df = pd.read_excel(self.standard_path, sheet_name='4G点对点推荐值', true_values=["是"],
+        self.multi_standard_df = pd.read_excel(self.standard_path, sheet_name='频点级别核查配置', true_values=["是"],
                                                false_values=["否"], dtype=str)
         # self.writer = pd.ExcelWriter(outpath, engine='xlsxwriter')  # 创建pandas.ExcelWriter实例，赋值给writer
 
-    def create_result_header(self, wb, sheet, start_col,row):
-        pt_params = self.point_standard_df[["层级", "参数名称", "原始参数名称"]]
+    def create_result_header(self, wb, sheet, start_col, row):
+        pt_params = self.point_standard_df[["类别", "参数名称", "原始参数名称"]]
+        freq_param = self.multi_standard_df[["类别", "参数名称", "原始参数名称"]]
+        params_df = pd.concat([pt_params,freq_param],axis=0)
+        params_df.dropna(how='all',inplace=True,axis=0)
         # 先生成层级
-        clzz = pt_params['层级'].unique().tolist()
+        clzz = np.array(params_df['类别'].unique().tolist())
+        clzz = [x for x in clzz if not x == 'nan']
         # start_col = 4
         class_colors = ['48D1CC', '00FA9A', 'FFA500', '1E90FF', '800080']
         for i in range(len(clzz)):
@@ -33,7 +39,7 @@ class reporter:
             if i >= len(class_colors):
                 j = 0
             color = class_colors[j]
-            param_names = pt_params[pt_params['层级'] == c]['参数名称'].unique().tolist()
+            param_names = params_df[params_df['类别'] == c]['参数名称'].unique().tolist()
             self.create_business_sector(c, sheet, start_col, param_names, row, color)
             start_col = start_col + len(param_names)
         wb.save("C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果1.xlsx")
@@ -52,24 +58,27 @@ class reporter:
         sheet.merge_cells(start_row=row, start_column=start_col, end_row=row, end_column=end_columns)
         cell = sheet.cell(row=row, column=start_col, value=c)
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        cell.font = Font(u'微软雅黑', size=10, bold=True, color='00000000')
+        cell.font = Font(u'微软雅黑', size=10, bold= True, color='00000000')
         cell.fill = PatternFill('solid', fgColor=color)
 
     def generate_excel_format(self):
         wb = openpyxl.load_workbook(filename=self.standard_path)
-        sheet = wb.get_sheet_by_name('工参')
+        sheet = wb.get_sheet_by_name('核查结果_test')
         all_params = self.point_standard_df['参数名称'].unique().tolist()
-        start_row =1
+        start_row = 1
         start_col = 1
+        common_cell_list = [['地市', '不合规总数'], ['地市', '核查总数'], ['地市', '总合规率'],
+                            ['地市', '不合规总数'], ['地市', '核查项总数']]
         headers = ['4G小区不合规数量', '4G小区核查项总数', '4G小区参数配置核查合规率', '5G小区不合规数量', '5G小区核查项总数']
         for index, header_value in enumerate(headers):
-            sheet.merge_cells(start_row=start_row, start_column=start_col, end_row=start_row, end_column=4 + len(all_params))
+            sheet.merge_cells(start_row=start_row, start_column=start_col, end_row=start_row,
+                              end_column=4 + len(all_params))
             cell = sheet.cell(row=start_row, column=start_col, value=header_value)
             cell.font = Font(u'微软雅黑', size=10, bold=True, color='00000000')
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.fill = PatternFill('solid', fgColor='FFFF00')
-            self.create_common_cell(sheet, 1, start_row + 1)
-            self.create_result_header(wb, sheet, 4, start_row + 1)
+            self.create_common_cell(common_cell_list[index], sheet, 1, start_row + 1)
+            self.create_result_header(wb, sheet, len(common_cell_list[index]) + 1, start_row + 1)
             city_row = start_row + 3
             for c in cities:
                 cell = sheet.cell(row=city_row, column=1, value=c)
@@ -79,20 +88,61 @@ class reporter:
             start_row = start_row + 2 + len(self.cities) + 1
         wb.save("C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果1.xlsx")
 
-    def statistic(self):
-        pass
+    def statistic_cell(self,system):
+        cell_flist = huaweiutils.find_file(os.path.join(self.outpath,system), '_cell.csv')
+        city_res_dict = {}
+        for f in cell_flist:
+            df = pd.read_csv(f)
+            self.statistic_data(df, city_res_dict)
+        return city_res_dict
 
 
 
-    def create_common_cell(self, sheet, start_col, row):
+
+    def statistic_freq(self,system):
+        freq_flist = huaweiutils.find_file(os.path.join(self.outpath,system), '_freq.csv')
+        city_res_dict = {}
+        for f in freq_flist:
+            df = pd.read_csv(f)
+            self.statistic_data(df,city_res_dict)
+        return city_res_dict
+
+    def create_common_cell(self, common_cell, sheet, start_col, row):
         # colors = ['#000080', '#B22222', '#2E8B57']
-        common_cell = ['地市', '核查项总数', '合规率']
+
         for index, c in enumerate(common_cell):
             sheet.merge_cells(start_row=row, start_column=start_col, end_row=row + 1, end_column=start_col)
             cell = sheet.cell(row=row, column=start_col, value=c)
             cell.font = Font(u'微软雅黑', size=9, bold=True, color='00000000')
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             start_col = start_col + 1
+
+    def statistic_data(self, df, city_res_dict):
+        """
+            统计小区级别参数的合规率和检查总数
+            return 按地市返回合格和不合格的总数
+        """
+        cols = df.columns.tolist()
+        judge_cols = [c for c in cols if c.find('合规') >= 0]
+        judge_cols.append('地市')
+        df = df[judge_cols]
+        grouped = df.groupby('地市')
+        for city, g in grouped:
+            city_res = city_res_dict.get(city, {})
+            for c in judge_cols:
+                if c == '地市':
+                    continue
+
+                c_qualified_num = len(df[df[c] == True])
+                c_unqualidied_num = len(df[df[c] == False])
+                c = c.split('#')[0]
+                param_tuple = city_res.get(c, (0, 0))
+                n_qualified_num = param_tuple[0] + c_qualified_num
+                n_unqualidied_num = param_tuple[1] + c_unqualidied_num
+                city_res[c] = (n_qualified_num, n_unqualidied_num)
+            city_res_dict[city] = city_res
+        return city_res_dict
+
 
 
 if __name__ == "__main__":
@@ -103,3 +153,5 @@ if __name__ == "__main__":
 
     reporter = reporter(check_result, outpath, standard_path, cities)
     reporter.generate_excel_format()
+   # cell_stat_res = reporter.statistic_cell('5G')
+    #cell_stat_res = reporter.statistic_freq('5G')

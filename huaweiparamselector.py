@@ -32,8 +32,10 @@ class HuaweiIntermediateGen:
         self.standard_alone_df = pd.DataFrame()
         g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.g4_freq_band_dict, band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
-        self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
-        self.g5_base_info_df = self.get_huawei_5g_base_info()
+        if self.system == '4G':
+            self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
+        else:
+            self.g5_base_info_df = self.get_huawei_5g_base_info()
 
         self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
         self.cell_config_df = pd.read_excel(self.standard_path, sheet_name="小区级别核查配置", true_values=["是"],
@@ -50,17 +52,16 @@ class HuaweiIntermediateGen:
         self.freq_config_df['参数组标识'] = self.freq_config_df['参数组标识'].astype(str)
         self.freq_config_df['QCI'] = self.freq_config_df['QCI'].astype(str)
 
-
     def get_huawei_4g_base_info(self, band_list):
         """
             获取基本信息列
         """
         cell_df = pd.read_csv(os.path.join(self.file_path, 'LST CELL.csv'))
-        enode_df = pd.read_csv(os.path.join(self.file_path, 'LST ENODEBFUNCTION.csv'))
+        enode_df = pd.read_csv(os.path.join(self.file_path,'LST ENODEBFUNCTION.csv'))
         cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
         common_table = pd.read_csv(self.g4_common_table,
                                    usecols=['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别'],
-                                   encoding='gbk',dtype=str)
+                                   encoding='gbk', dtype=str)
 
         common_table['工作频段'] = band_list
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
@@ -99,7 +100,8 @@ class HuaweiIntermediateGen:
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
             huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
         base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带', '双工模式']]
-        base_info_df['频带'] = base_info_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
+        base_info_df['频带'] = base_info_df['频带'].map(
+            {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
         base_info_df = base_info_df.rename(columns={'频带': '频段'})
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
@@ -143,6 +145,10 @@ class HuaweiIntermediateGen:
             frequencies = g['频点标识'].unique().tolist()
             if len(frequencies) > 0:
                 frequency_param = frequencies[0]
+                # 单独处理,将频带等于n1的去掉
+                if frequency_param == '频带':
+                    df = df[df[frequency_param] != 'n1']
+                    df[frequency_param] = df[frequency_param].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
                 all_freq = df[frequency_param].unique().tolist()
                 if self.is_4g_freq(all_freq):
                     # df[frequency_param] = 'LTE'
@@ -251,14 +257,14 @@ class HuaweiIntermediateGen:
             if len(frequency) > 0:
                 base_cols.append(frequency[0])
         base_df = pd.read_csv(file_name, usecols=base_cols)
+        # 如果没有开关参数，那么赋值为base_info
+        switch_df = pd.DataFrame()
         # 查看主命令是否存在标识,主命令对应标识应该一样
         if len(switch_dict) > 0:
             switch_cols = (list(set(switch_dict.values())))
             switch_cols.extend(base_cols)
             df = pd.read_csv(file_name, usecols=switch_cols)
             switch_df = self.read_switch_data(df, base_df, switch_dict)
-        else:
-            switch_df = pd.read_csv(file_name, usecols=base_cols)
         # 读取非开关参数
         non_switch_df = pd.DataFrame()
         if len(check_params) > 0:
@@ -267,10 +273,12 @@ class HuaweiIntermediateGen:
             logging.debug("读取文件:【" + file_name + "】读取的列:【" + str(non_switch_col) + "】")
             non_switch_df = pd.read_csv(file_name, usecols=non_switch_col)
         # result_df = switch_df.merge(non_switch_df, how='left', on=base_cols)
-        if not non_switch_df.empty:
+        if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
+        elif non_switch_df.empty and not switch_df.empty:
+            raise Exception("开关参数和非开关参数读取结果均为空,请检查参数名称或者原始数据结果,当前检查参数【" + str(params) + "】")
         else:
-            result_df = switch_df
+            result_df = switch_df if not switch_df.empty else non_switch_df
         return result_df, base_cols
 
     def read_switch_data(self, df, base_df, switch_params):
@@ -383,25 +391,36 @@ class HuaweiIntermediateGen:
         :param df: 输入的推荐值和需要核查的参数
         :return:
         """
-        df = self.get_cell_table(self.cell_config_df)
-        # df_list = self.get_freq_table(self.freq_config_df)
-        # for df in df_list:
-        #     d = df[0]
-        #     sorted_cols = self.sort_result(d.columns.tolist())
-        #     d = d[sorted_cols]
-        #     d.to_csv(os.path.join(self.file_path, df[1] + '_check.csv'),
-        #              index=False, encoding='utf_8_sig')
-        df = df[self.sort_result(df.columns.tolist())]
-        df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\check_result1.csv",
-                  index=False, encoding='utf_8_sig')
+        # df = self.get_cell_table(self.cell_config_df)
+        #
+        # df = df[self.sort_result(df.columns.tolist())]
+        # df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\check_result1.csv",
+        #           index=False, encoding='utf_8_sig')
+        df_list = self.get_freq_table(self.freq_config_df)
+        for df in df_list:
+            d = df[0]
+            sorted_cols = self.sort_result(d.columns.tolist())
+            d = d[sorted_cols]
+            out = os.path.join(self.file_path,'check_result','freq')
+            if not os.path.exists(out):
+                os.makedirs(out)
+            d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
+                     index=False, encoding='utf_8_sig')
+
 
 
 if __name__ == "__main__":
-    filepaths = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G"
+    filepaths = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\5G"
     standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
     g5_common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
     g4_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0121\\LTE资源大表-0121.csv"
     g4_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
     g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv"
-    report = HuaweiIntermediateGen(filepaths, standard_path, g4_common_table, g5_common_table, '4G')
-    report.generate_report()
+    raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
+    raw_files = os.listdir(os.path.join(filepaths,'raw_data'))
+    raw_file_name_list = []
+    for f in raw_files:
+        f_name = os.path.split(f)[1]
+        raw_file_name = os.path.join(filepaths, f_name.split('.')[0])
+        report = HuaweiIntermediateGen(raw_file_name, standard_path, g4_common_table, g5_common_table, '5G')
+        report.generate_report()

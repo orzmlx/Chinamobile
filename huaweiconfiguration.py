@@ -7,7 +7,6 @@ MESSAGE = "报文"
 G5_CELL_IDENTITY = 'NR小区标识'
 G4_CELL_IDENTITY = '本地小区标识'
 
-
 LST_NRCELLALGOSWITCH = ['网元', 'NR小区标识', 'NSA DC开关', '语音策略开关', ' 系统间业务移动性算法开关', ' 邻区自配置开关',
                         ' 异频切换算法开关', ' VoNR开关', ' ROHC头压缩开关', ' ROHC子协议开关', ' 终端节能开关',
                         ' INACTIVE策略开关', '测量策略开关', '负载均衡算法开关', ' 基于RFSP的算法开关', ' 视频直播开关',
@@ -182,6 +181,10 @@ LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_2 = ['网元', 'NR小区标识',
                                                      '同频切换的A3幅度迟滞(0.5dB)', '同频切换的A3时间迟滞(毫秒)',
                                                      '同频条件切换的候选邻区A3偏置(0.5dB)', '异构组网同频A3偏置(0.5dB)',
                                                      '室内外交叠区A3偏置(0.5dB)', '同频切换覆盖扩展的A3偏置(0.5dB)']
+
+LST_NRDUCELLSELCONFIG = ['NR DU小区标识', 'SIB1净荷精简策略', ' 最低接收电平(2dBm)', '最低接收信号质量(dB)', 'SIB可选信元指示',
+                         ' 小区为运营商保留', 'RA-SDT数据量门限(Byte)', 'RA-SDT RSRP门限(dBm)', 'UE最大发射功率(dBm)']
+
 # =====================================================================================================================================
 
 
@@ -368,7 +371,7 @@ G5_COMMAND_COLS_LIST = [LST_NRDUCELL, LST_GNODEBFUNCTION, LST_NRCELLALGOSWITCH,
                         LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_0,
                         LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_1,
                         LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2,
-                        LST_NRDUCELLSRSMEAS,
+                        LST_NRDUCELLSRSMEAS, LST_NRDUCELLSELCONFIG,
                         LST_NRCELLQCIBEARER_QCI_1, LST_NRCELLQCIBEARER_QCI_5, LST_NRCELLQCIBEARER_QCI_9,
                         LST_NRCELLSERVEXP, LST_GNBQCIALGOPARAMGRP, LST_NRCELLRESELCONFIG, LST_NRCELLFREQRELATION,
                         LST_NRCELLEUTRANNFREQ, LST_NRDUCELLINTRFIDENT,
@@ -415,6 +418,7 @@ G5_COMMAND_NAME_LIST = ['LST NRDUCELL:;', 'LST GNODEBFUNCTION:;', 'LST NRCELLALG
                         'LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=1;',
                         'LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=2;',
                         'LST NRDUCELLSRSMEAS:;',
+                        'LST NRDUCELLSELCONFIG:;',
                         'LST NRCELLQCIBEARER:QCI=1;',
                         'LST NRCELLQCIBEARER:QCI=5;',
                         'LST NRCELLQCIBEARER:QCI=9;',

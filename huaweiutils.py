@@ -5,11 +5,21 @@ import os
 from copy import deepcopy
 from difflib import SequenceMatcher
 import numpy as np
-
+import pathlib
 replace_char = ['秒', 'dB']
 
 
+def find_file(directory, file_extension):
+    files = []
+    for item in pathlib.Path(directory).rglob('*'):
+        if str(item).endswith(file_extension):
+            files.append(item)
+    return files
+
+
 def output_csv(df, file_name, out_path, is_format):
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
     if is_format:
         file_name = remove_digit(file_name, ['=', ":"])
     file_out_path = os.path.join(out_path, file_name)
@@ -19,34 +29,6 @@ def output_csv(df, file_name, out_path, is_format):
         df.to_csv(file_out_path, index=False, mode='a', header=True)
 
 
-# def merge_demand_result(out_put_dict, demand_cols):
-#     # gnodeb = out_put_dict['LST GNODEBFUNCTION.csv']
-#     # switch = out_put_dict['LST NRCELLALGOSWITCH.csv']
-#     # ducell = out_put_dict['LST NRDUCELL.csv']
-#     # interfreq = out_put_dict['LST NRCELLINTERFHOMEAGRPINTERFREQHOMEASGROUPID=0.csv']
-#     # hoparam = out_put_dict['LST NRINTERRATHOPARAM.csv']
-#     # interrath = out_put_dict['LST NRCELLINTERRHOMEAGRPINTERRATHOMEASGROUPID=0.csv']
-#     # intereutra = out_put_dict['LST NRCELLHOEUTRANMEAGRPINTERRHOTOEUTRANMEASGRPID=0.csv']
-#     # srsmeas = out_put_dict['LST NRDUCELLSRSMEAS.csv']
-#     key_cols = ['网元', 'NR小区标识']
-#     for f, df in out_put_dict.items():
-#         cols = df.columns.tolist()
-#         #具体开关属性需要在第一行里面找
-#         first_row
-#         intersection = list(set(cols) & set(demand_cols))
-#         if len(intersection) == 0:
-#
-#
-#
-#
-#     result = add_cgi(ducell, gnodeb)
-#     result = result.merge(switch, how='left', on=['网元', 'NR小区标识'])
-#     result = result.merge(interfreq, how='left', on=['网元', 'NR小区标识'])
-#     result = result.merge(hoparam, how='left', on=['网元', 'NR小区标识'])
-#     result = result.merge(interrath, how='left', on=['网元', 'NR小区标识'])
-#     result = result.merge(intereutra, how='left', on=['网元', 'NR小区标识'])
-#     result = result.merge(srsmeas, how='left', on=['网元', 'NR小区标识'])
-#     return result
 def only_has_digtal_diff(str1, str2):
     """
         判断两个字符串不相同的部分
@@ -211,6 +193,8 @@ def mapToBand(x, band_dict):
         if str(x) in list(item):  # 证明该频段是4G频段
             return key
     return '其他频段'
+
+
 
 
 
