@@ -6,6 +6,8 @@ from copy import deepcopy
 from difflib import SequenceMatcher
 import numpy as np
 import pathlib
+import math
+
 replace_char = ['秒', 'dB']
 
 
@@ -47,9 +49,12 @@ def only_has_digtal_diff(str1, str2):
         return False
     return True
 
+
 def add_4g_cgi(cell_df, enode_df):
+    cell_df = cell_df[cell_df['NB-IoT小区指示'] == '否']
     cell_df = pd.merge(cell_df, enode_df[['网元', 'eNodeB标识']], on='网元')
     return cell_df
+
 
 def add_5g_cgi(ducell_df, gnodeb_df):
     ducell_df = pd.merge(ducell_df, gnodeb_df[['网元', 'gNodeB标识']], on='网元')
@@ -188,6 +193,10 @@ def freq_judge(df, param):
     return judge_res
 
 
+def linear_calculation(x, m1, b, m2):
+    return x * m1 + b * m2
+
+
 def mapToBand(x, band_dict):
     for key, item in band_dict.items():
         if str(x) in list(item):  # 证明该频段是4G频段
@@ -195,14 +204,9 @@ def mapToBand(x, band_dict):
     return '其他频段'
 
 
-
-
-
-
 def generate_4g_frequency_band_dict(df):
-
     # df.dropna(axis=0, inplace=True, how='any')
-    band_list=[]
+    band_list = []
     g4_freq_band_dict = {}
     for band, offset, SSB in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
         band = str(band)
@@ -218,15 +222,22 @@ def generate_4g_frequency_band_dict(df):
         value_set = g4_freq_band_dict.get(band, set())
         value_set.add(str(SSB))
         g4_freq_band_dict[band] = value_set
-    return g4_freq_band_dict,band_list
+    return g4_freq_band_dict, band_list
 
 
-def merge_dfs(list, on):
-    init_df = list[0]
-    for i in range(len(list)):
+def list_to_str(check_list):
+    check_set = list(set(check_list))
+    check_set = [c for c in check_set if str(c) != 'nan']
+    result = '|'.join(check_set)
+    return result
+
+
+def merge_dfs(lst, on):
+    init_df = lst[0]
+    for i in range(len(lst)):
         if i == 0:
             continue
-        init_df = init_df.merge(list[i], how='left', on=on)
+        init_df = init_df.merge(lst[i], how='left', on=on)
     return init_df
 
 
@@ -243,7 +254,7 @@ def list_judge(x, standard):
     for c in replace_char:
         x = str(x).replace(c, "")
     splits = standard.split(',')
-    return True if str(x) in splits else  False
+    return True if str(x) in splits else False
 
 
 def range_judge(x, standard):
@@ -261,7 +272,7 @@ def range_judge(x, standard):
                 temp = max
                 max = min
                 min = temp
-            if min <= int(x) <= max:
+            if min <= int(float(x)) <= max:
                 return True
             else:
                 return False
@@ -295,7 +306,7 @@ def add_judgement(x, original_name, c):
     else:
 
         return True if int(float(judgement_value)) == int(
-            float(original_value)) else  False
+            float(original_value)) else False
 
 
 if __name__ == "__main__":
@@ -313,5 +324,3 @@ if __name__ == "__main__":
     str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # print(only_has_digtal_diff(str1, str2))
     print(remove_digit(str1, ['=']))
-
-

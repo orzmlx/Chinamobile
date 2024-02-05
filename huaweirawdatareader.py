@@ -28,7 +28,7 @@ class HuaweiRawDataFile(object):
         self.phases_dict = {huaweiconfiguration.COMMAND: [], "网元": [], "报文": [],
                             huaweiconfiguration.RETURN_CODE: [], huaweiconfiguration.QUERY: []}
         self.raw_data_inpath = raw_data_inpath
-        self.out_path = os.path.join(out_path, system)
+        self.out_path = os.path.join(out_path,  system)
         self.fail_command_number = 0
         self.success_command_number = 0
         self.command_content_dict = {}
@@ -36,11 +36,11 @@ class HuaweiRawDataFile(object):
         self.command_path = command_file_path
         self.command_list = self.read_command_list()
         if system == '5G':
-            assert len(self.command_list) == len(huaweiconfiguration.G5_COMMAND_COLS_LIST), "配置和输入命令长度不相等"
+            # assert len(self.command_list) == len(huaweiconfiguration.G5_COMMAND_COLS_LIST), "配置和输入命令长度不相等"
             self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
             self.init_table(huaweiconfiguration.G5_COMMAND_COLS_LIST, huaweiconfiguration.G5_COMMAND_NAME_LIST)
         else:
-            assert len(self.command_list) == len(huaweiconfiguration.G4_COMMAND_COLS_LIST), "配置和输入命令长度不相等"
+            # assert len(self.command_list) == len(huaweiconfiguration.G4_COMMAND_COLS_LIST), "配置和输入命令长度不相等"
             self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
             self.init_table(huaweiconfiguration.G4_COMMAND_COLS_LIST, huaweiconfiguration.G4_COMMAND_NAME_LIST)
 
@@ -267,7 +267,7 @@ class HuaweiRawDataFile(object):
                 df = pd.DataFrame(self.command_content_dict[d])
             except:
                 raise Exception(
-                    "请检查【" + d + "】命令下的参数设置是否齐全,当前的列的数量:【" + str(list(self.command_content_dict[d].keys())) + '】')
+                     "请检查【" + d + "】命令下的参数设置是否齐全,当前的列的数量:【" + str(list(self.command_content_dict[d].keys())) + '】')
             # NRDU小区改成NR小区
             if ~df.empty:
                 df.reset_index(inplace=True, drop=True)
@@ -372,17 +372,17 @@ class HuaweiRawDataFile(object):
 
 if __name__ == "__main__":
     # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_nb_20240126_093224.txt'
-    rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
+    # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
     # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs1_20240125_104929.txt'
     # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\QCI\\华为5G-QCI-159\\MML任务结果_gt_20231226_112108.txt"
-    # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\MML任务结果_gt_20231225_155211.txt"
-    commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为5G异频异系统切换重选语音数据-全量.txt"
-    # commandPath ="C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
+    rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G\\raw_data\\MML任务结果_zs_20240201_103223.txt"
+    # commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为5G异频异系统切换重选语音数据-全量.txt"
+    commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
     outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\"
     # 工参表路径
     # common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, '5G')
+    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, '4G')
     rawFile.read_huawei_txt()
     # rawFile.output_handover_result(qci=9)
     rawFile.output_format_data()

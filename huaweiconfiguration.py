@@ -13,7 +13,8 @@ LST_NRCELLALGOSWITCH = ['网元', 'NR小区标识', 'NSA DC开关', '语音策�
                         '网络切片算法开关', ' CloudX业务开关', ' 定位业务开关', ' 切换兼容性开关', ' 终端辅助信息处理开关',
                         '高速专属策略开关', ' ROHC模式', '加速开关', ' FWA算法开关', ' 流程开关', '重配消息传输间隔(毫秒)',
                         '面向企业客户的业务开关', '无线准入控制算法开关', ' 业务功能开关', '异频切换AI优化开关', ' NR-DC开关',
-                        ' 多频算法开关', ' 邻区信息控制开关', ' 同频切换算法开关', ' 多频智选模式', '同频切换开关', '同频协同切换模式']
+                        ' 多频算法开关', ' 邻区信息控制开关', ' 同频切换算法开关', ' 多频智选模式', '同频切换开关', '同频协同切换模式'
+    , '云手机开关', '上下行解耦算法开关', 'CloudVR业务开关']
 
 LST_GNODEBFUNCTION = ['网元', 'gNodeB功能名称', '引用的应用标识', 'gNodeB标识', 'gNodeB标识长度(比特)', '用户标签', '网元资源模型版本', '产品版本']
 
@@ -24,25 +25,35 @@ LST_NRDUCELL = ['网元', 'NR DU小区标识', 'NR DU小区名称', '双工模�
                 'NR DU小区组网模式', '系统消息配置标识', '根序列逻辑索引', 'PRACH频域起始位置', '高速小区标识', '辅助小区指示',
                 'SMTC持续时间(毫秒)', 'SMTC周期(毫秒)', '附加频带', 'SSB子载波间隔(KHz)', '客户化带宽配置标识', '客户化下行带宽',
                 '客户化上行带宽', '上行闭塞RB个数偏置', '对端时隙配比', 'SSB时域位置', '小区禁止状态',
-                '部署位置', 'IAB节点标识']
+                '部署位置', 'IAB节点标识', '场景策略', '系统消息配置策略标识']
 LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_0 = ['网元', 'NR小区标识', '异频切换测量参数组标识', '异频测量事件时间迟滞(毫秒)',
                                                      '异频测量事件幅度迟滞(0.5dB)',
-                                                     '异频A1A2时间迟滞(毫秒)', '异频A1A2幅度迟滞(0.5dB)',
-                                                     '基于频率优先级的异频切换A2 RSRP门限(dBm)', '基于频率优先级的异频切换A1 RSRP门限(dBm)',
-                                                     '基于覆盖的异频A5 RSRP触发门限1(dBm)', '基于覆盖的异频A5 RSRP触发门限2(dBm)',
-                                                     '基于覆盖的异频A2 RSRP触发门限(dBm)', '基于覆盖的异频A1 RSRP触发门限(dBm)',
-                                                     '基于频率优先级的异频切换A4 RSRP门限(dBm)',
-                                                     '基于MLB的异频A4 RSRP门限(dBm)', '运营商专用优先级异频切换A4 RSRP门限(dBm)',
-                                                     '基于业务的异频切换A4 RSRP门限(dBm)', '基于覆盖的异频RSRQ门限(0.5dB)',
-                                                     '基于覆盖的异频A2 RSRQ触发门限(0.5dB)', '基于覆盖的异频A1 RSRQ触发门限(0.5dB)',
-                                                     '基于干扰的异频切换A3 RSRP偏置(0.5dB)', '基于干扰的异频切换RSRP门限(dBm)',
-                                                     '基于SSB SINR的异频切换A1门限(0.5dB)', '基于SSB SINR的异频切换A2门限(0.5dB)',
-                                                     '基于A3异频切换的A2 RSRP触发门限(dBm)', '基于A3异频切换的A1 RSRP触发门限(dBm)',
-                                                     '异频切换A3偏置(0.5dB)', '基于上行覆盖的异频A5 RSRP触发门限1(dBm)',
-                                                     '高速用户A2门限偏置(dB)', '基于MBS兴趣指示的异频切换A5 RSRP触发门限2(dBm)',
-                                                     '基于覆盖的异频切换A5 SINR门限2(0.5dB)', '异频盲重定向A2 SINR门限(0.5dB)',
-                                                     '特殊终端基于频率优先级切换的A1 RSRP门限(dBm)', '特殊终端基于频率优先级切换的A2 RSRP门限(dBm)',
-                                                     '特殊终端基于频率优先级切换的A4 RSRP门限(dBm)', '基于干扰隔离的异频A5 RSRP触发门限1(dBm)']
+                                                     '异频A1A2时间迟滞(毫秒)', '异频A1A2幅度迟滞(0.5dB)', '基于频率优先级的异频切换A2RSRP门限(dBm)',
+                                                     '基于频率优先级的异频切换A1RSRP门限(dBm)',
+                                                     '基于覆盖的异频A5RSRP触发门限1(dBm)', '基于覆盖的异频A5RSRP触发门限2(dBm)',
+                                                     '基于覆盖的异频A2RSRP触发门限(dBm)',
+                                                     '基于覆盖的异频A1RSRP触发门限(dBm)', '基于频率优先级的异频切换A4RSRP门限(dBm)',
+                                                     '基于MLB的异频A4RSRP门限(dBm)', '运营商专用优先级异频切换A4RSRP门限(dBm)',
+                                                     '基于业务的异频切换A4RSRP门限(dBm)', '基于覆盖的异频RSRQ门限(0.5dB)',
+                                                     '基于覆盖的异频A2RSRQ触发门限(0.5dB)', '基于覆盖的异频A1RSRQ触发门限(0.5dB)',
+                                                     '基于干扰的异频切换A3RSRP偏置(0.5dB)', '基于干扰的异频切换RSRP门限(dBm)',
+                                                     '基于SSBSINR的异频切换A1门限(0.5dB)', '基于SSBSINR的异频切换A2门限(0.5dB)',
+                                                     '基于A3异频切换的A2RSRP触发门限(dBm)', '基于A3异频切换的A1RSRP触发门限(dBm)',
+                                                     '异频切换A3偏置(0.5dB)', '基于上行覆盖的异频A5RSRP触发门限1(dBm)', '高速用户A2门限偏置(dB)',
+                                                     '基于MBS兴趣指示的异频切换A5RSRP触发门限2(dBm)', '基于覆盖的异频切换A5SINR门限2(0.5dB)',
+                                                     '异频盲重定向A2SINR门限(0.5dB)', '特殊终端基于频率优先级切换的A1RSRP门限(dBm)',
+                                                     '特殊终端基于频率优先级切换的A2RSRP门限(dBm)', '特殊终端基于频率优先级切换的A4RSRP门限(dBm)',
+                                                     '基于干扰隔离的异频A5RSRP触发门限1(dBm)', '低速用户迁出A2RSRP门限(dBm)',
+                                                     '特殊终端上行基于频率优先级切换的A1RSRP门限(dBm)', '特殊终端上行基于频率优先级切换的A2RSRP门限(dBm)',
+                                                     '特殊终端上行基于频率优先级切换的A4RSRP门限(dBm)', '基于干扰的异频切换RSRP门限(毫瓦分贝)',
+                                                     '异频A4A5时间迟滞(毫秒)', '异频A4A5幅度迟滞(0.5分贝)', '异频A1A2幅度迟滞(0.5分贝)',
+                                                     '基于频率优先级的异频切换A2RSRP门限(毫瓦分贝)', '基于频率优先级的异频切换A1RSRP门限(毫瓦分贝)',
+                                                     '基于覆盖的异频A5RSRP触发门限1(毫瓦分贝)', '基于覆盖的异频A5RSRP触发门限2(毫瓦分贝)',
+                                                     '基于覆盖的异频A2RSRP触发门限(毫瓦分贝)', '基于覆盖的异频A1RSRP触发门限(毫瓦分贝)',
+                                                     '基于频率优先级的异频切换A4RSRP门限(毫瓦分贝)', '基于MLB的异频A4RSRP门限(毫瓦分贝)',
+                                                     '运营商专用优先级异频切换A4RSRP门限(毫瓦分贝)', '基于业务的异频切换A4RSRP门限(毫瓦分贝)',
+                                                     '基于覆盖的异频A5RSRQ门限2(0.5分贝)', '基于覆盖的异频A2RSRQ触发门限(0.5分贝)',
+                                                     '基于覆盖的异频A1RSRQ触发门限(0.5分贝)', '基于干扰的异频切换A3RSRP偏置(0.5分贝)']
 
 LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_2 = LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_0
 
@@ -50,63 +61,44 @@ LST_NRINTERRATHOPARAM = ['网元', 'NR小区标识',
                          '切换方式开关',
                          'EPS FB保护定时器(100毫秒)', '异系统切换触发事件类型', 'EPS FB模式', 'EPS FB测量保护定时器(100毫秒)', '下行资源比',
                          'EPS FB等待多频点B1测量报告定时器时长(10毫秒)']
-LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0 = ['网元', 'NR小区标识', '异系统切换测量参数组标识', '异系统切换A1 RSRP门限(dBm)',
-                                                    '异系统切换A2 RSRP门限(dBm)', '异系统切换A1A2幅度迟滞(0.5dB)',
-                                                    '异系统切换A1A2时间迟滞(毫秒)', '基于覆盖的切换至E-UTRAN盲A2 RSRP门限(dBm)',
-                                                    '基于覆盖的切换至E-UTRAN B2 RSRP门限1(dBm)',
-                                                    'VoNR/EPS FB自适应A2 RSRP门限(dBm)', 'VoNR/EPS FB自适应A2事件时间迟滞(毫秒)',
-                                                    '异系统切换A2 RSRQ门限(0.5dB)', '异系统切换A1 RSRQ门限(0.5dB)',
-                                                    '基于覆盖的切换至E-UTRAN盲A2 RSRQ门限(0.5dB)',
-                                                    '基于上行SINR的切换至E-UTRAN B2 RSRP门限1(dBm)']
-LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_1 = ['网元', 'NR小区标识', '异系统切换测量参数组标识', '异系统切换A1 RSRP门限(dBm)',
-                                                    '异系统切换A2 RSRP门限(dBm)', '异系统切换A1A2幅度迟滞(0.5dB)',
-                                                    '异系统切换A1A2时间迟滞(毫秒)', '基于覆盖的切换至E-UTRAN盲A2 RSRP门限(dBm)',
-                                                    '基于覆盖的切换至E-UTRAN B2 RSRP门限1(dBm)',
-                                                    'VoNR/EPS FB自适应A2 RSRP门限(dBm)', 'VoNR/EPS FB自适应A2事件时间迟滞(毫秒)',
-                                                    '异系统切换A2 RSRQ门限(0.5dB)', '异系统切换A1 RSRQ门限(0.5dB)',
-                                                    '基于覆盖的切换至E-UTRAN盲A2 RSRQ门限(0.5dB)',
-                                                    '基于上行SINR的切换至E-UTRAN B2 RSRP门限1(dBm)']
-LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_2 = ['网元', 'NR小区标识', '异系统切换测量参数组标识', '异系统切换A1 RSRP门限(dBm)',
-                                                    '异系统切换A2 RSRP门限(dBm)', '异系统切换A1A2幅度迟滞(0.5dB)',
-                                                    '异系统切换A1A2时间迟滞(毫秒)', '基于覆盖的切换至E-UTRAN盲A2 RSRP门限(dBm)',
-                                                    '基于覆盖的切换至E-UTRAN B2 RSRP门限1(dBm)',
-                                                    'VoNR/EPS FB自适应A2 RSRP门限(dBm)', 'VoNR/EPS FB自适应A2事件时间迟滞(毫秒)',
-                                                    '异系统切换A2 RSRQ门限(0.5dB)', '异系统切换A1 RSRQ门限(0.5dB)',
-                                                    '基于覆盖的切换至E-UTRAN盲A2 RSRQ门限(0.5dB)',
-                                                    '基于上行SINR的切换至E-UTRAN B2 RSRP门限1(dBm)']
-LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_0 = ['网元', 'NR小区标识', '异系统切换至E-UTRAN测量参数组标识', '基于覆盖的切换B1 RSRP门限(dBm)',
-                                                        '基于覆盖的切换B1B2幅度迟滞(0.5dB)', '基于覆盖的切换B1B2时间迟滞(毫秒)',
-                                                        'EPSFB B1 RSRP门限(dBm)', 'EPSFB B1幅度迟滞(0.5dB)',
-                                                        'EPSFB B1时间迟滞(毫秒)', 'LNR载波关断B1 RSRP门限(dBm)',
-                                                        '网络架构优选的RSRP触发门限(dBm)', '基于覆盖的切换B1 RSRQ门限(0.5dB)',
-                                                        'EPSFB B1 RSRQ门限(0.5dB)']
-LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_1 = ['网元', 'NR小区标识', '异系统切换至E-UTRAN测量参数组标识', '基于覆盖的切换B1 RSRP门限(dBm)',
-                                                        '基于覆盖的切换B1B2幅度迟滞(0.5dB)', '基于覆盖的切换B1B2时间迟滞(毫秒)',
-                                                        'EPSFB B1 RSRP门限(dBm)', 'EPSFB B1幅度迟滞(0.5dB)',
-                                                        'EPSFB B1时间迟滞(毫秒)', 'LNR载波关断B1 RSRP门限(dBm)',
-                                                        '网络架构优选的RSRP触发门限(dBm)', '基于覆盖的切换B1 RSRQ门限(0.5dB)',
-                                                        'EPSFB B1 RSRQ门限(0.5dB)']
-LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2 = ['网元', 'NR小区标识', '异系统切换至E-UTRAN测量参数组标识', '基于覆盖的切换B1 RSRP门限(dBm)',
-                                                        '基于覆盖的切换B1B2幅度迟滞(0.5dB)', '基于覆盖的切换B1B2时间迟滞(毫秒)',
-                                                        'EPSFB B1 RSRP门限(dBm)', 'EPSFB B1幅度迟滞(0.5dB)',
-                                                        'EPSFB B1时间迟滞(毫秒)', 'LNR载波关断B1 RSRP门限(dBm)',
-                                                        '网络架构优选的RSRP触发门限(dBm)', '基于覆盖的切换B1 RSRQ门限(0.5dB)',
-                                                        'EPSFB B1 RSRQ门限(0.5dB)']
+LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0 = ['网元', 'NR小区标识', '异系统切换测量参数组标识', '异系统切换A1RSRP门限(dBm)',
+                                                    '异系统切换A2RSRP门限(dBm)', '异系统切换A1A2幅度迟滞(0.5dB)', '异系统切换A1A2时间迟滞(毫秒)',
+                                                    '基于覆盖的切换至E-UTRAN盲A2RSRP门限(dBm)', '基于覆盖的切换至E-UTRANB2RSRP门限1(dBm)',
+                                                    'VoNR/EPSFB自适应A2RSRP门限(dBm)', 'VoNR/EPSFB自适应A2事件时间迟滞(毫秒)',
+                                                    '异系统切换A2RSRQ门限(0.5dB)', '异系统切换A1RSRQ门限(0.5dB)',
+                                                    '基于覆盖的切换至E-UTRAN盲A2RSRQ门限(0.5dB)', '基于上行SINR的切换至E-UTRANB2RSRP门限1(dBm)',
+                                                    '异系统切换A1RSRP门限(毫瓦分贝)', '异系统切换A2RSRP门限(毫瓦分贝)', '异系统切换A1A2幅度迟滞(0.5分贝)',
+                                                    '基于覆盖的切换至E-UTRAN盲A2RSRP门限(毫瓦分贝)', '基于覆盖的切换至E-UTRANB2RSRP门限1(毫瓦分贝)',
+                                                    'VoNR/EPSFB自适应A2RSRP门限(毫瓦分贝)', '异系统切换A2RSRQ门限(0.5分贝)',
+                                                    '异系统切换A1RSRQ门限(0.5分贝)', '基于覆盖的切换至E-UTRAN盲A2RSRQ门限(0.5分贝)',
+                                                    '基于上行SINR的迁移至E-UTRANB2RSRP门限1(毫瓦分贝)']
+LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_1 = LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0
+LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_2 = LST_NRCELLINTERRHOMEAGRP_INTERRATHOMEASGROUPID_0
+LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_0 = ['网元', 'NR小区标识', '异系统切换至E-UTRAN测量参数组标识', '基于覆盖的切换B1RSRP门限(dBm)',
+                                                        '基于覆盖的切换B1B2幅度迟滞(0.5dB)', '基于覆盖的切换B1B2时间迟滞(毫秒)', 'EPSFBB1RSRP门限(dBm)',
+                                                        'EPSFBB1幅度迟滞(0.5dB)', 'EPSFBB1时间迟滞(毫秒)', 'LNR载波关断B1RSRP门限(dBm)',
+                                                        '网络架构优选的RSRP触发门限(dBm)', '基于覆盖的切换B1RSRQ门限(0.5dB)', 'EPSFBB1RSRQ门限(0.5dB)',
+                                                        'SpeedTest用户基于覆盖的切换B1RSRP门限(dBm)', '基于覆盖的切换B1RSRP门限(毫瓦分贝)',
+                                                        '基于覆盖的切换B1B2幅度迟滞(0.5分贝)', 'EPSFBB1RSRP门限(毫瓦分贝)', 'EPSFBB1幅度迟滞(0.5分贝)',
+                                                        'LNR载波关断B1RSRP门限(毫瓦分贝)', '网络架构优选的RSRP触发门限(毫瓦分贝)', '基于覆盖的切换B1RSRQ门限(0.5分贝)',
+                                                        'EPSFBB1RSRQ门限(0.5分贝)']
+LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_1 = LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_0
+LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2 = LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_0
 
-LST_NRDUCELLSRSMEAS = ['网元', 'NR DU小区标识', 'NSA TDM功控触发SINR幅度迟滞(0.1dB)',
-                       'NSA TDM功控触发SINR门限(0.1dB)', 'SRS TA测量开关',
-                       ' NSA 上行回落到LTE SINR迟滞(0.1dB)', 'NSA 上行回落到LTE SINR门限(0.1dB)',
-                       'Hyper Cell内TRP间切换的RSRP差值(0.5dB)', 'NSA上行路径选择SINR高门限(0.1dB)',
-                       'NSA上行路径选择SINR低门限(0.1dB)', 'NSA分流用户上行路径选择SINR门限(0.1dB)',
-                       'NSA上行路径选择SINR幅度迟滞(0.1dB)', 'NSA上行路径选择SINR时间迟滞(100毫秒)',
-                       'NSA上行路径变更至LTE速率比', 'NSA上行路径变更至NR速率比', 'NSA上行小包返回NR后惩罚时长(秒)',
-                       'NSA 上行回落到LTE SINR时间迟滞(100毫秒)', 'NSA上行回落到LTE SINR优化开关',
-                       'UL ROHC的SINR门限(0.1dB)', 'UL ROHC的SINR幅度迟滞(0.1dB)',
-                       'DMM TRP选择RSRP差值门限(dB)', '上行SRS测量值使用开关', 'SRS干扰门限(dB)',
-                       'NR迁移到E-UTRAN的上行SINR低门限(0.1dB)', 'E-UTRAN迁移到NR的SINR高门限(0.1dB)',
-                       'SRS TA异常保护门限(Ts)', 'SRS均衡前信干噪比低门限(0.2dB)', 'SRS测量优化策略',
-                       ' SRS RSRP异常门限(dB)', 'DMRS TA的SINR判决门限(dB)', 'SRS和DMRS TA差值门限(Ts)',
-                       'SRS测量扩展开关', ' SRS干扰下TA测量优化开关', 'SRS测量优化开关']
+LST_NRDUCELLSRSMEAS = ['网元', 'NRDU小区标识', 'NSATDM功控触发SINR幅度迟滞(0.1dB)', 'NSATDM功控触发SINR门限(0.1dB)', 'SRSTA测量开关',
+                       'NSA上行回落到LTESINR迟滞(0.1dB)', 'NSA上行回落到LTESINR门限(0.1dB)', 'HyperCell内TRP间切换的RSRP差值(0.5dB)',
+                       'NSA上行路径选择SINR高门限(0.1dB)', 'NSA上行路径选择SINR低门限(0.1dB)', 'NSA分流用户上行路径选择SINR门限(0.1dB)',
+                       'NSA上行路径选择SINR幅度迟滞(0.1dB)', 'NSA上行路径选择SINR时间迟滞(100毫秒)', 'NSA上行路径变更至LTE速率比',
+                       'NSA上行路径变更至NR速率比', 'NSA上行小包返回NR后惩罚时长(秒)', 'NSA上行回落到LTESINR时间迟滞(100毫秒)',
+                       'NSA上行回落到LTESINR优化开关', 'ULROHC的SINR门限(0.1dB)', 'ULROHC的SINR幅度迟滞(0.1dB)', 'DMMTRP选择RSRP差值门限(dB)',
+                       '上行SRS测量值使用开关', 'SRS干扰门限(dB)', 'NR迁移到E-UTRAN的上行SINR低门限(0.1dB)', 'E-UTRAN迁移到NR的SINR高门限(0.1dB)',
+                       'SRSTA异常保护门限(Ts)', 'SRS均衡前信干噪比低门限(0.2dB)', 'SRS测量优化策略', 'SRSRSRP异常门限(dB)',
+                       'DMRSTA的SINR判决门限(dB)', 'SRS和DMRSTA差值门限(Ts)', 'SRS测量扩展开关', 'SRS干扰下TA测量优化开关', 'SRS测量优化开关',
+                       '上行语音ROHC退出SINR门限(0.1dB)', 'NSATDM功控触发SINR幅度迟滞(0.1分贝)', 'NSATDM功控触发SINR门限(0.1分贝)',
+                       'NSA上行回落到LTESINR迟滞(0.1分贝)', 'NSA上行回落到LTESINR门限(0.1分贝)', 'HyperCell内TRP间切换的RSRP差值(0.5分贝)',
+                       'NSA上行路径选择SINR高门限(0.1分贝)', 'NSA上行路径选择SINR低门限(0.1分贝)', 'NSA分流用户上行路径选择SINR门限(0.1分贝)',
+                       'NSA上行路径选择SINR幅度迟滞(0.1分贝)', 'ULROHC的SINR门限(0.1分贝)', 'ULROHC的SINR幅度迟滞(0.1分贝)',
+                       'DMMTRP选择RSRP差值门限(分贝)', 'NR迁移到E-UTRAN的上行SINR低门限(0.1分贝)']
 
 LST_NRCELLQCIBEARER_QCI_1 = ['网元', 'NR小区标识', '服务质量等级', '流控参数组标识', 'AM模式PDCP参数组标识', 'UM模式PDCP参数组标识',
                              'RLC模式', 'DRX参数组标识', '异系统切换测量参数组标识', '异系统切换至E-UTRAN测量参数组标识',
@@ -115,26 +107,10 @@ LST_NRCELLQCIBEARER_QCI_1 = ['网元', 'NR小区标识', '服务质量等级', '
                              '负载均衡的上行吞吐率门限(千比特/秒)', '负载均衡的下行缓存数据量(千比特)',
                              '负载均衡的上行BSR数据量(千比特)', '负载均衡的检查时长(秒)', 'NSA用户异频切换测量参数组标识',
                              '低速用户同频切换测量参数组标识', '低速用户异频切换测量参数组标识', 'RedCap用户DRX参数组标识',
-                             '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识', 'QCI算法参数组标识']
+                             '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识', 'QCI算法参数组标识', '业务差异化算法开关']
 
-LST_NRCELLQCIBEARER_QCI_5 = ['网元', 'NR小区标识', '服务质量等级', '流控参数组标识', 'AM模式PDCP参数组标识',
-                             'UM模式PDCP参数组标识', 'RLC模式', 'DRX参数组标识', '异系统切换测量参数组标识',
-                             '异系统切换至E-UTRAN测量参数组标识', '同频切换测量参数组标识', '异频切换测量参数组标识',
-                             'NSA DC配置参数组标识', '切换与QoS流程冲突处理策略', '负载均衡算法开关',
-                             ' 负载均衡的下行吞吐率门限(千比特/秒)', '负载均衡的上行吞吐率门限(千比特/秒)',
-                             '负载均衡的下行缓存数据量(千比特)', '负载均衡的上行BSR数据量(千比特)', '负载均衡的检查时长(秒)',
-                             'NSA用户异频切换测量参数组标识', '低速用户同频切换测量参数组标识', '低速用户异频切换测量参数组标识',
-                             'RedCap用户DRX参数组标识', '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识',
-                             'QCI算法参数组标识']
-LST_NRCELLQCIBEARER_QCI_9 = ['网元', 'NR小区标识', '服务质量等级', '流控参数组标识', 'AM模式PDCP参数组标识',
-                             'UM模式PDCP参数组标识', 'RLC模式', 'DRX参数组标识', '异系统切换测量参数组标识',
-                             '异系统切换至E-UTRAN测量参数组标识', '同频切换测量参数组标识', '异频切换测量参数组标识',
-                             'NSA DC配置参数组标识', '切换与QoS流程冲突处理策略', '负载均衡算法开关',
-                             ' 负载均衡的下行吞吐率门限(千比特/秒)', '负载均衡的上行吞吐率门限(千比特/秒)',
-                             '负载均衡的下行缓存数据量(千比特)', '负载均衡的上行BSR数据量(千比特)', '负载均衡的检查时长(秒)',
-                             'NSA用户异频切换测量参数组标识', '低速用户同频切换测量参数组标识', '低速用户异频切换测量参数组标识',
-                             'RedCap用户DRX参数组标识', '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识',
-                             'QCI算法参数组标识']
+LST_NRCELLQCIBEARER_QCI_5 = LST_NRCELLQCIBEARER_QCI_1
+LST_NRCELLQCIBEARER_QCI_9 = LST_NRCELLQCIBEARER_QCI_1
 
 LST_NRCELLSERVEXP = ['网元', 'NR小区标识', '基于语音质量的异频切换的丢包率门限', '基于业务质量的异频切换A5 RSRP门限2(dBm)',
                      '基于业务质量的异频切换A5 RSRQ门限(0.5dB)', '语音业务丢包率评估周期(秒)', '语音质量恢复的丢包率门限',
@@ -182,13 +158,13 @@ LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_2 = ['网元', 'NR小区标识',
                                                      '同频条件切换的候选邻区A3偏置(0.5dB)', '异构组网同频A3偏置(0.5dB)',
                                                      '室内外交叠区A3偏置(0.5dB)', '同频切换覆盖扩展的A3偏置(0.5dB)']
 
-LST_NRDUCELLSELCONFIG = ['NR DU小区标识', 'SIB1净荷精简策略', ' 最低接收电平(2dBm)', '最低接收信号质量(dB)', 'SIB可选信元指示',
+LST_NRDUCELLSELCONFIG = ['网元', 'NR DU小区标识', 'SIB1净荷精简策略', ' 最低接收电平(2dBm)', '最低接收信号质量(dB)', 'SIB可选信元指示',
                          ' 小区为运营商保留', 'RA-SDT数据量门限(Byte)', 'RA-SDT RSRP门限(dBm)', 'UE最大发射功率(dBm)']
 
 # =====================================================================================================================================
 
 
-LST_CELL = ['本地小区标识', '小区名称', 'Csg 指示', '上行循环前缀长度', '下行循环前缀长度', 'NB-IoT小区指示', '覆盖等级类型',
+LST_CELL = ['网元', '本地小区标识', '小区名称', 'Csg 指示', '上行循环前缀长度', '下行循环前缀长度', 'NB-IoT小区指示', '覆盖等级类型',
             '频带', '上行频点配置指示', '上行频点', '下行频点', '上行带宽', '下行带宽', '小区标识', '物理小区标识', '附加频谱散射',
             '小区激活状态', '小区闭塞优先级', '小区闭塞执行时长(分)', '小区双工模式', '上下行子帧配比', '特殊子帧配比',
             'SSP6下行导频时隙模式', '小区主备模式', '服务小区偏置(dB)', '服务小区频率偏置(dB)', '根序列索引', '高速小区指示',
@@ -199,7 +175,7 @@ LST_CELL = ['本地小区标识', '小区名称', 'Csg 指示', '上行循环前
             '下行闭塞RB个数', 'SFN主小区标签', '多小区共享模式', ' 辅框小区SFN自动恢复时间(小时)', '压缩带宽控制干扰模式',
             '上行闭塞RB个数偏置', '超高速小区根序列索引']
 
-LST_CELLSEL = ['本地小区标识', '最低接收电平(2dBm)', '最低接收电平偏置(2dB)', '最低接入信号质量(dB)', '最小接收信号接收质量偏置值配置指示',
+LST_CELLSEL = ['网元', '本地小区标识', '最低接收电平(2dBm)', '最低接收电平偏置(2dB)', '最低接入信号质量(dB)', '最小接收信号接收质量偏置值配置指示',
                '最小接收信号接收质量偏置值(dB)', 'CE最低接收电平(2dBm)', 'CE最低接入信号质量(dB)', 'CE ModeB模式最低接入信号质量(dB)',
                'CE ModeB模式最低接收电平(2dBm)', 'NB-IoT UE小区选择功率偏置值(dB)']
 
@@ -426,3 +402,7 @@ G5_COMMAND_NAME_LIST = ['LST NRDUCELL:;', 'LST GNODEBFUNCTION:;', 'LST NRCELLALG
                         'LST NRCELLFREQRELATION:;', 'LST NRCELLEUTRANNFREQ:;', 'LST NRDUCELLINTRFIDENT:;',
                         'LST NRCELLINTRAFHOMEAGRP:INTRAFREQHOMEASGROUPID=0;',
                         'LST NRCELLINTRAFHOMEAGRP:INTRAFREQHOMEASGROUPID=2;']
+
+G5_AFTER_PROCESSING = {}
+
+G4_AFTER_PROCESSING = {}
