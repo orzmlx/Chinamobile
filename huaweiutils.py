@@ -26,9 +26,9 @@ def output_csv(df, file_name, out_path, is_format):
         file_name = remove_digit(file_name, ['=', ":"])
     file_out_path = os.path.join(out_path, file_name)
     if file_name in os.listdir(out_path):
-        df.to_csv(file_out_path, index=False, mode='a', header=False)
+        df.to_csv(file_out_path, index=False)
     else:
-        df.to_csv(file_out_path, index=False, mode='a', header=True)
+        df.to_csv(file_out_path, index=False)
 
 
 def only_has_digtal_diff(str1, str2):
@@ -107,7 +107,6 @@ def flatten_features(df, c):
             current_cols = [0]
         first_row = edit_df.reset_index(drop=True).iloc[0]
         new_cols = []
-        start_index = 0
         for col in current_cols:
             cell = first_row[col]
             # 如果有部分为空,那么需要不停往下检查，直到找到非空
@@ -182,7 +181,8 @@ def freq_judge(df, param):
         value = str(value)
         recommand = str(recommand)
         if value == 'nan':
-            judge_res.append("没有找到参考值")
+            # judge_res.append("没有找到参考值")
+            judge_res.append(False)
             continue
         if recommand.find('[') >= 0 and recommand.find(']') >= 0:
             judge_res.append(range_judge(value, recommand))
@@ -246,8 +246,8 @@ def single_value_judge(x, standard):
         for c in replace_char:
             x = str(x).replace(c, "")
         return str(x) == standard
-    except:
-        print()
+    except Exception as e:
+        logging.error(e)
 
 
 def list_judge(x, standard):
@@ -266,18 +266,18 @@ def range_judge(x, standard):
         raise Exception("范围推荐值:【" + standard + "】格式不符合要求")
     else:
         try:
-            min = int(splits[0])
-            max = int(splits[1])
-            if min > max:
-                temp = max
-                max = min
-                min = temp
-            if min <= int(float(x)) <= max:
+            min_value = int(splits[0])
+            max_value = int(splits[1])
+            if min_value > max_value:
+                temp = max_value
+                max_value = min_value
+                min_value = temp
+            if min_value <= int(float(x)) <= max_value:
                 return True
             else:
                 return False
-        except:
-            raise Exception("范围推荐值:【" + standard + "】无法转换为数字")
+        except Exception as e:
+            raise Exception("范围推荐值:【" + standard + "】无法转换为数字", e)
 
 
 def add_judgement(x, original_name, c):

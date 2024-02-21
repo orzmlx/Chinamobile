@@ -27,7 +27,7 @@ class HuaweiIntermediateGen:
             self.site_info = pd.read_csv(g4_site_info, usecols=['CGI', '4G频段'])
             self.site_info.rename(columns={'4G频段': '共址类型'}, inplace=True)
             self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
-
+        self.site_info.drop_duplicates(subset=['CGI'], keep='last', inplace=True)
         self.g5_common_table = g5_common_table
         self.g4_common_table = g4_common_table
         self.file_path = data_path
@@ -40,14 +40,14 @@ class HuaweiIntermediateGen:
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
-        self.all_co_location = ""  # 所有的共址类型
+        self.all_co_location = [np.nan]  # 所有的共址类型
         if self.system == '4G':
 
             self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
             self.all_band = huaweiutils.list_to_str(band_list)
             self.all_area_classes = huaweiutils.list_to_str(self.g4_base_info_df['区域类别'].unique().tolist())
             self.all_cover_classes = huaweiutils.list_to_str(self.g4_base_info_df['覆盖类型'].unique().tolist())
-            self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist())
+            self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist()) + np.nan
         else:
             self.g5_base_info_df = self.get_huawei_5g_base_info()
             self.all_band = '4.9G|2.6G|700M'
@@ -94,7 +94,9 @@ class HuaweiIntermediateGen:
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
                                      '小区区域类别': '区域类别', '工作频段': '频段'},
                             inplace=True)
-        common_table['区域类别'] = common_table['区域类别'].apply(lambda x: str(x).replace('(农村)', ""))
+        common_table['区域类别'].fillna(value='一类', inplace=True)
+        # common_table['区域类别'] = common_table['区域类别'].apply(lambda x: str(x).replace('三类(农村)', "三类"))
+        common_table['区域类别'] = common_table['区域类别'].map({"一类": "一类", "二类": "二类", "三类(农村)": "三类", '四类(农村)': '农村'})
         # 覆盖类型中，室内外和空白，归为室外
         common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
         common_table['覆盖类型'].fillna("室外", inplace=True)
@@ -244,7 +246,7 @@ class HuaweiIntermediateGen:
             file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
             read_res, base_cols = self.read_data_by_command(file_name, params, g)
             if read_res.empty:
-                #有可能没有数据，因为没有加这个命令
+                # 有可能没有数据，因为没有加这个命令
                 continue
             read_res = self.before_add_judgement(read_res, g)
             for p in params:
@@ -379,7 +381,6 @@ class HuaweiIntermediateGen:
             non_switch_col.extend(check_params)
             logging.debug("读取文件:【" + file_name + "】读取的列:【" + str(non_switch_col) + "】")
             non_switch_df = pd.read_csv(file_name, usecols=non_switch_col)
-        # result_df = switch_df.merge(non_switch_df, how='left', on=base_cols)
         if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
@@ -432,15 +433,15 @@ class HuaweiIntermediateGen:
     def fill_col_na(self, standard, cols):
         for c in cols:
             if c == '区域类别':
-                standard[c].fillna(self.all_area_classes, inplace=True)
+                standard[c].fillna(self.all_area_classes + "|" + 'nan', inplace=True)
             elif c == '覆盖类型':
-                standard[c].fillna(self.all_cover_classes, inplace=True)
+                standard[c].fillna(self.all_cover_classes + "|" + 'nan', inplace=True)
             elif c == '频段':
-                standard[c].fillna(self.all_band, inplace=True)
+                standard[c].fillna(self.all_band + "|" + 'nan', inplace=True)
             elif c == '共址类型':
-                standard[c].fillna(self.all_co_location, inplace=True)
+                standard[c].fillna(self.all_co_location + "|" + 'nan', inplace=True)
             elif c == '对端频带':
-                standard[c].fillna(self.end_band, inplace=True)
+                standard[c].fillna(self.end_band + "|" + 'nan', inplace=True)
             else:
                 raise Exception(c + ",该字段没有定义过滤")
 
@@ -460,15 +461,20 @@ class HuaweiIntermediateGen:
             for r in result:
                 new_row = copy.deepcopy(row)
                 for idx, e in enumerate(list(r)):
-                    new_row[cols[idx]] = e
+                    if e == 'nan':
+                        new_row[cols[idx]] = np.nan
+                    else:
+                        new_row[cols[idx]] = e
                 add_rows.append(new_row)
             standard = standard.drop(index=index)
             standard = standard.append(add_rows)
         return standard
 
     def add_cell_judgement(self, df, standard, param):
-        standard = self.expand_standard(standard, ['区域类别', '覆盖类型', '频段', '共址类型'])
-        df = df.merge(standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']], how='left', on=['频段', '覆盖类型', '区域类别', '共址类型'])
+        standard = self.expand_standard(standard, ['区域类别', '覆盖类型', '频段', '共址类型']).reset_index(drop=True)
+        #  df = df.merge(standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']],how='left', on=['频段', '覆盖类型', '区域类别', '共址类型'])
+        df = pd.merge(df, standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']], how='left',
+                      on=['频段', '覆盖类型', '区域类别', '共址类型'])
         df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
         df[param + "#合规"] = huaweiutils.freq_judge(df, param)
         return df
@@ -506,8 +512,11 @@ class HuaweiIntermediateGen:
                     if pre_suffix == '合规' and suffix == '推荐值':
                         content_cols[index - 1] = k
                         content_cols[index] = pre_element
+        base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
+                     '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
 
-        return list(set(cols) - set(content_cols)) + content_cols
+        # return list(set(cols) - set(content_cols)) + content_cols
+        return base_cols + content_cols
 
     def generate_report(self):
         """
@@ -521,6 +530,7 @@ class HuaweiIntermediateGen:
         out = os.path.join(self.file_path, 'check_result', 'cell')
         if not os.path.exists(out):
             os.makedirs(out)
+        cell_df.dropna(subset=['地市'], how='any', inplace=True)
         cell_df.to_csv(os.path.join(out, 'param_check_cell.csv'), index=False, encoding='utf_8_sig')
         freq_df_list = self.get_freq_table(self.freq_config_df)
         for df in freq_df_list:
@@ -530,6 +540,7 @@ class HuaweiIntermediateGen:
             out = os.path.join(self.file_path, 'check_result', 'freq')
             if not os.path.exists(out):
                 os.makedirs(out)
+            d.dropna(subset=['地市'], how='any', inplace=True)
             d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
                      index=False, encoding='utf_8_sig')
 

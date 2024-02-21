@@ -13,11 +13,13 @@ import logging
 
 class reporter:
 
-    def __init__(self, check_result, outpath, standard_path, cities):
+    def __init__(self, check_result, outpath, standard_path, cities, date):
+        self.date = date
         self.result = check_result
         self.outpath = outpath
         self.cities = cities
         self.standard_path = standard_path
+        self.manufacturers = ['huawei', 'zte', 'ericsson']
         self.point_standard_df = pd.read_excel(self.standard_path, sheet_name='小区级别核查配置', true_values=["是"],
                                                false_values=["否"], dtype=str)
         self.multi_standard_df = pd.read_excel(self.standard_path, sheet_name='频点级别核查配置', true_values=["是"],
@@ -69,9 +71,13 @@ class reporter:
         cell.fill = PatternFill('solid', fgColor=color)
 
     def output_general_check_result(self):
-        self.get_statistic()
-        wb = openpyxl.load_workbook(filename=self.standard_path)
-        sheet = wb.get_sheet_by_name('核查结果_test')
+        self.get_all_statistic()
+        # if not os.path.exists(self.report_path):
+        # 创建一个工作簿
+        wb = openpyxl.Workbook()
+        # wb = openpyxl.load_workbook(filename=self.standard_path)
+        # sheet = wb.get_sheet_by_name('核查结果_test')
+        sheet = wb.active
         # all_params = self.param.dif['参数名称'].unique().tolist()
         start_row = 1
         start_col = 1
@@ -89,24 +95,85 @@ class reporter:
             self.create_common_cell(common_cell_list[index], sheet, 1, start_row + 1)
             end_col = self.create_result_header(sheet, len(common_cell_list[index]) + 1, start_row + 1)
             city_row = start_row + 3
-            for c in cities:
+            for c in self.cities:
                 cell = sheet.cell(row=city_row, column=1, value=c)
                 self.write_city_statistic_data(sheet, c, city_row, end_col, header_value)
                 cell.font = Font(u'微软雅黑', size=10, bold=True, color='00000000')
                 cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
                 city_row = city_row + 1
             start_row = start_row + 2 + len(self.cities) + 1
-        wb.save("C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果1.xlsx")
+            summary_row = city_row - 1
+            self.write_summary_statistic(sheet, summary_row, end_col, header_value)
+        report_outpath = os.path.join(self.outpath, '互操作参数核查结果' + self.date + '.xlsx')
+        wb.save(report_outpath)
 
-    def get_statistic(self):
-        g5_freq_stat_dict = self.statistic_freq('5G')
-        g5_cell_stat_dict = self.statistic_cell('5G')
-        g4_freq_stat_dict = self.statistic_freq('4G')
-        g4_cell_stat_dict = self.statistic_cell('4G')
-        self.g5_statistic_dict = self.merge_city_stat(g5_freq_stat_dict, g5_cell_stat_dict)
-        self.g4_statistic_dict = self.merge_city_stat(g4_freq_stat_dict, g4_cell_stat_dict)
+    def write_summary_statistic(self, sheet, summary_row, end_col, header_value):
+        statistic_dict = self.get_city_dict(header_value, None)
+        if len(statistic_dict) == 0:
+            return
+        param_summary_dict = self.get_param_summary_dict(statistic_dict)
+        summary_value = 0
+        for i in range(end_col):
+            if i == 0 or i == 1 or i == 2:
+                continue
+            param_name = sheet.cell(row=summary_row - len(self.cities), column=i).value
+            param_stat = param_summary_dict[param_name]
+            if param_stat[0] == 0 and param_stat[1] == 0:
+                continue
+            if header_value.find('不合规数量') >= 0:
+                write_value = param_stat[1]
+                sheet.cell(row=summary_row, column=i, value=write_value)
+            elif header_value.find('核查项总数') >= 0:
+                write_value = param_stat[1] + param_stat[0]
+                sheet.cell(row=summary_row, column=i, value=write_value)
+            elif header_value.find('合规率') >= 0:
+                if param_stat[1] + param_stat[0] == 0:
+                    write_value = 0
+                else:
+                    write_value = param_stat[0] / (param_stat[1] + param_stat[0])
+                sheet.cell(row=summary_row, column=i, value=str("{:.2%}".format(write_value)))
+            else:
+                raise Exception(header_value + '没有合适的数据汇集方法')
+            if header_value.find('合规率') >= 0:
+                summary_value = param_summary_dict['summary'][0] / (
+                        param_summary_dict['summary'][1] + param_summary_dict['summary'][0])
+                summary_value = str("{:.2%}".format(summary_value))
+            else:
+                summary_value = summary_value + int(write_value)
+        sheet.cell(row=summary_row, column=2, value=summary_value)
 
-    def merge_city_stat(self, g5_freq_stat_dict, g5_cell_stat_dict):
+    def get_param_summary_dict(self, statistic_dict):
+        param_summary_dict = {}
+        all_param_qualified_sum = 0
+        all_param_unqualified_sum = 0
+        for p in self.params:
+            param_qualified_sum = 0
+            param_unqualified_sum = 0
+            for city in statistic_dict:
+                city_statistic = statistic_dict[city]
+                if p not in city_statistic:
+                    logging.debug("统计中没有发现参数:" + p)
+                    continue
+                param_statistic = city_statistic[p]
+                qualified_value = param_statistic[0]
+                unqualified_value = param_statistic[1]
+                param_qualified_sum = param_qualified_sum + qualified_value
+                param_unqualified_sum = param_unqualified_sum + unqualified_value
+            param_summary_dict[p] = (param_qualified_sum, param_unqualified_sum)
+            all_param_qualified_sum = all_param_qualified_sum + param_qualified_sum
+            all_param_unqualified_sum = all_param_unqualified_sum + param_unqualified_sum
+        param_summary_dict['summary'] = (all_param_qualified_sum, all_param_unqualified_sum)
+        return param_summary_dict
+
+    def get_all_statistic(self):
+        g5_freq_stat_dict = self.statistic_city_data('5G', '_freq.csv')
+        g5_cell_stat_dict = self.statistic_city_data('5G', '_cell.csv')
+        g4_freq_stat_dict = self.statistic_city_data('4G', '_freq.csv')
+        g4_cell_stat_dict = self.statistic_city_data('4G', '_cell.csv')
+        self.g5_statistic_dict = self.merge_city_statistic(g5_freq_stat_dict, g5_cell_stat_dict)
+        self.g4_statistic_dict = self.merge_city_statistic(g4_freq_stat_dict, g4_cell_stat_dict)
+
+    def merge_city_statistic(self, g5_freq_stat_dict, g5_cell_stat_dict):
         freq_cities = list(g5_freq_stat_dict.keys())
         cell_cities = list(g5_cell_stat_dict.keys())
         freq_cities.extend(cell_cities)
@@ -119,18 +186,17 @@ class reporter:
             res_dict[city] = param_dict
         return res_dict
 
-    def statistic_cell(self, system):
-        cell_flist = huaweiutils.find_file(os.path.join(self.outpath, system), '_cell.csv')
+    def statistic_city_data(self, system, suffix):
+        all_flist = []
+        for m in self.manufacturers:
+            find_path = os.path.join(self.outpath, m, self.date, system)
+            flist = huaweiutils.find_file(find_path, suffix)
+            all_flist.extend(flist)
         city_res_dict = {}
-        for f in cell_flist:
-            df = pd.read_csv(f)
-            self.statistic_data(df, city_res_dict)
-        return city_res_dict
-
-    def statistic_freq(self, system):
-        freq_flist = huaweiutils.find_file(os.path.join(self.outpath, system), '_freq.csv')
-        city_res_dict = {}
-        for f in freq_flist:
+        if len(all_flist) == 0:
+            logging.info(self.outpath + "下没有找到包含" + suffix + '的文件')
+            return city_res_dict
+        for f in all_flist:
             df = pd.read_csv(f)
             self.statistic_data(df, city_res_dict)
         return city_res_dict
@@ -160,8 +226,9 @@ class reporter:
             for c in judge_cols:
                 if c == '地市':
                     continue
-                c_qualified_num = len(df[df[c] == True])
-                c_unqualidied_num = len(df[df[c] == False])
+                g[c] = g[c]
+                c_qualified_num = len(g[g[c] == True])
+                c_unqualidied_num = len(g[g[c] == False])
                 c = c.split('#')[0]
                 # 将简化名称放入字典
                 c = self.params_df[self.params_df['原始参数名称'] == c]['参数名称'].iloc[0]
@@ -182,13 +249,23 @@ class reporter:
         qualified_num = statistic_tuple[0]
         return qualified_num, unqualified_num
 
-    def write_city_statistic_data(self, sheet, city, city_row, end_col, header_value):
+    def get_city_dict(self, header_value, city):
         if header_value.find('4G') >= 0:
-            city_dict = self.g4_statistic_dict.get(city, {})
+            city_dict = self.g4_statistic_dict.get(city, {}) if city is not None else self.g4_statistic_dict
         elif header_value.find('5G') >= 0:
-            city_dict = self.g5_statistic_dict.get(city, {})
+            city_dict = self.g5_statistic_dict.get(city, {}) if city is not None else self.g5_statistic_dict
         else:
             raise Exception(header_value + "找不到对应的统计数据")
+        return city_dict
+
+    def write_city_statistic_data(self, sheet, city, city_row, end_col, header_value):
+        # if header_value.find('4G') >= 0:
+        #     city_dict = self.g4_statistic_dict.get(city, {})
+        # elif header_value.find('5G') >= 0:
+        #     city_dict = self.g5_statistic_dict.get(city, {})
+        # else:
+        #     raise Exception(header_value + "找不到对应的统计数据")
+        city_dict = self.get_city_dict(header_value, city)
         if 0 == len(city_dict):
             logging.info("没有找到【" + city + "】的统计数据,请检查统计表")
             return
@@ -216,12 +293,12 @@ class reporter:
                 sheet.cell(row=city_row, column=i, value=unqualified_num + qualified_num)
             elif header_value == '4G小区参数配置核查合规率':
                 sheet.cell(row=city_row, column=i,
-                           value=str((qualified_num / (unqualified_num + qualified_num)) ) )
+                           value=str((qualified_num / (unqualified_num + qualified_num))))
             elif header_value == '5G小区核查项总数':
                 sheet.cell(row=city_row, column=i, value=unqualified_num + qualified_num)
             elif header_value == '5G小区参数配置核查合规率':
                 sheet.cell(row=city_row, column=i,
-                           value=str("{:.2%}".format((qualified_num / (unqualified_num + qualified_num)))) )
+                           value=str("{:.2%}".format((qualified_num / (unqualified_num + qualified_num)))))
             elif header_value == '5G小区不合规数量':
                 sheet.cell(row=city_row, column=i, value=unqualified_num)
         if header_value.find('不合规数量') >= 0:
@@ -230,16 +307,18 @@ class reporter:
             sheet.cell(row=city_row, column=2, value=unqualified_sum + qualified_sum)
         elif header_value.find('合规率') >= 0:
             sheet.cell(row=city_row, column=2,
-                       value=str("{:.2%}".format((unqualified_sum / (unqualified_sum + unqualified_sum)) )))
+                       value=str("{:.2%}".format((qualified_sum / (qualified_sum + unqualified_sum)))))
 
 
 if __name__ == "__main__":
     check_result = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\check_result.csv'
+    # 所有的数据，包括中兴，华为，爱立信
     outpath = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result'
     standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
     cities = ['湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '衢州', '绍兴', '台州', '温州', '舟山', '汇总']
-
-    reporter = reporter(check_result, outpath, standard_path, cities)
+    report_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果1.xlsx"
+    date = '20240121'
+    reporter = reporter(check_result, outpath, standard_path, cities, date)
     reporter.output_general_check_result()
 # cell_stat_res = reporter.statistic_cell('5G')
 # cell_stat_res = reporter.statistic_freq('5G')
