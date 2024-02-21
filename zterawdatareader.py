@@ -8,11 +8,18 @@ import zteutils
 
 class ZteRawDataReader:
     def __init__(self, zte_raw_data_path, zte_config_file_path, system):
+        self.zte_config_file_path = zte_config_file_path
+        self.zte_raw_data_path = zte_raw_data_path
+        self.system = system
         self.temp_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240121\\5G\\zte_raw_data_test\\temp"
+
+
+    def output_format_data(self):
         # self.read_zte_data(zte_config_file_path, zte_raw_data_path, system)
-        zte_param_match = pd.read_excel(zte_config_file_path, engine='openpyxl', sheet_name='数据匹配')
-        match_outpath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240121\\5G\\zte_raw_data_test\\temp1"
-        self.match_zte_data(zte_param_match,match_outpath)
+        # zte_param_match = pd.read_excel(zte_config_file_path, engine='openpyxl', sheet_name='数据匹配')
+        # self.match_zte_data(zte_param_match)
+        zte_param_gather = pd.read_excel(self.zte_config_file_path, engine='openpyxl', sheet_name='数据汇聚')
+        self.gather_files(zte_param_gather)
 
     def read_zte_data(self, zte_config_file_path, zte_raw_data_path, system):
         zte_demand_param = pd.read_excel(zte_config_file_path, engine='openpyxl', sheet_name='需求参数')
@@ -34,6 +41,27 @@ class ZteRawDataReader:
                 sheet_name = row[1]
                 # copy_sheet_df = copy.deepcopy(sheet_df)
                 self.process_sheet(sheet_df, zte_param_process, sheet_name, raw_output_path)
+
+    def gather_files(self, gather_df):
+        grouped = gather_df.groupby('另存文件名')
+        for new_file_name, g in grouped:
+            relative_index = 0
+            merge_result = pd.DataFrame()
+            gather_out_path = os.path.join(os.path.split(self.temp_path)[0], new_file_name + '.csv')
+            for index, row in g.iterrows():
+                left_file_name = row['CSV名']
+                left_file_cols = row['合并字段']
+                on = row['匹配字段']
+                left_file_cols = left_file_cols.split('|') if left_file_cols.find('|') >= 0 else [left_file_cols]
+                on = on.split('|') if on.find('|') >= 0 else [on]
+                left_file_path = os.path.join(self.temp_path, left_file_name + '.csv')
+                left_file_df = pd.read_csv(left_file_path, usecols=left_file_cols)
+                if relative_index == 0:
+                    merge_result = left_file_df
+                else:
+                    merge_result = merge_result.merge(left_file_df, on=on, how='outer')
+                relative_index = relative_index + 1
+            merge_result.to_csv(gather_out_path, index=False, encoding='utf_8_sig')
 
     def process_sheet(self, sheet_df, zte_param_process, sheet_name, raw_output_path):
         sheet_process = zte_param_process[zte_param_process['CVS名'] == sheet_name]
@@ -89,49 +117,60 @@ class ZteRawDataReader:
         left_on = row['参数名1']
         right_on = row['参数名2']
         right_file = row['匹配文件']
+        left_file = row['主文件']
         right_file_demand = row['所需字段']
-        right_file_demand_rename = row['字段更名']
+        right_demand_rename = row['字段更名']
         right_demand_names = right_file_demand.split('|') if right_file_demand.find('|') >= 0 else [right_file_demand]
-        right_demand_renames = right_file_demand_rename.split('|') if right_file_demand_rename.find('|') >= 0 else [
-            right_file_demand_rename]
+        right_demand_renames = right_demand_rename.split('|') if right_demand_rename.find('|') >= 0 else [
+            right_demand_rename]
         if len(right_demand_names) != len(right_demand_renames):
             raise Exception("所需字段和字段更名不相对应,出错行数:" + str(index))
         # 右表重命名
         for index, name in enumerate(right_demand_names):
-            right_file_df.rename(columns={name: right_demand_renames[index]})
             if name not in right_file_cols:
-                raise Exception("列名:" + name + ",不在" + right_file+"文件中,出错行号:" + str(index))
-        if right_on not in right_file_cols:
-            raise Exception("列名:" + right_on + ",不在" + right_file+"文件中,出错行号:" + str(index))
-        if left_on not in left_file_cols:
-            raise Exception("列名:" + left_on + ",不在" + right_file+"文件中,出错行号:" + str(index))
+                raise Exception("列名:" + name + ",不在" + right_file + "文件中,出错行号:" + str(index))
+            # if left_on != right_on:
+            #     right_file_df.rename(columns={right_on: left_on}, inplace=True)
+            right_file_df.rename(columns={name: right_demand_renames[index]}, inplace=True)
+        right_ons = right_on.split('|') if right_on.find('|') >= 0 else [right_on]
+        left_ons = left_on.split('|') if left_on.find('|') >= 0 else [left_on]
+        for on in right_ons:
+            if on not in right_file_cols:
+                raise Exception("列名:" + on + ",不在" + right_file + "文件中,出错行号:" + str(index))
+        for on in left_ons:
+            if on not in left_file_cols:
+                raise Exception("列名:" + on + ",不在" + left_file + "文件中,出错行号:" + str(index))
 
-    def match_zte_data(self, zte_param_match,outpath):
-        grouped = zte_param_match.groupby('主文件')
+    def match_zte_data(self, zte_param_match):
+        grouped = zte_param_match.groupby('主文件', sort=False)
         for left_file, g in grouped:
             left_file_path = os.path.join(self.temp_path, left_file + '.csv')
-            left_file_df = pd.read_csv(left_file_path)
+            try:
+                left_file_df = pd.read_csv(left_file_path, dtype='str', encoding='gbk')
+            except Exception as e:
+                left_file_df = pd.read_csv(left_file_path, dtype='str')
             for index, row in g.iterrows():
                 index = index + 2
                 left_on = row['参数名1']
                 right_on = row['参数名2']
-                right_file = os.path.join(self.temp_path, row['匹配文件'] + '.csv')
-                right_file_demand_name = row['所需字段']
+                right_file = row['匹配文件']
+                right_file_demand = row['字段更名']
+                if right_file == '地市' and left_file == 'NRCellCU-1':
+                    city_df = pd.read_excel(self.zte_config_file_path, sheet_name='地市关系', engine='openpyxl',
+                                            dtype='str')
+                    city_df = city_df[city_df['制式'] == self.system][['地市', '子网ID']]
+                    left_file_df = left_file_df.merge(city_df, how='left', on=right_on)
+                    left_file_df.to_csv(left_file_path, index=False, encoding='utf_8_sig')
+                    continue
+                right_file = os.path.join(self.temp_path, right_file + '.csv')
                 right_file_df = pd.read_csv(right_file)
                 self.valid_and_process_configuration(row, right_file_df, left_file_df, index)
-                if left_on != right_on:
-                    right_file_df.rename(columns={right_on: left_on}, inplace=True)
-
-                right_file_demand = row['所需字段']
                 right_demand_names = right_file_demand.split('|') if right_file_demand.find('|') >= 0 else [
                     right_file_demand]
                 right_demand_names.append(left_on)
                 right_file_df = right_file_df[right_demand_names]
                 left_file_df = left_file_df.merge(right_file_df, on=left_on, how='left')
-                match_path = os.path.join(outpath, left_file + '.csv')
-                left_file_df.to_csv(match_path, index=False, encoding='utf_8_sig')
+                # match_path = os.path.join(outpath, left_file + '.csv')
+                left_file_df.to_csv(left_file_path, index=False, encoding='utf_8_sig')
 
 
-if __name__ == "__main__":
-    raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\RANCM-自定义参数模板-chaxun-20240109104733.xlsx"
-    reader = ZteRawDataReader(raw_data_path)
