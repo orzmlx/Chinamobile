@@ -82,7 +82,6 @@ class param_selector:
         self.freq_df = pd.DataFrame()
         self.pre_params = []
 
-
     def sort_config(self, config):
         """
             按qci重新命名参数
@@ -663,8 +662,11 @@ class param_selector:
             cell_df = self.get_cell_table(self.cell_config_df)
             order_cols, first_class_dict = self.sort_result(cell_df.columns.tolist(), self.cell_config_df, base_cols)
             cell_df = cell_df[order_cols]
-            #将区域类型为空的之前填补成农村区域的站点还原
-            cell_df[cell_df['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
+            # 将区域类型为空的之前填补成农村区域的站点还原
+            na_index = cell_df[cell_df['CGI'].isin(self.na_area_cgi)].index.tolist()
+            if len(na_index) > 0:
+                select_col_index = cell_df.columns.get_loc('区域类别')
+                cell_df.iloc[na_index, select_col_index] = np.nan
             self.cell_df = cell_df
             out = os.path.join(self.file_path, 'check_result', 'cell')
             if not os.path.exists(out):

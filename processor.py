@@ -135,11 +135,11 @@ if __name__ == '__main__':
     g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv"
     raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
     # read_raw_data(path, '5G', '20240226', 'huawei')
-    read_raw_data(path, '5G', '20240121', 'zte')
+    #read_raw_data(path, '5G', '20240121', 'zte')
     target_directory = os.path.join(path, 'huawei', date, '5G')
     all_cell_check_result_path = os.path.join(target_directory, check_result_name)
     report_path = os.path.join(target_directory, 'huawei', date, '互操作参数核查结果.xlsx')
-    #cell_class_dict, freq_class_dict = evaluate(path, '5G', 'huawei', date, base_cols)
+    cell_class_dict, freq_class_dict = evaluate(path, '5G', 'huawei', date, base_cols)
    # combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name, cell_class_dict)
     # freq_cell_suffix = ['LST NRCELLFREQRELATION_freq.csv', 'LST NRCELLEUTRANNFREQ_freq.csv']
     # for f in freq_cell_suffix:
