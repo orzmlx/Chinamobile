@@ -7,8 +7,101 @@ from difflib import SequenceMatcher
 import numpy as np
 import pathlib
 import math
+import copy
+from openpyxl import load_workbook
+from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
+import itertools
 
 replace_char = ['秒', 'dB']
+
+
+def create_header(path, class_dict, base_cols):
+    wb = load_workbook(path,read_only=True)
+    sheet = wb.active
+    # 从第一行开始,插入两行
+    sheet.insert_rows(1, 2)
+    base_col_len = len(base_cols)
+    first_start_row = 1
+    second_start_row = 2
+    header_row = 3
+    first_start_col = base_col_len + 1
+    second_start_col = first_start_col
+    first_class_colors = ['48D1CC', '00FA9A', 'FFA500', '1E90FF', '800080']
+    second_class_colors = ['7B68EE', '6495ED', '48D1CC', '98FB98', 'F0E68C']
+    header_colors = ['DCDCDC','FAEBD7','FFFFE0','D4F2E7','E6E6FA']
+    second_color_index = 0
+    for i, clzz in enumerate(class_dict.keys()):
+        # clzz_cols = class_dict[clzz]
+        second_dict = class_dict[clzz]
+        first_clzz_values = second_dict.values()
+        first_clzz_cols = list(itertools.chain(*first_clzz_values))
+        first_end_column = first_start_col + len(first_clzz_cols) - 1
+        first_end_row = first_start_row
+        m = i
+        if i >= len(first_class_colors):
+            m = 0
+        first_color = first_class_colors[m]
+        sheet.merge_cells(start_row=first_start_row, start_column=first_start_col, end_row=first_end_row,
+                          end_column=first_end_column)
+        cell = sheet.cell(row=first_start_row, column=first_start_col, value=clzz)
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.font = Font(u'微软雅黑', size=10, bold=True, color='00000000')
+        cell.fill = PatternFill('solid', fgColor=first_color)
+        first_start_col = first_end_column + 1
+        for j, second_clzz in enumerate(second_dict.keys()):
+            second_end_row = second_start_row
+            second_clzz_cols = len(second_dict[second_clzz])
+            second_end_column = second_start_col + second_clzz_cols - 1
+            if second_color_index >= len(second_class_colors) - 1:
+                second_color_index = 0
+            second_color = second_class_colors[second_color_index]
+            sheet.merge_cells(start_row=second_start_row, start_column=second_start_col, end_row=second_end_row,
+                              end_column=second_end_column)
+            cell = sheet.cell(row=second_start_row, column=second_start_col, value=second_clzz)
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.font = Font(u'微软雅黑', size=10, bold=True, color='00000000')
+            cell.fill = PatternFill('solid', fgColor=second_color)
+            for row in sheet.iter_rows(min_row=header_row, min_col=second_start_col, max_col=second_end_column, max_row=header_row):
+                for header_cell in row:
+                    header_cell.alignment = Alignment(wrapText=True, vertical='center', horizontal='left')
+                    header_cell.fill = PatternFill('solid', fgColor=header_colors[second_color_index])
+                    header_cell.font = Font(u'微软雅黑', size=9, bold=True, color='00000000')
+            second_color_index = second_color_index + 1
+            second_start_col = second_end_column + 1
+    # 获取第三行
+    header_row = sheet[header_row]
+    for index, cell in enumerate(header_row):
+        cell.alignment = Alignment(wrapText=True, vertical='center', horizontal='left')
+        cell.fill = PatternFill('solid', fgColor='E1FFFF')
+        cell.font = Font(u'微软雅黑', size=9, bold=True, color='00000000')
+        if index == len(base_cols)-1:
+            break
+    wb.save(path)
+
+
+def get_content_col(base_cols, cols):
+    diff = set(cols) - set(base_cols)
+    if "对端频带" in diff:
+        diff.remove("对端频带")
+    diff1 = copy.deepcopy(diff)
+    content_cols = []
+    for m in diff:
+        if m.find('#') < 0:
+            content_cols.append(m)
+            for n in diff1:
+                if m == n:
+                    continue
+                if n.find(m) >= 0 and n.find('#') >= 0:
+                    content_cols.append(n)
+    return content_cols
+
+
+# def sort_result(cols, config, base_cols):
+#     content_cols = get_content_col(base_cols ,cols)
+#     order_content, class_dict = order_content_cols(config, content_cols)
+#     # base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
+#     #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+#     return base_cols + order_content, class_dict
 
 
 def find_file(directory, file_extension):
@@ -174,7 +267,7 @@ def add_strategy_info(g5_data_strategy_df, g45_data_strategy_df, report_df):
     return report[diff_cols]
 
 
-def freq_judge(df, param):
+def judge(df, param):
     judge_res = []
     df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
     for recommand, value in zip(df[param + "#推荐值"], df[param]):
@@ -183,6 +276,9 @@ def freq_judge(df, param):
         if value == 'nan':
             # judge_res.append("没有找到参考值")
             judge_res.append(False)
+            continue
+        if recommand == 'nan':
+            judge_res.append(True)
             continue
         if recommand.find('[') >= 0 and recommand.find(']') >= 0:
             judge_res.append(range_judge(value, recommand))
@@ -232,11 +328,13 @@ def list_to_str(check_list):
     return result
 
 
-def merge_dfs(lst, on):
+def merge_dfs(lst, on, cell_identity):
     init_df = lst[0]
     for i in range(len(lst)):
         if i == 0:
             continue
+        if cell_identity in lst[i].columns.tolist() and cell_identity in init_df:
+            on.append(cell_identity)
         init_df = init_df.merge(lst[i], how='left', on=on)
     return init_df
 

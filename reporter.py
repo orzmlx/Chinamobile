@@ -27,12 +27,14 @@ class reporter:
         # self.writer = pd.ExcelWriter(outpath, engine='xlsxwriter')  # 创建pandas.ExcelWriter实例，赋值给writer
         self.params = self.point_standard_df['参数名称'].unique().tolist()
         self.params.extend(self.multi_standard_df['参数名称'].unique().tolist())
+        self.params = list(np.array([x for x in self.params if not str(x) == 'nan']))
         self.g5_statistic_dict = {}
         self.g4_statistic_dict = {}
         pt_params = self.point_standard_df[["类别", "参数名称", "原始参数名称"]]
         freq_param = self.multi_standard_df[["类别", "参数名称", "原始参数名称"]]
         params_df = pd.concat([pt_params, freq_param], axis=0)
         params_df.dropna(how='all', inplace=True, axis=0)
+        params_df.drop_duplicates(inplace=True, ignore_index=True)
         self.params_df = params_df
 
     def create_result_header(self, sheet, start_col, row):
@@ -168,10 +170,10 @@ class reporter:
     def get_all_statistic(self):
         g5_freq_stat_dict = self.statistic_city_data('5G', '_freq.csv')
         g5_cell_stat_dict = self.statistic_city_data('5G', '_cell.csv')
-        g4_freq_stat_dict = self.statistic_city_data('4G', '_freq.csv')
-        g4_cell_stat_dict = self.statistic_city_data('4G', '_cell.csv')
+        # g4_freq_stat_dict = self.statistic_city_data('4G', '_freq.csv')
+        # g4_cell_stat_dict = self.statistic_city_data('4G', '_cell.csv')
         self.g5_statistic_dict = self.merge_city_statistic(g5_freq_stat_dict, g5_cell_stat_dict)
-        self.g4_statistic_dict = self.merge_city_statistic(g4_freq_stat_dict, g4_cell_stat_dict)
+        # self.g4_statistic_dict = self.merge_city_statistic(g4_freq_stat_dict, g4_cell_stat_dict)
 
     def merge_city_statistic(self, g5_freq_stat_dict, g5_cell_stat_dict):
         freq_cities = list(g5_freq_stat_dict.keys())
@@ -231,7 +233,13 @@ class reporter:
                 c_unqualidied_num = len(g[g[c] == False])
                 c = c.split('#')[0]
                 # 将简化名称放入字典
-                c = self.params_df[self.params_df['原始参数名称'] == c]['参数名称'].iloc[0]
+                if c.find("_") >= 0:
+                    c = c.split('_')[0]
+                c_df = self.params_df[self.params_df['原始参数名称'] == c]['参数名称']
+                if c_df.empty:
+                    logging.info("参数: " + c + '不在核查参数中')
+                    continue
+                c = c_df.iloc[0]
                 param_tuple = city_res.get(c, (0, 0))
                 n_qualified_num = param_tuple[0] + c_qualified_num
                 n_unqualidied_num = param_tuple[1] + c_unqualidied_num

@@ -7,17 +7,24 @@ import copy
 import math
 import numpy as np
 import itertools
+from openpyxl import load_workbook
+from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
+
+logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
 
-class HuaweiIntermediateGen:
+class param_selector:
 
     def __init__(self, data_path, standard_path,
                  g4_common_table, g5_common_table,
-                 g4_site_info, g5_site_info, system):
+                 g4_site_info, g5_site_info,
+                 system, used_commands):
         """
             一个是文件名对应的列名字典
             一个是文件名中的key的字典
         """
+        self.na_area_cgi = []
+        self.used_commands = used_commands
         self.system = system
         if self.system == '5G':
             self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
@@ -72,12 +79,38 @@ class HuaweiIntermediateGen:
         self.freq_config_df = self.sort_config(self.freq_config_df)
         self.cell_config_df = self.sort_config(self.cell_config_df)
         self.cell_df = pd.DataFrame()
-        self.freq_df = []
+        self.freq_df = pd.DataFrame()
+        self.pre_params = []
+
 
     def sort_config(self, config):
-        config = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
-        config.sort_values(by=['伴随参数命令'], inplace=True)
-        return config
+        """
+            按qci重新命名参数
+        """
+
+        config0 = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
+        # config0.sort_values(by=['伴随参数命令'], inplace=True)
+        config0 = config0[~config0['推荐值'].isna()]
+        config0[['原始参数名称', '参数名称']] = config0.apply(lambda x: param_selector.rename_col_by_qci(x), axis=1).apply(
+            pd.Series)
+
+        return config0
+
+    @staticmethod
+    def rename_col_by_qci(row):
+        qci = str(row['QCI'])
+        if qci != 'nan':
+            if qci == '1' or qci == '5':
+                suffix = '语音'
+            elif qci == '9':
+                suffix = '数据'
+            else:
+                raise Exception("未知的QCI值:" + qci)
+            original_name = row['原始参数名称'] + "_" + suffix + qci
+            name = row['参数名称'] + "_" + suffix + qci
+            return original_name, name
+        else:
+            return row['原始参数名称'], row['参数名称']
 
     def get_huawei_4g_base_info(self, band_list):
         """
@@ -94,12 +127,15 @@ class HuaweiIntermediateGen:
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
                                      '小区区域类别': '区域类别', '工作频段': '频段'},
                             inplace=True)
-        common_table['区域类别'].fillna(value='一类', inplace=True)
+        common_table['区域类别'].fillna(value='农村', inplace=True)
         # common_table['区域类别'] = common_table['区域类别'].apply(lambda x: str(x).replace('三类(农村)', "三类"))
         common_table['区域类别'] = common_table['区域类别'].map({"一类": "一类", "二类": "二类", "三类(农村)": "三类", '四类(农村)': '农村'})
         # 覆盖类型中，室内外和空白，归为室外
         common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
         common_table['覆盖类型'].fillna("室外", inplace=True)
+        na_area_common_df = common_table[common_table['区域类别'].isna()]
+        self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
+        common_table['区域类别'].fillna(value='农村', inplace=True)
         # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
         cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
             huaweiconfiguration.G4_CELL_IDENTITY].apply(str)
@@ -126,6 +162,9 @@ class HuaweiIntermediateGen:
         # 覆盖类型中，室内外和空白，归为室外
         common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
         common_table['覆盖类型'].fillna("室外", inplace=True)
+        na_area_common_df = common_table[common_table['区域类别'].isna()]
+        self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
+        common_table['区域类别'].fillna(value='农村', inplace=True)
         # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
             huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
@@ -191,7 +230,7 @@ class HuaweiIntermediateGen:
                     # 去掉对端非移动频点的行
                     df = df[df[frequency_param] != '其他频段']
                 df.rename(columns={frequency_param: '对端频带'}, inplace=True)
-
+        self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
         df = df.merge(self.base_info_df, how='left', on=['网元', self.cell_identity])
         # df.rename(columns={'频带': '频段'}, inplace=True)
         return df
@@ -210,10 +249,13 @@ class HuaweiIntermediateGen:
         return False
 
     def processing_param_value(self, df, param, command):
-        param_rule = self.cal_rule[(self.cal_rule['原始参数名称'] == param) & (self.cal_rule['主命令'] == command)]
+        param0 = copy.deepcopy(param)
+        if param0.find('_') > 0:
+            param0 = param.split('_')[0]
+        param_rule = self.cal_rule[(self.cal_rule['原始参数名称'] == param0) & (self.cal_rule['主命令'] == command)]
         if param_rule.empty:
             return
-        if self.extra_handler(df, param):
+        if self.extra_handler(df, param0):
             return
         premise_param = str(param_rule['伴随参数'].iloc[0])
         cal_param = str(param_rule['计算方法'].iloc[0])
@@ -226,8 +268,11 @@ class HuaweiIntermediateGen:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
                 multuple1 = int(splits[1])
+                df[param] = df[param].apply(int)
+                df[premise_param] = df[premise_param].apply(int)
                 df[param] = df[param] * multiple0 + df[premise_param] * multuple1
             else:
+                df[param] = df[param].apply(int)
                 df[param] = df[param] * int(cal_param)
         # 如果前置参数在小区级别参数中,这种一定是频点级别merge小区级别
         elif not self.cell_df.empty and premise_param in self.cell_df.columns.tolist():
@@ -237,8 +282,8 @@ class HuaweiIntermediateGen:
     def get_freq_table(self, config_df):
         if config_df.empty:
             return []
-        self.check_params(config_df)
-        command_grouped = config_df.groupby(['主命令'])
+        config_df0 = self.check_params(config_df, True)
+        command_grouped = config_df0.groupby(['主命令'])
         read_result_list = []
         for command, g in command_grouped:
             params = g['原始参数名称'].unique().tolist()
@@ -250,15 +295,19 @@ class HuaweiIntermediateGen:
                 continue
             read_res = self.before_add_judgement(read_res, g)
             for p in params:
+                if p in self.pre_params:
+                    logging.info(p + '是计算依赖参数,不需要输出')
+                    continue
                 self.processing_param_value(read_res, p, command)
                 read_res = self.judge_compliance(read_res, p, command, g)
             read_result_list.append((read_res, command))
         # 只要主命令标识不为空，说明要读QCI进行过滤
         return read_result_list
 
-    def check_params(self, config_df):
+    def check_params(self, config_df, is_freq):
+        copy_config_df = config_df.copy(deep=True)
         # 如果某些参数的计算前提是必须有其他参数存在，则需要检查前置参数是否存在
-        res_df = config_df[['原始参数名称', '主命令']].merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
+        res_df = copy_config_df[['原始参数名称', '主命令']].merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # 有多少的伴随参数，检查这些伴随参数是否在检查参数中,否则报错
         primise_params_tuple = list(res_df[['伴随参数', '伴随参数命令']].apply(tuple).values)
         params_tuple = list(res_df[['原始参数名称', '主命令']].apply(tuple).values)
@@ -277,12 +326,28 @@ class HuaweiIntermediateGen:
                     cal_param = \
                         self.cal_rule[(self.cal_rule['伴随参数'] == p[0]) & (self.cal_rule['伴随参数命令'] == p[1])][
                             '原始参数名称'].iloc[0]
-                    raise Exception(str(p) + '是为了计算【' + cal_param + '】必须存在的参数,请在参数配置中加入该参数')
+                    pre_df = pd.read_excel(self.standard_path, sheet_name="频点级别计算依赖参数", true_values=["是"],
+                                           false_values=["否"], dtype=str) if is_freq else \
+                        pd.read_excel(self.standard_path, sheet_name="小区级别计算依赖参数", true_values=["是"], dtype=str)
+                    # 如果有频点对应参数,row里面也加上
+                    logging.info(str(p) + '是为了计算【' + cal_param + '】必须存在的参数,在参数配置中加入该参数')
+                    pre_df = pre_df[(pre_df['原始参数名称'] == str(p[0])) & (pre_df['主命令'] == str(p[1]))]
+                    check = copy_config_df[
+                        (copy_config_df['原始参数名称'] == str(p[0])) & (copy_config_df['主命令'] == str(p[1]))]
+                    if check.empty:
+                        copy_config_df = copy_config_df.append(pre_df, ignore_index=True)
+                    self.pre_params.append(p[0])
+        return copy_config_df
+        # if is_freq:
+        #     self.freq_config_df = copy_config_df
+        # else:
+        #     self.cell_config_df = copy_config_df
 
     def get_cell_table(self, config_df):
-        all_param = list(config_df[['原始参数名称', '主命令']].apply(tuple).values)
+        all_param = list(config_df[['原始参数名称', '主命令', 'QCI']].apply(tuple).values)
         all_param = list(set(tuple(t) for t in all_param))
-        self.check_params(config_df)
+        # all_param = []
+        self.check_params(config_df, False)
         command_identities = config_df['参数组标识'].tolist()
         command_identities = list(filter(lambda x: not 'nan' == x, command_identities))
         command_grouped = config_df.groupby(['主命令', 'QCI'])
@@ -296,6 +361,9 @@ class HuaweiIntermediateGen:
             qci = p[1]
             params = g['原始参数名称'].unique().tolist()
             command = huaweiutils.remove_digit(command, [",", ":"])
+            if not command in self.used_commands or qci == '1' or qci == '5':
+                logging.info("该命令没有在此次参数核查中使用:" + command + 'QCI:' + str(qci))
+                continue
             file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
             read_res, base_cols = self.read_data_by_command(file_name, params, g)
             if qci.isdigit():
@@ -305,12 +373,19 @@ class HuaweiIntermediateGen:
         # 只要主命令标识不为空，说明要读QCI进行过滤
         if read_qci or len(command_identities) > 0:
             qci_params.extend(command_identities)
-            qci_df = pd.read_csv(qci_path, usecols=qci_params)
+            qci_df = pd.read_csv(qci_path, usecols=qci_params, dtype=str)
             qci_df['服务质量等级'] = qci_df['服务质量等级'].astype(int)
         merge_qci_result = self.merge_with_qci_data(qci_df, read_result_list, qci_params)
         for p in all_param:
+            if p in self.pre_params:
+                logging.info(p + '是计算依赖参数,不需要输出')
+                continue
             param = p[0]
             command = p[1]
+            qci = p[2]
+            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands \
+                    or qci == '1' or qci == '5':
+                continue
             self.processing_param_value(merge_qci_result, param, command)
             merge_qci_result = self.judge_compliance(merge_qci_result, param, command, config_df)
         return merge_qci_result
@@ -329,20 +404,55 @@ class HuaweiIntermediateGen:
             cols = r[0].columns.tolist()
             qci = r[1]
             if not 'nan' == qci:
+                if qci == 1 or qci == 5:
+                    suffix = '语音'
+                elif qci == 9:
+                    suffix = '数据'
+                else:
+                    raise Exception("未知的QCI值:" + qci)
+                # 为了防止不同QCI的相同参数产生错误
+                for c in cols:
+                    if c != '网元' and c != self.cell_identity and c.find('参数组') < 0:
+                        r[0].rename(columns={c: c + "_" + suffix + str(qci)}, inplace=True)
                 res = qci_df[qci_df['服务质量等级'] == qci]
                 on = list(set(cols) & set(res.columns.tolist()))
                 qci_res = res[on].merge(r[0], how='left', on=on)
                 qci_res_cols = qci_res.columns.tolist()
                 last_cols = list(set(qci_res_cols) - set(qci_params))
+                qci_res = qci_res[last_cols]
+                # 如果on中没有cell.identity,那么会有很多重复
+                if not self.cell_identity in r[0].columns.tolist():
+                    qci_res.drop_duplicates(subset=['网元'], keep='last', inplace=True, ignore_index=False)
                 qci_res_list.append(qci_res[last_cols])
             else:
                 on = ['网元', self.cell_identity]
                 # if 'NR小区标识' in cols:
                 #     on.append()
+                # try:
+                non_qci_res[self.cell_identity] = non_qci_res[self.cell_identity].astype(str)
                 non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
-        merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=['网元', self.cell_identity])
+                # except Exception as e:
+                #     logging.info(e)
+        merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=['网元'], cell_identity=self.cell_identity)
         res = merge_qci_df.merge(non_qci_res, how='left', on=['网元', self.cell_identity])
         return res
+
+    # def update_name_by_qci(self, df, name, qci):
+    #     """
+    #         如果一个参数同时有QCI=1或者QCI=9,那后面加上语音
+    #
+    #     """
+    #
+    #     new_name = name + "_" + str(qci)
+    #     df.renmae(columns={name: new_name}, inplace=Trues)
+    #     # if qci == 1:
+    #     #     suffix = '语音'
+    #     # elif qci == 5:
+    #     #     suffix = '数据'
+    #     # elif qci == 9:
+    #     #     suffix = '数据'
+    #     # else:
+    #     #     raise Exception('未知的QCI类型:' + str(qci))
 
     def read_data_by_command(self, file_name, params, g):
         # 区分开关和非开关参数,剩下的params中都是非开关类参数
@@ -350,6 +460,7 @@ class HuaweiIntermediateGen:
         switch_params = []
         for i in range(len(check_params) - 1, -1, -1):
             param = check_params[i]
+
             is_switch = g[g['原始参数名称'] == param]['开关'].iloc[0]
             if not pd.isna(is_switch) and is_switch == '是':
                 switch_params.append(param)
@@ -365,22 +476,27 @@ class HuaweiIntermediateGen:
             frequency = g['频点标识'].unique().tolist()
             if len(frequency) > 0:
                 base_cols.append(frequency[0])
-        base_df = pd.read_csv(file_name, usecols=base_cols)
+        base_df = pd.read_csv(file_name, usecols=base_cols, dtype=str)
         # 如果没有开关参数，那么赋值为base_info
         switch_df = pd.DataFrame()
         # 查看主命令是否存在标识,主命令对应标识应该一样
         if len(switch_dict) > 0:
             switch_cols = (list(set(switch_dict.values())))
             switch_cols.extend(base_cols)
-            df = pd.read_csv(file_name, usecols=switch_cols)
+            df = pd.read_csv(file_name, usecols=switch_cols, dtype=str)
             switch_df = self.read_switch_data(df, base_df, switch_dict)
         # 读取非开关参数
         non_switch_df = pd.DataFrame()
         if len(check_params) > 0:
             non_switch_col = copy.deepcopy(base_cols)
+            # 之前为了区分相同参数下的不同qci,参数后加上了_QCI,在这里去掉，否则无法查到原始数据
+            for i in range(len(check_params)):
+
+                if check_params[i].find('_') >= 0:
+                    check_params[i] = check_params[i].split('_')[0]
             non_switch_col.extend(check_params)
             logging.debug("读取文件:【" + file_name + "】读取的列:【" + str(non_switch_col) + "】")
-            non_switch_df = pd.read_csv(file_name, usecols=non_switch_col)
+            non_switch_df = pd.read_csv(file_name, usecols=non_switch_col, dtype=str)
         if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
@@ -407,6 +523,9 @@ class HuaweiIntermediateGen:
         return result_df
 
     def judge_compliance(self, df, param, command, g):
+        # param0 = copy.deepcopy(param)
+        # if param0.find('_') >= 0:
+        #     param0 = param0.split('_')[0]
         g_c = g[(g['原始参数名称'] == param) & (g['主命令'] == command)]
         if g_c.empty:
             raise Exception('参数【' + param + '】没有找到配置信息')
@@ -421,13 +540,15 @@ class HuaweiIntermediateGen:
 
     def add_freq_judgement(self, df, standard, param):
         standard_on = ['对端频带', '频段', '覆盖类型', '区域类别', '共址类型']
+        df['对端频带'] = df['对端频带'].apply(str)
+
         deep_on = copy.deepcopy(standard_on)
         deep_on.append('推荐值')
         standard = self.expand_standard(standard, standard_on)
         df = df.merge(standard[deep_on], how='left',
                       on=standard_on)
         df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
-        df[param + "#合规"] = huaweiutils.freq_judge(df, param)
+        df[param + "#合规"] = huaweiutils.judge(df, param)
         return df
 
     def fill_col_na(self, standard, cols):
@@ -476,7 +597,7 @@ class HuaweiIntermediateGen:
         df = pd.merge(df, standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']], how='left',
                       on=['频段', '覆盖类型', '区域类别', '共址类型'])
         df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
-        df[param + "#合规"] = huaweiutils.freq_judge(df, param)
+        df[param + "#合规"] = huaweiutils.judge(df, param)
         return df
 
     def is_4g_freq(self, all_freqs):
@@ -486,79 +607,131 @@ class HuaweiIntermediateGen:
                     return True
         return False
 
-    def sort_result(self, cols):
+    def get_content_col(self, cols):
         base_cols = self.base_info_df.columns.tolist()
         diff = set(cols) - set(base_cols)
         if "对端频带" in diff:
             diff.remove("对端频带")
-        diff1 = copy.deepcopy(diff)
+        copy_diff = copy.deepcopy(diff)
         content_cols = []
         for m in diff:
             if m.find('#') < 0:
                 content_cols.append(m)
-                for n in diff1:
+                for n in copy_diff:
                     if m == n:
                         continue
                     if n.find(m) >= 0 and n.find('#') >= 0:
                         content_cols.append(n)
-        for index, k in enumerate(content_cols):
-            if k.find('#') >= 0:
-                splits = k.split('#')
-                suffix = splits[1]
-                pre_element = content_cols[index - 1]
-                if pre_element.find('#') >= 0:
-                    pre_splits = pre_element.split('#')
-                    pre_suffix = pre_splits[1]
-                    if pre_suffix == '合规' and suffix == '推荐值':
-                        content_cols[index - 1] = k
-                        content_cols[index] = pre_element
-        base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
-                     '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
 
-        # return list(set(cols) - set(content_cols)) + content_cols
-        return base_cols + content_cols
+        return content_cols
 
-    def generate_report(self):
+    def sort_result(self, cols, config, base_cols):
+        # config.reset_index(inplace=True)
+        ordered_params = config['原始参数名称'].unique().tolist()
+        content_cols = self.get_content_col(cols)
+        order_content_cols = []
+        for param in ordered_params:
+            if param in content_cols:
+                order_content_cols.extend([param, param + '#推荐值', param + '#合规'])
+        order_content, class_dict = self.order_content_cols(config, order_content_cols)
+        # base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
+        #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+        return base_cols + order_content, class_dict
+        # for index, k in enumerate(content_cols):
+        #     if k.find('#') >= 0:
+        #         splits = k.split('#')
+        #         suffix = splits[1]
+        #         pre_element = content_cols[index - 1]
+        #         if pre_element.find('#') >= 0:
+        #             pre_splits = pre_element.split('#')
+        #             pre_suffix = pre_splits[1]
+        #             if pre_suffix == '合规' and suffix == '推荐值':
+        #                 content_cols[index - 1] = k
+        #                 content_cols[index] = pre_element
+        # base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
+        #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+
+        # return base_cols + content_cols
+
+    def generate_report(self, type, base_cols):
         """
-
-        :param df: 输入的推荐值和需要核查的参数
-        :return:
+         输入的推荐值和需要核查的参数
         """
-        cell_df = self.get_cell_table(self.cell_config_df)
-        cell_df = cell_df[self.sort_result(cell_df.columns.tolist())]
-        self.cell_df = cell_df
-        out = os.path.join(self.file_path, 'check_result', 'cell')
-        if not os.path.exists(out):
-            os.makedirs(out)
-        cell_df.dropna(subset=['地市'], how='any', inplace=True)
-        cell_df.to_csv(os.path.join(out, 'param_check_cell.csv'), index=False, encoding='utf_8_sig')
-        freq_df_list = self.get_freq_table(self.freq_config_df)
-        for df in freq_df_list:
-            d = df[0]
-            sorted_cols = self.sort_result(d.columns.tolist())
-            d = d[sorted_cols]
-            out = os.path.join(self.file_path, 'check_result', 'freq')
+        first_class_dict = {}
+        freq_class_dict = {}
+        if type == 'cell' or type == 'all':
+            cell_df = self.get_cell_table(self.cell_config_df)
+            order_cols, first_class_dict = self.sort_result(cell_df.columns.tolist(), self.cell_config_df, base_cols)
+            cell_df = cell_df[order_cols]
+            #将区域类型为空的之前填补成农村区域的站点还原
+            cell_df[cell_df['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
+            self.cell_df = cell_df
+            out = os.path.join(self.file_path, 'check_result', 'cell')
             if not os.path.exists(out):
                 os.makedirs(out)
-            d.dropna(subset=['地市'], how='any', inplace=True)
-            d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
-                     index=False, encoding='utf_8_sig')
+            cell_df.dropna(subset=['地市'], how='any', inplace=True)
+            cell_df.to_csv(os.path.join(out, 'param_check_cell.csv'), index=False, encoding='utf_8_sig')
+            # huaweiutils.create_header(os.path.join(out, 'param_check_cell.xlsx'), first_class_dict, base_cols)
+
+        if type == 'freq' or type == 'all':
+            freq_df_list = self.get_freq_table(self.freq_config_df)
+            for df in freq_df_list:
+                d = df[0]
+                sorted_cols, freq_class_dict = self.sort_result(d.columns.tolist(), self.freq_config_df, base_cols)
+                d = d[sorted_cols]
+                # 将区域类型为空的之前填补成农村区域的站点还原
+                d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
+                out = os.path.join(self.file_path, 'check_result', 'freq')
+                if not os.path.exists(out):
+                    os.makedirs(out)
+                d.dropna(subset=['地市'], how='any', inplace=True)
+                d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
+                         index=False, encoding='utf_8_sig')
+        return first_class_dict, freq_class_dict
+
+    def order_content_cols(self, config, content_cols):
+        clzz = np.array(config['类别'].unique().tolist())
+        clzz = [x for x in clzz if not x == 'nan']
+        order_content = []
+        first_class_dict = {}
+        for i in range(len(clzz)):
+            # 该层级下有那些参数
+            c = clzz[i]
+            # 一级class列表是一个字典列表，每个字典中的key是二级表头
+            first_class_content = []
+            class_config = config[config['类别'] == c]
+            param_names = class_config['原始参数名称'].unique().tolist()
+            used_cols = list(set(param_names) & set(content_cols))
+            if len(used_cols) == 0:
+                continue
+            second_class_dict = {}
+            for u in used_cols:
+                # 一个参数只可能对应一个二级表头，下面的代码的结果取第一个
+                second_class = class_config[class_config['原始参数名称'] == u]['二级表头'].unique().tolist()[0]
+                second_cols = second_class_dict.get(second_class, [])
+                second_cols.extend([u, u + '#推荐值', u + '#合规'])
+                second_class_dict[second_class] = second_cols
+                order_content.extend([u, u + '#推荐值', u + '#合规'])
+                first_class_content.extend([u, u + '#推荐值', u + '#合规'])
+            copy_second_dict = copy.deepcopy(second_class_dict)
+            first_class_dict[c] = copy_second_dict
+        return order_content, first_class_dict
+# if __name__ == "__main__":
 
 
-if __name__ == "__main__":
-    filepaths = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G"
-    standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-    g5_common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
-    g4_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0121\\LTE资源大表-0121.csv"
-    g4_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
-    g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv"
-    raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
-
-    raw_files = os.listdir(os.path.join(filepaths, 'raw_data'))
-    raw_file_name_list = []
-    for f in raw_files:
-        f_name = os.path.split(f)[1]
-        raw_file_name = os.path.join(filepaths, f_name.split('.')[0])
-        report = HuaweiIntermediateGen(raw_file_name, standard_path, g4_common_table, g5_common_table,
-                                       g4_site_info, g5_site_info, '4G')
-        report.generate_report()
+#     filepaths = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G"
+#     standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
+#     g5_common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
+#     g4_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0121\\LTE资源大表-0121.csv"
+#     g4_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
+#     g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv"
+#     raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
+#
+#     raw_files = os.listdir(os.path.join(filepaths, 'raw_data'))
+#     raw_file_name_list = []
+#     for f in raw_files:
+#         f_name = os.path.split(f)[1]
+#         raw_file_name = os.path.join(filepaths, f_name.split('.')[0])
+#         report = HuaweiIntermediateGen(raw_file_name, standard_path, g4_common_table, g5_common_table,
+#                                        g4_site_info, g5_site_info, '4G')
+#         report.generate_report()

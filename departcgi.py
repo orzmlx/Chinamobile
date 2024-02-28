@@ -8,6 +8,8 @@ import logging
 import threading
 import math
 import time
+import openpyxl
+
 out_put_path = ""
 last_week_data = pd.DataFrame()
 latest_week_data = pd.DataFrame()
@@ -33,6 +35,8 @@ def init_dict(new_dict):
     g5_dict['CGI'] = []
     g4_dict['制式'] = []
     g5_dict['制式'] = []
+    g4_dict['频段'] = []
+    g5_dict['频段'] = []
 
 
 def update_dict(row, new_dict):
@@ -40,7 +44,7 @@ def update_dict(row, new_dict):
         new_dict[c].append(row[c])
 
 
-def split_cgi(row, cgi, new_dict, system):
+def split_cgi(row, cgi, new_dict, system, band):
     if pd.isna(cgi):
         return
     else:
@@ -51,24 +55,25 @@ def split_cgi(row, cgi, new_dict, system):
             update_dict(row, new_dict)
             new_dict['CGI'].append(c.strip())
             new_dict['制式'].append(system)
+            new_dict['频段'].append(band)
 
 
-def split_cgi(row, cgi, new_dict, system):
-    if pd.isna(cgi):
-        return
-    else:
-        cgis = str(cgi).split(";")
-        for c in cgis:
-            if len(c.strip()) == 0:
-                continue
-            update_dict(row, new_dict)
-            new_dict['CGI'].append(c.strip())
-            new_dict['制式'].append(system)
+# def split_cgi(row, cgi, new_dict, system):
+#     if pd.isna(cgi):
+#         return
+#     else:
+#         cgis = str(cgi).split(";")
+#         for c in cgis:
+#             if len(c.strip()) == 0:
+#                 continue
+#             update_dict(row, new_dict)
+#             new_dict['CGI'].append(c.strip())
+#             new_dict['制式'].append(system)
 
 
-def depart_cgi(row, g4_dict, g5_dict):
-    for col in g5_cols:
-        split_cgi(row, row[col], g4_dict, g5_dict)
+# def depart_cgi(row, g4_dict, g5_dict):
+#     for col in g5_cols:
+#         split_cgi(row, row[col], g4_dict, g5_dict)
 
 
 def handle_by_system(site_info, g4_dict, g5_dict):
@@ -76,14 +81,16 @@ def handle_by_system(site_info, g4_dict, g5_dict):
     prg_int = 0
     for index, row in site_info.iterrows():
         progress = (index / row_number) * 100
-        prg= math.ceil(progress)
+        prg = math.ceil(progress)
         if prg > prg_int:
             prg_int = prg
             logging.info(str(prg) + "%")
         for col in g4_cols:
-            split_cgi(row, row[col], g4_dict, '4G')
+            band = col.replace('CGI', "").strip()
+            split_cgi(row, row[col], g4_dict, '4G', band)
         for col in g5_cols:
-            split_cgi(row, row[col], g5_dict, '5G')
+            band = col.replace('CGI', "").replace("NR", "").strip()
+            split_cgi(row, row[col], g5_dict, '5G', band)
 
 
 def select_files():
@@ -123,14 +130,14 @@ def parse():
         out_put_path = select_path1.get()
         use_cols = ['地市', '区县', '区域', '物理站编号', '物理站名', '基站类型', '分布系统编号', '室内外', '覆盖场景', '经度', '纬度', '全部制式', '4G频段',
                     '4G逻辑站(包含NB）',
-                    '5G频段', '5G逻辑站','NR 2.6G CGI', 'NR 700M CGI', 'NR 4.9G CGI', 'TDD-F CGI', 'TDD-A CGI',
+                    '5G频段', '5G逻辑站', 'NR 2.6G CGI', 'NR 700M CGI', 'NR 4.9G CGI', 'TDD-F CGI', 'TDD-A CGI',
                     'TDD-D CGI', 'TDD-E CGI', 'FDD-1800 CGI', 'FDD-900 CGI']
         logging.info("导入文件中,请稍后...")
         start_time = time.time()
         if input_path.find("pkl") >= 0:
             site_info = pd.read_pickle(input_path)
         elif select_path.get().find("xlsx") >= 0:
-            site_info = pd.read_excel(input_path,usecols=use_cols,sheet_name='物理站信息表')
+            site_info = pd.read_excel(input_path, usecols=use_cols, sheet_name='物理站信息表', engine='openpyxl')
         elif input_path.find("csv") >= 0:
             site_info = pd.read_csv(input_path)
         end_time = time.time()
@@ -144,11 +151,13 @@ def parse():
         df_4g = pd.DataFrame(g4_dict)
         df_5g = pd.DataFrame(g5_dict)
         df_4g = df_4g[
-            ['地市', '区县', '区域', '物理站编号', '物理站名', '基站类型', '分布系统编号', '室内外', '覆盖场景', '经度', '纬度', '全部制式', '4G频段', '4G逻辑站(包含NB）',
-             '5G频段', '5G逻辑站', 'CGI', '制式']]
+            ['地市', '区县', '区域', '物理站编号', '物理站名', '基站类型', '分布系统编号', '室内外', '覆盖场景', '经度', '纬度', '全部制式', '4G频段',
+             '4G逻辑站(包含NB）',
+             '5G频段', '5G逻辑站', 'CGI', '制式', '频段']]
         df_5g = df_5g[
-            ['地市', '区县', '区域', '物理站编号', '物理站名', '基站类型', '分布系统编号', '室内外', '覆盖场景', '经度', '纬度', '全部制式', '4G频段', '4G逻辑站(包含NB）',
-             '5G频段', '5G逻辑站', 'CGI', '制式']]
+            ['地市', '区县', '区域', '物理站编号', '物理站名', '基站类型', '分布系统编号', '室内外', '覆盖场景', '经度', '纬度', '全部制式', '4G频段',
+             '4G逻辑站(包含NB）',
+             '5G频段', '5G逻辑站', 'CGI', '制式', '频段']]
         df_4g.dropna(axis=0, how="any", subset=['CGI'], inplace=True)
         df_5g.dropna(axis=0, how="any", subset=['CGI'], inplace=True)
         df_4g.to_csv(os.path.join(os.path.abspath(out_put_path), "物理站CGI_4g.csv"), encoding='utf-8-sig', index=False)
@@ -156,7 +165,7 @@ def parse():
 
         logging.info("数据处理完成!")
     except Exception as e:
-        logging.error(e.with_traceback())
+        raise Exception(e)
     finally:
         check_button.config(state=tk.ACTIVE, text="检查")
         in_btn.config(state=tk.ACTIVE, text="统计表路径")

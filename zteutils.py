@@ -55,19 +55,21 @@ def action_delete(df, action_tuples, index):
         operator = tuple[2].strip()
         if operator is None:
             raise Exception("删除操作,但是缺少算子,出错行数:" + str(index))
-        #筛选出来的df,全部在原df中通过Index删除
+        # 筛选出来的df,全部在原df中通过Index删除
         filter_df = filter(df, operator, col_name, range)
         index = filter_df.index.tolist()
         df.drop(index=index, axis=0, inplace=True)
     return df
 
 
-def split_column(x, pattern):
+def split_column(x, pattern,index):
     match_res = re.search(pattern, x)
-    if match_res is not None:
-        return match_res.group()
+    if match_res is None:
+        raise Exception('正则表达式:' + pattern + "没有匹配到任何字符串,出错行数:" + str(index))
     else:
-        return ''
+        return match_res.group()
+    # else:
+    #     return ''
 
 
 def action_columns_merge(df, action_tuples_list, new_column_name, index):
@@ -79,9 +81,9 @@ def action_columns_merge(df, action_tuples_list, new_column_name, index):
         operator = action_tuple[2].strip() if action_tuple[2] is not None else None
         if operator == 'match':
             try:
-                df[col_name + "#"] = df[col_name].apply(split_column, args=(action_range,))
+                df[col_name + "#"] = df[col_name].apply(split_column, args=(action_range, index))
             except Exception as e:
-                raise Exception("请检查正则表达式的正确性," + "出错行数:" + str(index), e)
+                raise Exception("请检查正则表达式的正确性," + "出错行数:" + str(index))
             if constant is not None:
                 df[col_name + "#"] = constant + df[col_name + "#"]
                 constant = None
