@@ -11,13 +11,58 @@ import copy
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
 import itertools
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 replace_char = ['秒', 'dB']
 
 
-def create_header(path, class_dict, base_cols):
-    wb = load_workbook(path,read_only=True)
+def split_csv(path, chunksize):
+    files = find_file(path, '.csv')
+    for index, f in enumerate(files):
+        dfs = pd.read_csv(f, chunksize=chunksize, encoding='gbk')
+        f_name = f.name
+        merge_result = pd.DataFrame()
+        i = 0
+        for index0, chunk in enumerate(dfs):
+            merge_result = chunk if merge_result.empty else pd.concat([merge_result, chunk], axis=0)
+            if i >= 3:
+                merge_result.to_csv(os.path.join(path, f_name + '_' + str(index0) + '.csv'), index=False,
+                                    encoding='utf_8_sig')
+                merge_result = pd.DataFrame()
+                i = -1
+            i = i + 1
+        merge_result.to_csv(os.path.join(path, f_name + '_last' + '.csv'), index=False, encoding='utf_8_sig')
+
+
+def combine_file_by_name(path):
+    f_dict = {}
+    all_file = find_file(path, '.csv')
+    for i in range(len(all_file)):
+        f_name = all_file[i].name
+        f_list = f_dict.get(f_name, [])
+        f_list.append(str(all_file[i]))
+        f_dict[f_name] = f_list
+    for key in f_dict:
+        merge_res = pd.DataFrame()
+        f_list = f_dict[key]
+        for f in f_list:
+            df = pd.read_csv(f)
+            merge_res = df if merge_res.empty else pd.concat([merge_res, df], axis=0)
+        output_path = os.path.join(path, "temp_combine")
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        merge_res.to_csv(os.path.join(output_path, str(key)), index=False, encoding='utf_8_sig')
+
+
+def create_header(df, path, class_dict, base_cols):
+    # wb = load_workbook(path)
+    # sheet = wb.active
+    logging.info(">>>>>修改结果表头....<<<<<")
+    wb = Workbook()
     sheet = wb.active
+    for r in dataframe_to_rows(df, index=False, header=True):
+        sheet.append(r)
     # 从第一行开始,插入两行
     sheet.insert_rows(1, 2)
     base_col_len = len(base_cols)
@@ -28,7 +73,7 @@ def create_header(path, class_dict, base_cols):
     second_start_col = first_start_col
     first_class_colors = ['48D1CC', '00FA9A', 'FFA500', '1E90FF', '800080']
     second_class_colors = ['7B68EE', '6495ED', '48D1CC', '98FB98', 'F0E68C']
-    header_colors = ['DCDCDC','FAEBD7','FFFFE0','D4F2E7','E6E6FA']
+    header_colors = ['DCDCDC', 'FAEBD7', 'FFFFE0', 'D4F2E7', 'E6E6FA']
     second_color_index = 0
     for i, clzz in enumerate(class_dict.keys()):
         # clzz_cols = class_dict[clzz]
@@ -61,7 +106,8 @@ def create_header(path, class_dict, base_cols):
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.font = Font(u'微软雅黑', size=10, bold=True, color='00000000')
             cell.fill = PatternFill('solid', fgColor=second_color)
-            for row in sheet.iter_rows(min_row=header_row, min_col=second_start_col, max_col=second_end_column, max_row=header_row):
+            for row in sheet.iter_rows(min_row=header_row, min_col=second_start_col, max_col=second_end_column,
+                                       max_row=header_row):
                 for header_cell in row:
                     header_cell.alignment = Alignment(wrapText=True, vertical='center', horizontal='left')
                     header_cell.fill = PatternFill('solid', fgColor=header_colors[second_color_index])
@@ -74,9 +120,9 @@ def create_header(path, class_dict, base_cols):
         cell.alignment = Alignment(wrapText=True, vertical='center', horizontal='left')
         cell.fill = PatternFill('solid', fgColor='E1FFFF')
         cell.font = Font(u'微软雅黑', size=9, bold=True, color='00000000')
-        if index == len(base_cols)-1:
+        if index == len(base_cols) - 1:
             break
-    wb.save(path)
+    wb.save(os.path.join(os.path.split(path)[0], '互操作小区级核查结果.csv'))
 
 
 def get_content_col(base_cols, cols):
@@ -153,7 +199,7 @@ def add_5g_cgi(ducell_df, gnodeb_df):
     ducell_df = pd.merge(ducell_df, gnodeb_df[['网元', 'gNodeB标识']], on='网元')
     ducell_df.rename(columns={'NRDU小区标识': 'NR小区标识'}, inplace=True)
 
-    print(ducell_df.shape)
+    # print(ducell_df.shape)
     return ducell_df
 
 
@@ -417,8 +463,13 @@ if __name__ == "__main__":
     # report_cols = report.columns.tolist()
     # report.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\report_strategy.csv",
     #               index=False, encoding='utf_8_sig')
-    str1 = 'LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=2'
-    # str2 = 'LST NRCELLINTRAFHOMEAGRPINTRAFREQHOMEASGROUPID=2.csv'
-    str2 = 'LST NRCELLQCIBEARER:QCI=5'
-    # print(only_has_digtal_diff(str1, str2))
-    print(remove_digit(str1, ['=']))
+    # str1 = 'LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=2'
+    # # str2 = 'LST NRCELLINTRAFHOMEAGRPINTRAFREQHOMEASGROUPID=2.csv'
+    # str2 = 'LST NRCELLQCIBEARER:QCI=5'
+    # # print(only_has_digtal_diff(str1, str2))
+    # print(remove_digit(str1, ['=']))
+    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240229\\5G'
+
+    # combine_file_by_name(path)
+    # path = 'C:\\Users\\No.1\\Desktop\\分表'
+    # split_csv(path, 200000)

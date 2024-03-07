@@ -18,7 +18,7 @@ class param_selector:
     def __init__(self, data_path, standard_path,
                  g4_common_table, g5_common_table,
                  g4_site_info, g5_site_info,
-                 system, used_commands):
+                 system, used_commands, manufacturer):
         """
             一个是文件名对应的列名字典
             一个是文件名中的key的字典
@@ -26,6 +26,7 @@ class param_selector:
         self.na_area_cgi = []
         self.used_commands = used_commands
         self.system = system
+        self.manufacturer = manufacturer
         if self.system == '5G':
             self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
             self.site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
@@ -48,21 +49,12 @@ class param_selector:
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
         self.all_co_location = [np.nan]  # 所有的共址类型
-        if self.system == '4G':
-
-            self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
-            self.all_band = huaweiutils.list_to_str(band_list)
-            self.all_area_classes = huaweiutils.list_to_str(self.g4_base_info_df['区域类别'].unique().tolist())
-            self.all_cover_classes = huaweiutils.list_to_str(self.g4_base_info_df['覆盖类型'].unique().tolist())
-            self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist()) + np.nan
-        else:
-            self.g5_base_info_df = self.get_huawei_5g_base_info()
-            self.all_band = '4.9G|2.6G|700M'
-            self.all_area_classes = huaweiutils.list_to_str(self.g5_base_info_df['区域类别'].unique().tolist())
-            self.all_cover_classes = huaweiutils.list_to_str(self.g5_base_info_df['覆盖类型'].unique().tolist())
-            self.all_co_location = huaweiutils.list_to_str(self.g5_base_info_df['共址类型'].unique().tolist())
+        self.get_base_info(band_list)
         self.end_band = 'FDD-900|FDD-1800|F|A|D|E|4.9G|2.6G|700M'
         self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
+        self.all_area_classes = huaweiutils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
+        self.all_cover_classes = huaweiutils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
+        self.all_co_location = huaweiutils.list_to_str(self.base_info_df['共址类型'].unique().tolist()) + np.nan
         self.cell_config_df = pd.read_excel(self.standard_path, sheet_name="小区级别核查配置", true_values=["是"],
                                             false_values=["否"], dtype=str)
         self.freq_config_df = pd.read_excel(self.standard_path, sheet_name="频点级别核查配置", true_values=["是"],
@@ -81,6 +73,29 @@ class param_selector:
         self.cell_df = pd.DataFrame()
         self.freq_df = pd.DataFrame()
         self.pre_params = []
+        self.cover_filter_list = ['高铁']
+
+    def get_base_info(self, band_list):
+        if self.manufacturer == 'huawei':
+            if self.system == '4G':
+                self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
+                self.all_band = huaweiutils.list_to_str(band_list)
+                # self.all_area_classes = huaweiutils.list_to_str(self.g4_base_info_df['区域类别'].unique().tolist())
+                # self.all_cover_classes = huaweiutils.list_to_str(self.g4_base_info_df['覆盖类型'].unique().tolist())
+                # self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist()) + np.nan
+            else:
+                self.g5_base_info_df = self.get_huawei_5g_base_info()
+                self.all_band = '4.9G|2.6G|700M'
+        elif self.manufacturer == 'zte':
+            if self.system == '4G':
+                self.g4_base_info_df = self.get_zte_4g_base_info(band_list)
+                self.all_band = huaweiutils.list_to_str(band_list)
+                # self.all_area_classes = huaweiutils.list_to_str(self.g4_base_info_df['区域类别'].unique().tolist())
+                # self.all_cover_classes = huaweiutils.list_to_str(self.g4_base_info_df['覆盖类型'].unique().tolist())
+                # self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist()) + np.nan
+            else:
+                self.g5_base_info_df = self.get_zte_5g_base_info()
+                self.all_band = '4.9G|2.6G|700M'
 
     def sort_config(self, config):
         """
@@ -115,9 +130,71 @@ class param_selector:
         """
             获取基本信息列
         """
+        common_table = self.get_4g_common(band_list)
         cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST CELL.csv'))
         enode_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST ENODEBFUNCTION.csv'))
         cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
+        cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
+            huaweiconfiguration.G4_CELL_IDENTITY].apply(str)
+        base_info_df = cell_df[['网元', huaweiconfiguration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
+        # base_info_df['频带'] = base_info_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
+        # base_info_df = base_info_df.rename(columns={'频带': '频段'}, inplace=True)
+        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
+        base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
+        base_info_df['厂家'] = '华为'
+        return base_info_df
+
+    def get_zte_5g_base_info(self):
+        common_table = self.get_5g_common()
+        cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
+                              usecols=['网元名称', '用户标识', '小区标识', 'CGI', 'SSB的中心频点'])
+
+        base_info_df = cell_df.rename(columns={'SSB的中心频点': '频段',
+                                               '网元名称': '网元', '用户标识': 'NRDU小区名称',
+                                               '小区标识': 'NR小区标识'})
+        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
+        base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
+        base_info_df['厂家'] = '中兴'
+        return base_info_df
+
+    def get_zte_4g_base_info(self, band_list):
+        return None
+
+    def get_huawei_5g_base_info(self):
+        """
+            获取基本信息列
+        """
+        common_table = self.get_5g_common()
+        ducell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST NRDUCELL.csv'))
+        gnode_df = pd.read_csv(
+            os.path.join(self.file_path, 'raw_result', 'LST GNODEBFUNCTION.csv'))
+        ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
+        ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
+            huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
+
+        # common_table = pd.read_csv(self.g5_common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市', '工作频段', 'CELL区域类别'],
+        #                            encoding='gbk', dtype=str)
+        # common_table.rename(columns={'CELL区域类别': '区域类别'}, inplace=True)
+        # # common_table['工作频段'] = common_table['工作频段'].apply(lambda x: x.split('-')[1])
+        # # 覆盖类型中，室内外和空白，归为室外
+        # common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
+        # common_table['覆盖类型'].fillna("室外", inplace=True)
+        # na_area_common_df = common_table[common_table['区域类别'].isna()]
+        # self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
+        # common_table['区域类别'].fillna(value='农村', inplace=True)
+        # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
+        # ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
+        #     huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
+        base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带']]
+        base_info_df['频带'] = base_info_df['频带'].map(
+            {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
+        base_info_df = base_info_df.rename(columns={'频带': '频段'})
+        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
+        base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
+        base_info_df['厂家'] = '华为'
+        return base_info_df
+
+    def get_4g_common(self, band_list):
         common_table = pd.read_csv(self.g4_common_table,
                                    usecols=['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别'],
                                    encoding='gbk', dtype=str)
@@ -135,25 +212,8 @@ class param_selector:
         na_area_common_df = common_table[common_table['区域类别'].isna()]
         self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
         common_table['区域类别'].fillna(value='农村', inplace=True)
-        # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
-        cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
-            huaweiconfiguration.G4_CELL_IDENTITY].apply(str)
-        base_info_df = cell_df[['网元', huaweiconfiguration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
-        # base_info_df['频带'] = base_info_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
-        # base_info_df = base_info_df.rename(columns={'频带': '频段'}, inplace=True)
-        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
-        base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
-        base_info_df['厂家'] = '华为'
-        return base_info_df
 
-    def get_huawei_5g_base_info(self):
-        """
-            获取基本信息列
-        """
-        ducell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST NRDUCELL.csv'))
-        gnode_df = pd.read_csv(
-            os.path.join(self.file_path, 'raw_result', 'LST GNODEBFUNCTION.csv'))
-        ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
+    def get_5g_common(self):
         common_table = pd.read_csv(self.g5_common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市', '工作频段', 'CELL区域类别'],
                                    encoding='gbk', dtype=str)
         common_table.rename(columns={'CELL区域类别': '区域类别'}, inplace=True)
@@ -164,17 +224,7 @@ class param_selector:
         na_area_common_df = common_table[common_table['区域类别'].isna()]
         self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
         common_table['区域类别'].fillna(value='农村', inplace=True)
-        # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
-        ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
-            huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
-        base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带', '双工模式']]
-        base_info_df['频带'] = base_info_df['频带'].map(
-            {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
-        base_info_df = base_info_df.rename(columns={'频带': '频段'})
-        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
-        base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
-        base_info_df['厂家'] = '华为'
-        return base_info_df
+        return common_table
 
     def find_switch_cols(self, file_name, switch_params):
         find_params = {}
@@ -636,21 +686,6 @@ class param_selector:
         # base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
         #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
         return base_cols + order_content, class_dict
-        # for index, k in enumerate(content_cols):
-        #     if k.find('#') >= 0:
-        #         splits = k.split('#')
-        #         suffix = splits[1]
-        #         pre_element = content_cols[index - 1]
-        #         if pre_element.find('#') >= 0:
-        #             pre_splits = pre_element.split('#')
-        #             pre_suffix = pre_splits[1]
-        #             if pre_suffix == '合规' and suffix == '推荐值':
-        #                 content_cols[index - 1] = k
-        #                 content_cols[index] = pre_element
-        # base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
-        #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
-
-        # return base_cols + content_cols
 
     def generate_report(self, type, base_cols):
         """
@@ -664,6 +699,7 @@ class param_selector:
             cell_df = cell_df[order_cols]
             # 将区域类型为空的之前填补成农村区域的站点还原
             na_index = cell_df[cell_df['CGI'].isin(self.na_area_cgi)].index.tolist()
+            cell_df = cell_df[~cell_df['覆盖场景'].isin(self.cover_filter_list)]
             if len(na_index) > 0:
                 select_col_index = cell_df.columns.get_loc('区域类别')
                 cell_df.iloc[na_index, select_col_index] = np.nan

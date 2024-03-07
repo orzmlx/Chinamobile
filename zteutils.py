@@ -1,9 +1,20 @@
+# -*- coding: utf-8 -*-
+import polars as pl
+
 import re
 import copy
+import pathlib
+import pandas as pd
+from openpyxl import Workbook
+import os
+import importlib
+import sys
+
+importlib.reload(sys)
 
 
 def get_action_charactors():
-    return [':', 'match', 'eq']
+    return [':', 'match', 'eq', 'extract']
 
 
 def get_action_names():
@@ -62,14 +73,15 @@ def action_delete(df, action_tuples, index):
     return df
 
 
-def split_column(x, pattern,index):
-    match_res = re.search(pattern, x)
-    if match_res is None:
+def split_column(x, pattern, operator, index):
+    try:
+        return re.search(pattern, x).group() if operator == 'match' else re.findall(pattern, x)[0]
+    except Exception as e:
         raise Exception('正则表达式:' + pattern + "没有匹配到任何字符串,出错行数:" + str(index))
-    else:
-        return match_res.group()
+    # if match_res is None:
+    #     raise Exception('正则表达式:' + pattern + "没有匹配到任何字符串,出错行数:" + str(index))
     # else:
-    #     return ''
+    #     return match_res.group()
 
 
 def action_columns_merge(df, action_tuples_list, new_column_name, index):
@@ -79,11 +91,11 @@ def action_columns_merge(df, action_tuples_list, new_column_name, index):
         col_name = action_tuple[0].strip() if action_tuple[0] is not None else None
         action_range = action_tuple[1].strip() if action_tuple[1] is not None else None
         operator = action_tuple[2].strip() if action_tuple[2] is not None else None
-        if operator == 'match':
+        if operator == 'match' or operator == 'extract':
             try:
-                df[col_name + "#"] = df[col_name].apply(split_column, args=(action_range, index))
+                df[col_name + "#"] = df[col_name].apply(split_column, args=(action_range, operator, index))
             except Exception as e:
-                raise Exception("请检查正则表达式的正确性," + "出错行数:" + str(index))
+                raise Exception("请检查正则表达式的正确性," + "出错行数:" + str(index), e)
             if constant is not None:
                 df[col_name + "#"] = constant + df[col_name + "#"]
                 constant = None
@@ -122,3 +134,30 @@ def action_filter(df, action_tuples, index):
             raise Exception("删除操作,但是缺少算子,出错行数:" + str(index))
         filter_df = filter(filter_df, operator, col_name, range)
     return filter_df
+
+
+def get_csv_summary(path):
+    wb = Workbook()
+    # 创建第一个sheet
+    sheet = wb.active
+    items = pathlib.Path(path).rglob('*')
+    for item in items:
+        item = str(item)
+        df = pl.read_csv(item, encoding='utf8')
+        df = df.to_pandas()
+        if df.empty:
+            raise Exception(item + '中数据为空')
+        f_name = os.path.split(item)[1].split(".")[0]
+        df_cols = [f_name, len(df)]
+        first_col = [f_name, len(df)]
+        df_cols.extend(df.columns.tolist())
+        first_col.extend(df.iloc[1].tolist())
+        sheet.append(df_cols)
+        sheet.append(first_col)
+    wb.save(os.path.join(path, 'summary.csv'))
+
+
+if __name__ == "__main__":
+    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240229\\5G'
+    get_csv_summary(
+        "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240229\\5G\\ RANCM-5G互操作参数-fxx-chaxun-20240226165328\\temp")
