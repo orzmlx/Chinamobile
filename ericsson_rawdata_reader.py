@@ -48,10 +48,13 @@ class EricssonDataReader(ZteRawDataReader):
             sheet_df = pd.read_csv(file_path, usecols=used_cols)
             # sheet_df = self.read_raw_data(row, f)
             # 在处理流程中寻找如何处理该数据
-            out_path_dir = os.path.join(eri_raw_data_path, self.system, f_name)
+            out_path_dir = os.path.join(eri_raw_data_path, self.system, f_name, 'raw_result')
             if not os.path.exists(out_path_dir):
                 os.makedirs(out_path_dir)
             self.process_data_by_sheet(sheet_df, eri_param_process, sheet_name, out_path_dir, ';')
 
     def output_format_data(self):
         self.clean_data(self.eri_config_file_path, self.eri_raw_data_path, self.system)
+        zte_param_gather = pd.read_excel(self.zte_config_file_path, engine='openpyxl', sheet_name='数据汇聚')
+        zte_param_gather = zte_param_gather[zte_param_gather['厂家'] == self.manufacturer]
+        self.gather_files(zte_param_gather)

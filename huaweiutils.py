@@ -13,7 +13,7 @@ from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
 import itertools
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
-
+from tqdm import tqdm
 replace_char = ['秒', 'dB']
 
 
@@ -47,6 +47,8 @@ def combine_file_by_name(path):
         merge_res = pd.DataFrame()
         f_list = f_dict[key]
         for f in f_list:
+            tqdm.pandas(desc='Reading CSV')
+            # 读取CSV文件，tqdm将自动处理进度条显示
             df = pd.read_csv(f)
             merge_res = df if merge_res.empty else pd.concat([merge_res, df], axis=0)
         output_path = os.path.join(path, "temp_combine")
@@ -326,13 +328,29 @@ def judge(df, param):
         if recommand == 'nan':
             judge_res.append(True)
             continue
-        if recommand.find('[') >= 0 and recommand.find(']') >= 0:
-            judge_res.append(range_judge(value, recommand))
-        elif recommand.find(',') >= 0:
-            judge_res.append(list_judge(value, recommand))
+        if value.find(';') >= 0:
+            values = value.split(';')
+            match = True
+            for v in values:
+                judge = get_judge(recommand, v)
+                if not judge:
+                    match = False
+                    break
+            judge_res.append(match)
         else:
-            judge_res.append(single_value_judge(value, recommand))
+            judge = get_judge(recommand, value)
+            judge_res.append(judge)
+
     return judge_res
+
+
+def get_judge(recommand, value):
+    if recommand.find('[') >= 0 and recommand.find(']') >= 0:
+        return range_judge(value, recommand)
+    elif recommand.find(',') >= 0:
+        return list_judge(value, recommand)
+    else:
+        return single_value_judge(value, recommand)
 
 
 def linear_calculation(x, m1, b, m2):
@@ -367,14 +385,27 @@ def generate_4g_frequency_band_dict(df):
     return g4_freq_band_dict, band_list
 
 
+def read_csv(file_name, usecols, dtype):
+    try:
+        return pd.read_csv(file_name, usecols=usecols, dtype=dtype) if dtype != None else pd.read_csv(file_name,
+                                                                                                      usecols=usecols)
+    except:
+        return pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') if dtype != None else pd.read_csv(file_name,
+                                                                                                      usecols=usecols,encoding='gbk')
+
+
 def list_to_str(check_list):
     check_set = list(set(check_list))
     check_set = [c for c in check_set if str(c) != 'nan']
     result = '|'.join(check_set)
+    if 'nan' not in check_list:
+        result = result + '|nan'
     return result
 
 
 def merge_dfs(lst, on, cell_identity):
+    if len(lst) == 0:
+        return pd.DataFrame()
     init_df = lst[0]
     for i in range(len(lst)):
         if i == 0:
@@ -468,8 +499,8 @@ if __name__ == "__main__":
     # str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # # print(only_has_digtal_diff(str1, str2))
     # print(remove_digit(str1, ['=']))
-    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240229\\5G'
+    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240314\\5G'
 
-    # combine_file_by_name(path)
+    combine_file_by_name(path)
     # path = 'C:\\Users\\No.1\\Desktop\\分表'
     # split_csv(path, 200000)

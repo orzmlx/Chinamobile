@@ -40,8 +40,9 @@ def read_raw_data(path, system, date, manufacturer):
             reader.read_huawei_txt()
             reader.output_format_data()
         elif manufacturer == ZTE:
-            zte_config = os.path.join(path, manufacturer, '工参案例V7.xlsx')
+            zte_config = os.path.join(path, manufacturer, '工参重选.xlsx')
             reader = ZteRawDataReader(item, outputPath, zte_config, system, ZTE_NAME)
+
             reader.output_format_data()
         elif manufacturer == ERICSSON:
             eri_config = os.path.join(path, manufacturer, '工参案例V8.xlsx')
@@ -51,7 +52,6 @@ def read_raw_data(path, system, date, manufacturer):
         else:
             raise Exception('未知厂商:' + manufacturer)
         del reader
-        # progress_bar.update()
 
 
 def combine_frq_evaluation(dir0, result_path, suffix):
@@ -122,13 +122,16 @@ def evaluate(filepath, system, manufacturer, date, base_cols):
         if len(used_command) == 0:
             raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
             for f in raw_fs:
-                df = pd.read_csv(f, nrows=10, encoding='gb2312')
+                try:
+                    df = pd.read_csv(f, nrows=10, encoding='gb2312')
+                except:
+                    df = pd.read_csv(f, nrows=10, encoding='utf8')
                 if not df.empty:
                     command = os.path.split(f)[1].split('.')[0]
                     used_command.append(command)
         selector = param_selector(raw_file_dir, standard_path, g4_common_table, g5_common_table,
                                   g4_site_info, g5_site_info, system, used_command, manufacturer)
-        cell_class_dict, freq_class_dict = selector.generate_report('cell', base_cols)
+        cell_class_dict, freq_class_dict = selector.generate_report('freq', base_cols)
         del selector
     return cell_class_dict, freq_class_dict
 
@@ -154,15 +157,15 @@ def combine_by_manufacturer(dir, suffix, config, result_path, header_class_dict)
 
 if __name__ == '__main__':
     base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
-                 '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+                 '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
     check_result_name = "all_cell_check_result.csv"
     cell_check_result_name = "param_check_cell.csv"
-    date = '20240229'
+    date = '20240314'
     path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\"
     g5_command_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240121\\5G\\华为45G互操作固定通报参数20231225.txt"
     g4_command_path = "C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果_test.xlsx"
-    standard_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\参数核查规则0223.xlsx"
+    standard_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\参数核查规则0314.xlsx"
     g5_common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20240131.csv"
     g4_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0121\\LTE资源大表-0121.csv"
     g4_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
@@ -170,11 +173,12 @@ if __name__ == '__main__':
     raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
     cell_header_class_dict = None
     # read_raw_data(path, '5G', '20240226', 'huawei')
-    # read_raw_data(path, FIVE_GEN, date, ZTE)
+    read_raw_data(path, FIVE_GEN, date, ZTE)
+    #read_raw_data(path, FIVE_GEN, date, ERICSSON)
     target_directory = os.path.join(path, HUAWEI, date, FIVE_GEN)
     all_cell_check_result_path = os.path.join(target_directory, check_result_name)
     report_path = os.path.join(target_directory, HUAWEI, date, '互操作参数核查结果.xlsx')
-    cell_header_class_dict, freq_header_class_dict = evaluate(path, FIVE_GEN, ZTE, date, base_cols)
+    #cell_header_class_dict, freq_header_class_dict = evaluate(path, FIVE_GEN, ZTE, date, base_cols)
     # combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name, cell_header_class_dict)
 # freq_cell_suffix = ['LST NRCELLFREQRELATION_freq.csv', 'LST NRCELLEUTRANNFREQ_freq.csv']
 # for f in freq_cell_suffix:

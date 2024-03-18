@@ -2,6 +2,50 @@
 import difflib
 import pandas as pd
 import numpy as np
+import threading
+import time
+import sys
+from threading import Thread
+import os
+from tqdm import tqdm
+
+
+def read_csv():
+    INPUT_FILENAME = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
+    LINES_TO_READ_FOR_ESTIMATION = 20
+    CHUNK_SIZE_PER_ITERATION = 10 ** 5
+    temp = pd.read_csv(INPUT_FILENAME,
+                       nrows=LINES_TO_READ_FOR_ESTIMATION)
+    N = len(temp.to_csv(index=False))
+    df = [temp[:0]]
+    t = int(os.path.getsize(INPUT_FILENAME) / N * LINES_TO_READ_FOR_ESTIMATION / CHUNK_SIZE_PER_ITERATION) + 1
+    with tqdm(total=t, file=sys.stdout) as pbar:
+        for i, chunk in enumerate(pd.read_csv(INPUT_FILENAME, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False)):
+            df.append(chunk)
+            pbar.set_description('Importing: %d' % (1 + i))
+            pbar.update(1)
+    data = temp[:0].append(df)
+    del df
+
+
+def read():
+    return pd.read_csv("C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv")
+
+
+def progress(thread_name):
+    letters = '|\\-|/-'
+    i = 0
+    is_alive = True
+    start = time.time()
+    while is_alive:
+        sys.stdout.write('Loading file.' + letters[i % 5] + '\b' * 20)
+        sys.stdout.flush()
+        time.sleep(0.5)
+        i += 1
+        is_alive = thread_name.is_alive()
+    end = time.time()
+    elapsed_time = '%.2f' % (end - start)
+    sys.stdout.write('Loading finished. Elapsed time: ' + str(elapsed_time) + " Seconds")
 
 
 def test1(string):
@@ -37,41 +81,19 @@ if __name__ == "__main__":
     #  # print(dff1)
     # str = 'WZ2809_3920', 'WZ2805_3916', 'WZ2803_3918', 'WZ2808_3920', 'WZ2802_3921', 'WZ2811_3916', 'WZ2801_3918', 'WZ2803_3921', 'WZ2808_3916', 'WZ2809_3929', 'WZ2807_3919', 'WZ2804_3919', 'WZ2804_3926', 'WZ2802_3923', 'WZ2801_3926', 'WZ2809_3921', 'WZ2800_3922', 'WZ2805_3925', 'WZ2804_3915', 'WZ2802_3927', 'WZ2809_3928', 'WZ2803_3916', 'WZ2803_3926', 'WZ2806_3926', 'WZ2807_3925', 'WZ2809_3918', 'WZ2804_3924', 'WZ2806_3918', 'WZ2805_3926', 'WZ2806_3927', 'WZ2800_3925', 'WZ2808_3918', 'WZ2804_3929', 'WZ2804_3925', 'WZ2809_3927', 'WZ2807_3926', 'WZ2811_3917', 'WZ2814_3919', 'WZ2810_3920', 'WZ2807_3920', 'WZ2806_3928', 'WZ2807_3916', 'WZ2803_3928', 'WZ2812_3916', 'WZ2814_3918', 'WZ2805_3922', 'WZ2804_3920', 'WZ2806_3915', 'WZ2804_3917', 'WZ2812_3920', 'WZ2800_3923', 'WZ2805_3920', 'WZ2803_3919', 'WZ2801_3919', 'WZ2801_3925', 'WZ2805_3918', 'WZ2803_3925', 'WZ2802_3926', 'WZ2806_3919', 'WZ2807_3923', 'WZ2806_3920', 'WZ2809_3917', 'WZ2811_3919', 'WZ2802_3924', 'WZ2800_3921', 'WZ2802_3918', 'WZ2802_3917', 'WZ2807_3917', 'WZ2808_3925', 'WZ2805_3927', 'WZ2803_3920', 'WZ2810_3915', 'WZ2812_3917', 'WZ2804_3928', 'WZ2811_3920', 'WZ2810_3919', 'WZ2803_3917', 'WZ2809_3915', 'WZ2804_3918', 'WZ2808_3928', 'WZ2805_3929', 'WZ2812_3919', 'WZ2806_3916', 'WZ2805_3921', 'WZ2805_3917', 'WZ2806_3921', 'WZ2802_3925', 'WZ2811_3918', 'WZ2802_3920', 'WZ2812_3918', 'WZ2807_3928', 'WZ2801_3924', 'WZ2805_3915', 'WZ2802_3919', 'WZ2810_3918', 'WZ2806_3924', 'WZ2810_3917', 'WZ2808_3919', 'WZ2808_3926', 'WZ2804_3921', 'WZ2810_3916', 'WZ2807_3918', 'WZ2808_3921', 'WZ2802_3922', 'WZ2803_3924', 'WZ2807_3915', 'WZ2804_3927', 'WZ2806_3929', 'WZ2808_3929', 'WZ2809_3919', 'WZ2800_3924', 'WZ2807_3927', 'WZ2800_3920', 'WZ2805_3923', 'WZ2807_3922', 'WZ2808_3927', 'WZ2813_3917', 'WZ2807_3924', 'WZ2805_3919', 'WZ2801_3923', 'WZ2801_3922', 'WZ2806_3917', 'WZ2806_3923', 'WZ2803_3927', 'WZ2813_3919', 'WZ2801_3921', 'WZ2806_3925', 'WZ2808_3915', 'WZ2807_3921', 'WZ2801_3920', 'WZ2806_3922', 'WZ2803_3922', 'WZ2804_3923', 'WZ2800_3919', 'WZ2804_3922', 'WZ2803_3923', 'WZ2804_3916', 'WZ2807_3929', 'WZ2808_3917', 'WZ2805_3924', 'WZ2805_3928', 'WZ2809_3916', 'WZ2813_3918'
     # print(len(str.split(",")))
-    lst1 = ['网元', 'NR小区标识', '异频切换测量参数组标识', '异频测量事件时间迟滞(毫秒)',
-                                                     '异频测量事件幅度迟滞(0.5dB)',
-                                                     '异频A1A2时间迟滞(毫秒)', '异频A1A2幅度迟滞(0.5dB)', '基于频率优先级的异频切换A2RSRP门限(dBm)',
-                                                     '基于频率优先级的异频切换A1RSRP门限(dBm)',
-                                                     '基于覆盖的异频A5RSRP触发门限1(dBm)', '基于覆盖的异频A5RSRP触发门限2(dBm)',
-                                                     '基于覆盖的异频A2RSRP触发门限(dBm)',
-                                                     '基于覆盖的异频A1RSRP触发门限(dBm)', '基于频率优先级的异频切换A4RSRP门限(dBm)',
-                                                     '基于MLB的异频A4RSRP门限(dBm)', '运营商专用优先级异频切换A4RSRP门限(dBm)',
-                                                     '基于业务的异频切换A4RSRP门限(dBm)', '基于覆盖的异频RSRQ门限(0.5dB)',
-                                                     '基于覆盖的异频A2RSRQ触发门限(0.5dB)', '基于覆盖的异频A1RSRQ触发门限(0.5dB)',
-                                                     '基于干扰的异频切换A3RSRP偏置(0.5dB)', '基于干扰的异频切换RSRP门限(dBm)',
-                                                     '基于SSBSINR的异频切换A1门限(0.5dB)', '基于SSBSINR的异频切换A2门限(0.5dB)',
-                                                     '基于A3异频切换的A2RSRP触发门限(dBm)', '基于A3异频切换的A1RSRP触发门限(dBm)',
-                                                     '异频切换A3偏置(0.5dB)', '基于上行覆盖的异频A5RSRP触发门限1(dBm)', '高速用户A2门限偏置(dB)',
-                                                     '基于MBS兴趣指示的异频切换A5RSRP触发门限2(dBm)', '基于覆盖的异频切换A5SINR门限2(0.5dB)',
-                                                     '异频盲重定向A2SINR门限(0.5dB)', '特殊终端基于频率优先级切换的A1RSRP门限(dBm)',
-                                                     '特殊终端基于频率优先级切换的A2RSRP门限(dBm)', '特殊终端基于频率优先级切换的A4RSRP门限(dBm)',
-                                                     '基于干扰隔离的异频A5RSRP触发门限1(dBm)', '低速用户迁出A2RSRP门限(dBm)',
-                                                     '特殊终端上行基于频率优先级切换的A1RSRP门限(dBm)', '特殊终端上行基于频率优先级切换的A2RSRP门限(dBm)',
-                                                     '特殊终端上行基于频率优先级切换的A4RSRP门限(dBm)', '基于干扰的异频切换RSRP门限(dBm)',
-                                                     '异频A4A5时间迟滞(毫秒)', '异频A4A5幅度迟滞(0.5dB)', '异频A1A2幅度迟滞(0.5dB)',
-                                                     '基于频率优先级的异频切换A2RSRP门限(dBm)', '基于频率优先级的异频切换A1RSRP门限(dBm)',
-                                                     '基于覆盖的异频A5RSRP触发门限1(dBm)', '基于覆盖的异频A5RSRP触发门限2(dBm)',
-                                                     '基于覆盖的异频A2RSRP触发门限(dBm)', '基于覆盖的异频A1RSRP触发门限(dBm)',
-                                                     '基于频率优先级的异频切换A4RSRP门限(dBm)', '基于MLB的异频A4RSRP门限(dBm)',
-                                                     '运营商专用优先级异频切换A4RSRP门限(dBm)', '基于业务的异频切换A4RSRP门限(dBm)',
-                                                     '基于覆盖的异频A5RSRQ门限2(0.5dB)', '基于覆盖的异频A2RSRQ触发门限(0.5dB)',
-                                                     '基于覆盖的异频A1RSRQ触发门限(0.5dB)', '基于干扰的异频切换A3RSRP偏置(0.5dB)']
-    lst2 = ['网元', 'NR小区标识', '异频切换测量参数组标识', '异频测量事件时间迟滞(毫秒)', '异频测量事件幅度迟滞(0.5dB)', '异频A1A2时间迟滞(毫秒)', '异频A1A2幅度迟滞(0.5dB)', '基于频率优先级的异频切换A2RSRP门限(dBm)', '基于频率优先级的异频切换A1RSRP门限(dBm)', '基于覆盖的异频A5RSRP触发门限1(dBm)', '基于覆盖的异频A5RSRP触发门限2(dBm)', '基于覆盖的异频A2RSRP触发门限(dBm)', '基于覆盖的异频A1RSRP触发门限(dBm)', '基于频率优先级的异频切换A4RSRP门限(dBm)', '基于MLB的异频A4RSRP门限(dBm)', '运营商专用优先级异频切换A4RSRP门限(dBm)', '基于业务的异频切换A4RSRP门限(dBm)', '基于覆盖的异频RSRQ门限(0.5dB)', '基于覆盖的异频A2RSRQ触发门限(0.5dB)', '基于覆盖的异频A1RSRQ触发门限(0.5dB)', '基于干扰的异频切换A3RSRP偏置(0.5dB)', '基于干扰的异频切换RSRP门限(dBm)', '基于SSBSINR的异频切换A1门限(0.5dB)', '基于SSBSINR的异频切换A2门限(0.5dB)', '基于A3异频切换的A2RSRP触发门限(dBm)', '基于A3异频切换的A1RSRP触发门限(dBm)', '异频切换A3偏置(0.5dB)', '基于上行覆盖的异频A5RSRP触发门限1(dBm)', '高速用户A2门限偏置(dB)', '基于MBS兴趣指示的异频切换A5RSRP触发门限2(dBm)', '基于覆盖的异频切换A5SINR门限2(0.5dB)', '异频盲重定向A2SINR门限(0.5dB)', '特殊终端基于频率优先级切换的A1RSRP门限(dBm)', '特殊终端基于频率优先级切换的A2RSRP门限(dBm)', '特殊终端基于频率优先级切换的A4RSRP门限(dBm)', '基于干扰隔离的异频A5RSRP触发门限1(dBm)', '低速用户迁出A2RSRP门限(dBm)', '特殊终端上行基于频率优先级切换的A1RSRP门限(dBm)', '特殊终端上行基于频率优先级切换的A2RSRP门限(dBm)', '特殊终端上行基于频率优先级切换的A4RSRP门限(dBm)', '异频A4A5时间迟滞(毫秒)', '异频A4A5幅度迟滞(0.5dB)', '基于覆盖的异频A5RSRQ门限2(0.5dB)', '异频A4A5幅度迟滞(0.5dB)', '异频A1A2幅度迟滞(0.5dB)', '基于覆盖的异频A5RSRQ门限2(0.5dB)', '基于覆盖的异频A2RSRQ触发门限(0.5dB)', '基于覆盖的异频A1RSRQ触发门限(0.5dB)', '基于干扰的异频切换A3RSRP偏置(0.5dB)']
-    # lst1 = [s.replace(" ","") for s in lst1]
+
     # lst2 = [s.replace(" ","") for s in lst2]
-    dff = set(lst1).difference(set(lst2))
-    print(dff)
+    # dff = set(lst1).difference(set(lst2))
+    # print(dff)
     # df1 = pd.DataFrame({'A': ['A', np.nan, np.nan], 'B': ['A', 'B', 'E']})
     # df2 = pd.DataFrame({'A': ['A', np.nan, np.nan], 'B': ['A', 'B', np.nan], 'C': ['A', 'B', np.nan]})
     # df3 = pd.merge(df1,df2,how='left',on=['A','B'])
     # print()
 
+    # read_thread = Thread(target=read)
+    # progress_thread = Thread(target=progress, args=(read_thread,))
+    # read_thread.start()
+    # progress_thread.start()
+    # read_thread.join()
+    # progress_thread.join()
+    read_csv()

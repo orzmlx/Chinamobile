@@ -7,10 +7,13 @@ import copy
 import itertools
 import common_util
 
+import os
+
 
 class WeightChange:
     # csv文件解析异常,直接改后缀无法解决，将xlsx另存为包含,的csv文件
-    def __init__(self, common_file_path, cloud_file_path, output_path, distance):
+    def __init__(self, g5_common_path, common_file_path, cloud_file_path, output_path, distance):
+        self.g5_common_df = pd.read_csv(g5_common_path, encoding='gbk')
         self.output_path = output_path
         self.match_result = {}
         self.cover_distance = distance
@@ -44,7 +47,7 @@ class WeightChange:
         self.cloud_file_df['MR总数_移动'].fillna(value=0, inplace=True)
 
     @staticmethod
-    def match_distance_by_geo(lat_node, lon_node, lat, lon, distance):
+    def match_distance_by_geo(lat_node, lon_node, lat, lon):
         """
             根据小数点位数来快速过滤站点
         """
@@ -85,7 +88,7 @@ class WeightChange:
 
     @staticmethod
     def is_in_sector(lat_node, lon_node, lat, lon, start_angle, end_angle, cover_distance):
-        if WeightChange.match_distance_by_geo(lat_node, lon_node, lat, lon, cover_distance):
+        if WeightChange.match_distance_by_geo(lat_node, lon_node, lat, lon):
             real_distance = gutils.haversine((lat_node, lon_node), (lat, lon))
             if real_distance < cover_distance:
                 angle = gutils.get_angle(lat_node, lon_node, lat, lon)
@@ -191,41 +194,6 @@ class WeightChange:
         else:
             return round(start_angle + buffer, 2)
 
-    # @staticmethod
-    # def get_new_direction(center_angle, clock_wise_angle, anti_clock_wise_angle):
-    #     if clock_wise_angle >= anti_clock_wise_angle:
-    #         new_center_angle = center_angle - (45 - anti_clock_wise_angle)
-    #         if new_center_angle < 0:
-    #             new_center_angle = 360 + new_center_angle
-    #     else:
-    #         new_center_angle = center_angle + (45 - clock_wise_angle)
-    #         if new_center_angle > 360:
-    #             new_center_angle = new_center_angle - 360
-    #     return new_center_angle
-
-    # @staticmethod
-    # def get_normal_direction(angle, start_angle, end_angle, center_angle, buffer):
-    #     """"
-    #         判断这个点是否在法线的顺时针方向,并且给出法线角度和法线坐标
-    #     """
-    #     clockwise = None
-    #     if abs(end_angle - start_angle) > 90:
-    #         # 判断点是否在法线的顺时针方向
-    #         if end_angle + buffer < 360:
-    #             # center_angle = end_angle + buffer
-    #             if angle is not None:
-    #                 clockwise = False if end_angle <= angle <= center_angle else True
-    #         else:
-    #             # center_angle = buffer - (360 - end_angle)
-    #             if angle is not None:
-    #                 clockwise = True if start_angle >= angle >= center_angle else False
-    #     else:
-    #         # center_angle = start_angle + buffer
-    #         if angle is not None:
-    #             clockwise = True if center_angle <= angle <= end_angle else False
-    #
-    #     return clockwise
-
     @staticmethod
     def calculate_proper_point(points, sum_weight):
 
@@ -329,9 +297,10 @@ class WeightChange:
             # end_angle = row['终止角度']
             start_angle, end_angle = gutils.get_rad_by_direction(direction)
 
-            match_node_list, cell_sum_weight,match_nodes_names = weightchange.get_match_points(row, self.cloud_file_df, cover_distance,
-                                                                             start_angle,
-                                                                             end_angle)
+            match_node_list, cell_sum_weight, match_nodes_names = weightchange.get_match_points(row, self.cloud_file_df,
+                                                                                                cover_distance,
+                                                                                                start_angle,
+                                                                                                end_angle)
             site_sum_weight = site_sum_weight + cell_sum_weight
         return site_sum_weight
 
@@ -345,17 +314,212 @@ class WeightChange:
                     return False
         return True
 
+    def get_direction_diff(self, dr1, dr2):
+        """
+            以顺时针计算两个方位角之间的差值
+        """
+        if abs(dr2 - dr1) > 180:
+            if dr2 >= dr1:
+                return (360 - dr2) + dr1
+            else:
+                return (360 - dr1) + dr2
+        else:
+            return abs(dr2 - dr1)
+
+    def get_g5_directions(self, df):
+        g5_directions = df[df['频段'].str.contains('NR-D', na=False)]['方位角'].unique().tolist()
+        if len(g5_directions) == 0:
+            g5_directions = df[df['频段'].str.contains('NR-700', na=False)]['方位角'].unique().tolist()
+            if len(g5_directions) == 0:
+                g5_directions = df[df['频段'].str.contains('NR-C', na=False)]['方位角'].unique().tolist()
+        return g5_directions
+
+    @staticmethod
+    def is_in_buff(angle, direction, buff):
+        if angle < 0:
+            angle = 360 + angle
+        direction_min = angle - buff
+        direction_max = angle + buff
+        if direction_min < 0:
+            direction_min = 360 + direction_min
+            if direction_max < direction < direction_min:
+                return False
+        elif direction_max > 360:
+            direction_max = direction_max - 360
+            if direction_max < direction < direction_min:
+                return False
+        elif direction < direction_min or direction > direction_max:
+            return False
+        return True
+
+    @staticmethod
+    def get_proper_point_by_distance(row, common_df, buff):
+        primary_cell_lon = row['主小区经度']
+        primary_cell_lat = row['主小区纬度']
+        primary_cell = row['主小区']
+
+        city = row['地市']
+        for lat, lon, c, cgi, direction, band in zip(common_df['纬度'], common_df['经度'],
+                                                     common_df['地市'], common_df['CGI'], common_df['方位角'],
+                                                     common_df['工作频段']):
+            if str(direction) == 'nan':
+                continue
+            if c != city:
+                continue
+            if band == 'NR-C':
+                continue
+            lat_node_decimal_part = abs(primary_cell_lat - lat)
+            lon_node_decimal_part = abs(primary_cell_lon - lon)
+            if lat_node_decimal_part > 0.01 or lon_node_decimal_part > 0.01:
+                continue
+            # if angle < 0:
+            #     angle = 360 + angle
+            # direction_min = angle - buff
+            # direction_max = angle + buff
+            # if direction_min < 0:
+            #     direction_min = 360 + direction_min
+            #     if direction_max < direction < direction_min:
+            #         continue
+            # elif direction_max > 360:
+            #     direction_max = direction_max - 360
+            #     if direction_max < direction < direction_min:
+            #         continue
+            # elif direction < direction_min or direction > direction_max:
+            #     continue
+            real_distance = gutils.haversine((primary_cell_lat, primary_cell_lon), (lat, lon))
+            if band == 'NR-700' and real_distance > 0.5:
+                continue
+            elif band == 'NR-D' and real_distance > 0.3:
+                continue
+            angle = gutils.get_angle(lat, lon, primary_cell_lat, primary_cell_lon)
+            if angle < 0:
+                angle = 360 + angle
+            if real_distance < 0.1:
+                match = weightchange.is_in_buff(angle, direction, 40)
+            elif 0.1 <= real_distance < 0.3:
+                match = weightchange.is_in_buff(angle, direction, 30)
+            else:
+                match = weightchange.is_in_buff(angle, direction, 20)
+            if match:
+                bands.append(band)
+                real_distances.append(real_distance)
+                cgis.append(cgi)
+                g5_lons.append(lon)
+                g5_lats.append(lat)
+                angles.append(angle)
+                directions.append(direction)
+                primary_cells.append(primary_cell)
+                primary_lats.append(primary_cell_lat)
+                primary_lons.append(primary_cell_lon)
+        # return pd.DataFrame({'主小区': primary_cells,"对打小区CGI":cgis, "频段":bands,"经度":lons,"纬度":lats,
+        #                      "方位角":direction})
+
+    def get_neighbor_opposite_cell(self, path):
+        check_df = pd.read_csv(path, usecols=['主小区', '主小区经度', '主小区纬度', '地市'], encoding='gbk')
+        tqdm.pandas(desc='过滤对打小区')
+        columns = ["主小区", "CGI", "频段", '距离', '经度', '纬度', '方位角', '站点方位角']
+
+        check_df.progress_apply(
+            WeightChange.get_proper_point_by_distance,
+            axis=1, args=(self.g5_common_df, 30), result_type="expand")
+
+    def classify_site_number(self, path):
+        # cut_bins = [-10, 0, 60, 120, 180, 240, 300, 360]
+        df = pd.read_csv(path, encoding='utf8')
+        df['方位角'].fillna(inplace=True, value=0.001)
+        df.sort_values(by=['方位角'], inplace=True, ascending=True)
+        df.reset_index(drop=True, inplace=True)
+        df['label'] = ""
+        grouped = df.groupby('场景编号')
+        group_number = len(grouped)
+        index0 = 0
+        prg = 0
+        for s_number, g in grouped:
+            if str(s_number) == 'nan':
+                continue
+            index0 = index0 + 1
+            c_prg = round(index0 / group_number, 3)
+            # print(index0)
+            if c_prg > prg:
+                print("{:.2f}%".format(c_prg * 100))
+                prg = c_prg
+            # g5_directions = g[g['频段'].str.contains('NR', na=False)]['方位角'].unique().tolist()
+            g5_directions = self.get_g5_directions(g)
+            # for index, d in enumerate(g5_directions):
+            for label, row in g.iterrows():
+                # for row in g.itertuples():
+                direction = row['方位角']
+                band = row['频段']
+                if direction == 0.001:
+                    continue
+                if str(band) == 'nan':
+                    continue
+                for index, d in enumerate(g5_directions):
+                    # 因为所有都是顺序排列
+                    if direction == d and band.find('NR') >= 0:
+                        df.at[label, 'label'] = index + 1
+                        break
+                    if g5_directions[len(g5_directions) - 1] < direction < 360:
+                        up_d = g5_directions[len(g5_directions) - 1]
+                        down_d = g5_directions[0]
+                        up_diff = self.get_direction_diff(up_d, direction)
+                        down_diff = self.get_direction_diff(direction, down_d)
+                        if up_diff > down_diff:
+                            value = 1
+                            # df.at[label, 'label'] = 1
+                            if down_diff > 60:
+                                value = value + 10
+                        else:
+                            value = len(g5_directions)
+                            # df.at[label, 'label'] = len(g5_directions)
+                            if up_diff > 60:
+                                value = value + 10
+                        df.at[label, 'label'] = value
+                        break
+                    if direction <= d:
+                        if index == 0:
+                            up_d = g5_directions[len(g5_directions) - 1]
+                        else:
+                            up_d = g5_directions[index - 1]
+                        down_d = d
+                        up_diff = self.get_direction_diff(up_d, direction)
+                        down_diff = self.get_direction_diff(direction, down_d)
+                        if up_diff > down_diff:
+                            if index == 0:
+                                value = 1
+                            else:
+                                value = index + 1
+                            if down_diff > 60:
+                                value = value + 10
+                            df.at[label, 'label'] = value
+                        else:
+                            if index == 0:
+                                value = len(g5_directions)
+                            else:
+                                value = index
+                            if up_diff > 60:
+                                value = value + 10
+                            df.at[label, 'label'] = value
+                        break
+
+        # df['label'] = pd.cut(df['方位角'], bins=cut_bins, labels=["0.001", "1", "2", "3", "4", "5", "6"])
+        # df['label'] = df['label'].astype(str)
+        # df['共扇区编号'] = df['场景编号'] + '_' + df['label']
+        # df['方位角'] = df['方位角'].replace(-0.001, 0.001)
+        df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\区域优化问题小区清单.csv", index=False, encoding='utf_8_sig')
+
 
 if __name__ == "__main__":
+    g5_common_path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20240131.csv'
     common_file_path = "C:\\Users\\No.1\\Desktop\\teleccom\\5G小区工参-温州衢州三类四类(1).csv"
     cloud_file_path = "C:\\Users\\No.1\\Desktop\\teleccom\\云勘数据-温州衢州三类四类(1).csv"
     output_path = "C:\\Users\\No.1\\Desktop\\teleccom\\result.csv"
-    weightchange = WeightChange(common_file_path, cloud_file_path, output_path, 0.8)
+    weightchange = WeightChange(g5_common_path, common_file_path, cloud_file_path, output_path, 0.8)
+    # # df = pd.read_csv(output_path)
+    # # weightchange.check_valid(df)
+    # weightchange.get_proper_points()
     # df = pd.read_csv(output_path)
     # weightchange.check_valid(df)
-    weightchange.get_proper_points()
-    # df = pd.read_csv(output_path)
-    #weightchange.check_valid(df)
     # list1 = [1, 2, 3, 4]
     # list2 = [5, 6, 7, 8]
     # list3 = [7, 9, 10, 2]
@@ -364,3 +528,23 @@ if __name__ == "__main__":
     # print(list(itertools.product(*tuple)))
     # result = [x * y  for x, y in zip(list1, list2)]
     # print(result)
+    path = "C:\\Users\\No.1\\Desktop\\teleccom\\区域优化问题小区清单.csv"
+    weightchange.classify_site_number(path)
+    # real_distances = []
+    # bands = []
+    # cgis = []
+    # g5_lons = []
+    # g5_lats = []
+    # primary_lons = []
+    # primary_lats = []
+    # primary_cells = []
+    # angles = []
+    # directions = []
+    # path = 'C:\\Users\\No.1\\Desktop\\teleccom\\有4无5优化清单.csv'
+    # weightchange.get_neighbor_opposite_cell(path)
+    # result = pd.DataFrame(
+    #     {'主小区': primary_cells, "主小区经度": primary_lons, "主小区纬度": primary_lats, "对打小区CGI": cgis,
+    #      "距离": real_distances, "频段": bands,
+    #      "经度": g5_lons, "纬度": g5_lats,
+    #      "方位角": directions, "站点方位角": angles})
+    # result.to_csv(os.path.join(os.path.split(path)[0], '优化结果1.csv'), index=False, encoding='utf_8_sig')

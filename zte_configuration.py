@@ -1,0 +1,4 @@
+
+G4_CELL_IDENTITY = None
+G5_CELL_IDENTITY = "网元CU"
+

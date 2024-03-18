@@ -9,6 +9,7 @@ import numpy as np
 import itertools
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
+import zte_configuration
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
@@ -30,11 +31,11 @@ class param_selector:
         if self.system == '5G':
             self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
             self.site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
-            self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
+            # self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
         else:
             self.site_info = pd.read_csv(g4_site_info, usecols=['CGI', '4G频段'])
             self.site_info.rename(columns={'4G频段': '共址类型'}, inplace=True)
-            self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
+            # self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
         self.site_info.drop_duplicates(subset=['CGI'], keep='last', inplace=True)
         self.g5_common_table = g5_common_table
         self.g4_common_table = g4_common_table
@@ -54,15 +55,15 @@ class param_selector:
         self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
         self.all_area_classes = huaweiutils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
         self.all_cover_classes = huaweiutils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
-        self.all_co_location = huaweiutils.list_to_str(self.base_info_df['共址类型'].unique().tolist()) + np.nan
+        self.all_co_location = huaweiutils.list_to_str(self.base_info_df['共址类型'].unique().tolist())
         self.cell_config_df = pd.read_excel(self.standard_path, sheet_name="小区级别核查配置", true_values=["是"],
                                             false_values=["否"], dtype=str)
         self.freq_config_df = pd.read_excel(self.standard_path, sheet_name="频点级别核查配置", true_values=["是"],
                                             false_values=["否"], dtype=str)
         self.freq_config_df = self.freq_config_df[
-            (self.freq_config_df['制式'] == self.system) & (self.freq_config_df['厂家'] == '华为')]
+            (self.freq_config_df['制式'] == self.system) & (self.freq_config_df['厂家'] == self.manufacturer)]
         self.cell_config_df = self.cell_config_df[
-            (self.cell_config_df['制式'] == self.system) & (self.cell_config_df['厂家'] == '华为')]
+            (self.cell_config_df['制式'] == self.system) & (self.cell_config_df['厂家'] == self.manufacturer)]
         self.cell_config_df['参数组标识'] = self.cell_config_df['参数组标识'].astype(str)
         self.cell_config_df['QCI'] = self.cell_config_df['QCI'].astype(str)
         self.freq_config_df['参数组标识'] = self.freq_config_df['参数组标识'].astype(str)
@@ -80,9 +81,6 @@ class param_selector:
             if self.system == '4G':
                 self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
                 self.all_band = huaweiutils.list_to_str(band_list)
-                # self.all_area_classes = huaweiutils.list_to_str(self.g4_base_info_df['区域类别'].unique().tolist())
-                # self.all_cover_classes = huaweiutils.list_to_str(self.g4_base_info_df['覆盖类型'].unique().tolist())
-                # self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist()) + np.nan
             else:
                 self.g5_base_info_df = self.get_huawei_5g_base_info()
                 self.all_band = '4.9G|2.6G|700M'
@@ -90,9 +88,6 @@ class param_selector:
             if self.system == '4G':
                 self.g4_base_info_df = self.get_zte_4g_base_info(band_list)
                 self.all_band = huaweiutils.list_to_str(band_list)
-                # self.all_area_classes = huaweiutils.list_to_str(self.g4_base_info_df['区域类别'].unique().tolist())
-                # self.all_cover_classes = huaweiutils.list_to_str(self.g4_base_info_df['覆盖类型'].unique().tolist())
-                # self.all_co_location = huaweiutils.list_to_str(self.g4_base_info_df['共址类型'].unique().tolist()) + np.nan
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
                 self.all_band = '4.9G|2.6G|700M'
@@ -101,7 +96,9 @@ class param_selector:
         """
             按qci重新命名参数
         """
-
+        if config.empty:
+            logging.info('>>>>>>>>>>配置表为空.....<<<<<<<<<<<')
+            return
         config0 = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # config0.sort_values(by=['伴随参数命令'], inplace=True)
         config0 = config0[~config0['推荐值'].isna()]
@@ -141,57 +138,44 @@ class param_selector:
         # base_info_df = base_info_df.rename(columns={'频带': '频段'}, inplace=True)
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
-        base_info_df['厂家'] = '华为'
+        base_info_df['厂家'] = self.manufacturer
+        self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
         return base_info_df
 
     def get_zte_5g_base_info(self):
         common_table = self.get_5g_common()
-        cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
-                              usecols=['网元名称', '用户标识', '小区标识', 'CGI', 'SSB的中心频点'])
+        # cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
+        #                       usecols=['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], encoding='gbk')
+        cell_df = huaweiutils.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
+                                       ['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], dtype=str)
 
-        base_info_df = cell_df.rename(columns={'SSB的中心频点': '频段',
-                                               '网元名称': '网元', '用户标识': 'NRDU小区名称',
-                                               '小区标识': 'NR小区标识'})
+        base_info_df = cell_df.rename(columns={'用户标识': 'NRDU小区名称'})
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
-        base_info_df['厂家'] = '中兴'
-        return base_info_df
+        base_info_df['厂家'] = self.manufacturer
+        self.cell_identity = zte_configuration.G5_CELL_IDENTITY
 
-    def get_zte_4g_base_info(self, band_list):
-        return None
+        return base_info_df
 
     def get_huawei_5g_base_info(self):
         """
             获取基本信息列
         """
         common_table = self.get_5g_common()
-        ducell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST NRDUCELL.csv'))
+        ducell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST NRDUCELL.csv'), dtype=str)
         gnode_df = pd.read_csv(
-            os.path.join(self.file_path, 'raw_result', 'LST GNODEBFUNCTION.csv'))
+            os.path.join(self.file_path, 'raw_result', 'LST GNODEBFUNCTION.csv'), dtype=str)
         ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
             huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
-
-        # common_table = pd.read_csv(self.g5_common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市', '工作频段', 'CELL区域类别'],
-        #                            encoding='gbk', dtype=str)
-        # common_table.rename(columns={'CELL区域类别': '区域类别'}, inplace=True)
-        # # common_table['工作频段'] = common_table['工作频段'].apply(lambda x: x.split('-')[1])
-        # # 覆盖类型中，室内外和空白，归为室外
-        # common_table['覆盖类型'] = common_table['覆盖类型'].map({"室外": "室外", "室内外": "室外", "室内": "室内"})
-        # common_table['覆盖类型'].fillna("室外", inplace=True)
-        # na_area_common_df = common_table[common_table['区域类别'].isna()]
-        # self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
-        # common_table['区域类别'].fillna(value='农村', inplace=True)
-        # huaweiutils.output_csv(common_table, "common.csv", self.out_path)
-        # ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
-        #     huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
         base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带']]
         base_info_df['频带'] = base_info_df['频带'].map(
             {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
         base_info_df = base_info_df.rename(columns={'频带': '频段'})
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
-        base_info_df['厂家'] = '华为'
+        base_info_df['厂家'] = self.manufacturer
+        self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
         return base_info_df
 
     def get_4g_common(self, band_list):
@@ -226,10 +210,16 @@ class param_selector:
         common_table['区域类别'].fillna(value='农村', inplace=True)
         return common_table
 
+    def get_base_cols(self):
+        return ['网元'] if self.manufacturer == 'huawei' else ['网元CU', 'CGI']
+
     def find_switch_cols(self, file_name, switch_params):
         find_params = {}
-        base_cols = ['网元']
-        df = pd.read_csv(file_name, nrows=1)
+        base_cols = self.get_base_cols()
+        try:
+            df = pd.read_csv(file_name, nrows=1)
+        except:
+            df = pd.read_csv(file_name, nrows=1, encoding='gbk')
         cols = df.columns.tolist()
         if self.cell_identity in cols:
             base_cols.append(self.cell_identity)
@@ -279,8 +269,11 @@ class param_selector:
                     # 去掉对端非移动频点的行
                     df = df[df[frequency_param] != '其他频段']
                 df.rename(columns={frequency_param: '对端频带'}, inplace=True)
-        self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
-        df = df.merge(self.base_info_df, how='left', on=['网元', self.cell_identity])
+        # self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
+        on = ['网元', self.cell_identity]
+        if self.manufacturer == 'zte':
+            on = ['CGI']
+        df = df.merge(self.base_info_df, how='left', on=on)
         # df.rename(columns={'频带': '频段'}, inplace=True)
         return df
 
@@ -331,12 +324,14 @@ class param_selector:
     def get_freq_table(self, config_df):
         if config_df.empty:
             return []
-        config_df0 = self.check_params(config_df, True)
-        command_grouped = config_df0.groupby(['主命令'])
+        checked_config = self.check_params(config_df, True)
+        command_grouped = checked_config.groupby(['主命令'])
         read_result_list = []
         for command, g in command_grouped:
             params = g['原始参数名称'].unique().tolist()
-            command = huaweiutils.remove_digit(command, [",", ":"])
+            # 华为参数需要去掉数字,中兴不需要
+            if self.manufacturer == 'huawei':
+                command = huaweiutils.remove_digit(command, [",", ":"])
             file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
             read_res, base_cols = self.read_data_by_command(file_name, params, g)
             if read_res.empty:
@@ -483,7 +478,8 @@ class param_selector:
                 # except Exception as e:
                 #     logging.info(e)
         merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=['网元'], cell_identity=self.cell_identity)
-        res = merge_qci_df.merge(non_qci_res, how='left', on=['网元', self.cell_identity])
+        res = merge_qci_df.merge(non_qci_res, how='left',
+                                 on=['网元', self.cell_identity]) if not merge_qci_df.empty else non_qci_res
         return res
 
     # def update_name_by_qci(self, df, name, qci):
@@ -525,7 +521,9 @@ class param_selector:
             frequency = g['频点标识'].unique().tolist()
             if len(frequency) > 0:
                 base_cols.append(frequency[0])
-        base_df = pd.read_csv(file_name, usecols=base_cols, dtype=str)
+        # if self.manufacturer == 'zte':
+        #     base_cols.append('CGI')
+        base_df = huaweiutils.read_csv(file_name, base_cols, str)
         # 如果没有开关参数，那么赋值为base_info
         switch_df = pd.DataFrame()
         # 查看主命令是否存在标识,主命令对应标识应该一样
@@ -545,7 +543,7 @@ class param_selector:
                     check_params[i] = check_params[i].split('_')[0]
             non_switch_col.extend(check_params)
             logging.debug("读取文件:【" + file_name + "】读取的列:【" + str(non_switch_col) + "】")
-            non_switch_df = pd.read_csv(file_name, usecols=non_switch_col, dtype=str)
+            non_switch_df = huaweiutils.read_csv(file_name, non_switch_col, str)
         if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
