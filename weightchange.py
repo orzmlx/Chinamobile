@@ -425,12 +425,12 @@ class WeightChange:
 
     def classify_site_number(self, path):
         # cut_bins = [-10, 0, 60, 120, 180, 240, 300, 360]
-        df = pd.read_csv(path, encoding='utf8')
+        df = pd.read_csv(path, encoding='gbk')
         df['方位角'].fillna(inplace=True, value=0.001)
         df.sort_values(by=['方位角'], inplace=True, ascending=True)
         df.reset_index(drop=True, inplace=True)
         df['label'] = ""
-        grouped = df.groupby('场景编号')
+        grouped = df.groupby('共扇区编号')
         group_number = len(grouped)
         index0 = 0
         prg = 0
@@ -506,7 +506,7 @@ class WeightChange:
         # df['label'] = df['label'].astype(str)
         # df['共扇区编号'] = df['场景编号'] + '_' + df['label']
         # df['方位角'] = df['方位角'].replace(-0.001, 0.001)
-        df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\区域优化问题小区清单.csv", index=False, encoding='utf_8_sig')
+        df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\22问题小区清单.csv.csv", index=False, encoding='utf_8_sig')
 
 
 if __name__ == "__main__":
@@ -528,7 +528,7 @@ if __name__ == "__main__":
     # print(list(itertools.product(*tuple)))
     # result = [x * y  for x, y in zip(list1, list2)]
     # print(result)
-    path = "C:\\Users\\No.1\\Desktop\\teleccom\\区域优化问题小区清单.csv"
+    path = "C:\\Users\\No.1\\Desktop\\teleccom\\22问题小区清单.csv"
     weightchange.classify_site_number(path)
     # real_distances = []
     # bands = []

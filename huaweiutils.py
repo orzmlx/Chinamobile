@@ -499,8 +499,8 @@ if __name__ == "__main__":
     # str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # # print(only_has_digtal_diff(str1, str2))
     # print(remove_digit(str1, ['=']))
-    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240314\\5G'
-
-    combine_file_by_name(path)
-    # path = 'C:\\Users\\No.1\\Desktop\\分表'
-    # split_csv(path, 200000)
+    # path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240314\\5G'
+    #
+    # combine_file_by_name(path)
+    path = 'C:\\Users\\No.1\\Desktop\\分表'
+    split_csv(path, 200000)
