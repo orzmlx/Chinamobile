@@ -143,8 +143,8 @@ def get_csv_summary(path):
     items = pathlib.Path(path).rglob('*')
     for item in items:
         item = str(item)
-        df = pl.read_csv(item, encoding='utf8')
-        df = df.to_pandas()
+        df = pd.read_csv(item, encoding='utf8')
+        # df = df.to_pandas()
         if df.empty:
             raise Exception(item + '中数据为空')
         f_name = os.path.split(item)[1].split(".")[0]
@@ -160,4 +160,5 @@ def get_csv_summary(path):
 if __name__ == "__main__":
     path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240229\\5G'
     get_csv_summary(
-        "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240229\\5G\\ RANCM-5G互操作参数-fxx-chaxun-20240226165328\\temp")
+        "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240322\\5G\\RANCM-5G互操作参数-fxx-chaxun-20240319165154"
+        "-ITBBU-ITRAN-PNF_V5\\temp")

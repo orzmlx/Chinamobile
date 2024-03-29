@@ -1,3 +1,4 @@
+import shutil
 import pandas as pd
 import logging
 import pkgutil
@@ -8,12 +9,14 @@ import numpy as np
 import pathlib
 import math
 import copy
+import patoolib
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
 import itertools
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
+
 replace_char = ['秒', 'dB']
 
 
@@ -39,6 +42,8 @@ def combine_file_by_name(path):
     f_dict = {}
     all_file = find_file(path, '.csv')
     for i in range(len(all_file)):
+        if 'temp' == os.path.split(os.path.abspath(os.path.dirname(all_file[i])))[1]:
+            continue
         f_name = all_file[i].name
         f_list = f_dict.get(f_name, [])
         f_list.append(str(all_file[i]))
@@ -125,6 +130,22 @@ def create_header(df, path, class_dict, base_cols):
         if index == len(base_cols) - 1:
             break
     wb.save(os.path.join(os.path.split(path)[0], '互操作小区级核查结果.csv'))
+
+
+def unzip_all_files(path):
+    import zipfile
+    os.chmod(path, 7)
+    zip_files = find_file(path, '.zip')
+    if len(zip_files) == 0:
+        return
+    for file in zip_files:
+        dest_dir = str(file).replace('.zip', '')
+        # patoolib.extract_archive(file,dest_dir)
+        shutil.unpack_archive(file, dest_dir)
+        os.remove(file)
+    unzip_all_files(path)
+
+    # f = zipfile.ZipFile(f, 'r')  # 压缩文件位置
 
 
 def get_content_col(base_cols, cols):
@@ -390,8 +411,9 @@ def read_csv(file_name, usecols, dtype):
         return pd.read_csv(file_name, usecols=usecols, dtype=dtype) if dtype != None else pd.read_csv(file_name,
                                                                                                       usecols=usecols)
     except:
-        return pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') if dtype != None else pd.read_csv(file_name,
-                                                                                                      usecols=usecols,encoding='gbk')
+        return pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') if dtype != None else pd.read_csv(
+            file_name,
+            usecols=usecols, encoding='gbk')
 
 
 def list_to_str(check_list):
@@ -499,8 +521,16 @@ if __name__ == "__main__":
     # str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # # print(only_has_digtal_diff(str1, str2))
     # print(remove_digit(str1, ['=']))
-    # path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240314\\5G'
-    #
+    # path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240326\\5G'
+
     # combine_file_by_name(path)
-    path = 'C:\\Users\\No.1\\Desktop\\分表'
-    split_csv(path, 200000)
+    # path = 'C:\\Users\\No.1\\Desktop\\分表'
+    # split_csv(path, 200000)
+    path = 'C:\\Users\\No.1\\Desktop\\zip_test'
+    # unzip_all_files(path)
+    huawei_txts = find_file(path, '.txt')
+    dest = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240327\\5G\\raw_data'
+    if not os.path.exists(dest):
+        os.makedirs(dest)
+    for txt in huawei_txts:
+        shutil.move(str(txt), dest)

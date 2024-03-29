@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>mainWindow</class>
+ <widget class="QMainWindow" name="mainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>396</width>
-    <height>356</height>
+    <width>497</width>
+    <height>312</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -18,6 +18,8 @@
   </property>
   <property name="font">
    <font>
+    <weight>75</weight>
+    <bold>true</bold>
     <kerning>true</kerning>
    </font>
   </property>
@@ -26,7 +28,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../../../.designer/icons/chinamobile.svg</normaloff>../../../../.designer/icons/chinamobile.svg</iconset>
+    <normaloff>../../../../../.designer/icons/chinamobile.svg</normaloff>../../../../../.designer/icons/chinamobile.svg</iconset>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -45,16 +47,76 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>40</y>
-      <width>381</width>
-      <height>201</height>
+      <y>110</y>
+      <width>451</width>
+      <height>122</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="3" column="0">
-      <widget class="QToolButton" name="load_4g_site_info_btn">
+     <property name="leftMargin">
+      <number>1</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>5</number>
+     </property>
+     <item row="1" column="4">
+      <widget class="QProgressBar" name="load_4g_common_prgbar">
+       <property name="maximumSize">
+        <size>
+         <width>120</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="5">
+      <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>导入4G物理站信息表</string>
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="4">
+      <widget class="QProgressBar" name="load_4g_site_info_prgbar">
+       <property name="maximumSize">
+        <size>
+         <width>120</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QPushButton" name="start_5g_common_btn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>爱奇艺黑体</family>
+         <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(85, 255, 0);</string>
+       </property>
+       <property name="text">
+        <string>加载</string>
        </property>
       </widget>
      </item>
@@ -73,110 +135,12 @@
         <font>
          <family>爱奇艺黑体</family>
          <pointsize>7</pointsize>
-         <kerning>true</kerning>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(85, 255, 0);</string>
-       </property>
-       <property name="text">
-        <string>加载</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="4">
-      <widget class="QProgressBar" name="load_check_rule_prgbar">
-       <property name="maximumSize">
-        <size>
-         <width>120</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="5">
-      <widget class="QLabel" name="load_raw_data_msg">
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>成功</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QToolButton" name="load_4g_common_btn">
-       <property name="text">
-        <string>导入4G工参表</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="3">
-      <widget class="QPushButton" name="stop_raw_data_btn">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>爱奇艺黑体</family>
-         <pointsize>7</pointsize>
          <weight>75</weight>
          <bold>true</bold>
          <kerning>true</kerning>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(229, 59, 7);</string>
-       </property>
-       <property name="text">
-        <string>停止</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="4">
-      <widget class="QProgressBar" name="load_raw_data_prgbar">
-       <property name="maximumSize">
-        <size>
-         <width>120</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QPushButton" name="start_5g_site_info_btn">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>爱奇艺黑体</family>
-         <pointsize>7</pointsize>
-         <kerning>true</kerning>
-        </font>
-       </property>
-       <property name="styleSheet">
         <string notr="true">background-color: rgb(85, 255, 0);</string>
        </property>
        <property name="text">
@@ -184,23 +148,23 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="4">
-      <widget class="QProgressBar" name="load_4g_site_info_prgbar">
-       <property name="maximumSize">
-        <size>
-         <width>120</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="value">
-        <number>0</number>
+     <item row="3" column="5">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string/>
        </property>
       </widget>
      </item>
-     <item row="0" column="5">
-      <widget class="QLabel" name="load_5g_common_msg">
+     <item row="4" column="6">
+      <widget class="QLabel" name="load_raw_data_msg">
+       <property name="maximumSize">
+        <size>
+         <width>50</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
-        <string>成功</string>
+        <string>未开始</string>
        </property>
       </widget>
      </item>
@@ -219,6 +183,8 @@
         <font>
          <family>爱奇艺黑体</family>
          <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
          <kerning>true</kerning>
         </font>
        </property>
@@ -227,20 +193,6 @@
        </property>
        <property name="text">
         <string>加载</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="5">
-      <widget class="QLabel" name="load_5g_site_info_msg">
-       <property name="text">
-        <string>成功</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QToolButton" name="load_5g_common_btn">
-       <property name="text">
-        <string>导入5G工参表</string>
        </property>
       </widget>
      </item>
@@ -257,182 +209,18 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
-      <widget class="QToolButton" name="out_put_dir_btn">
-       <property name="text">
-        <string>结果输出文件夹</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="stop_4g_common_btn">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>20</height>
-        </size>
-       </property>
+     <item row="0" column="6">
+      <widget class="QLabel" name="load_5g_common_msg">
        <property name="font">
         <font>
-         <family>爱奇艺黑体</family>
-         <pointsize>7</pointsize>
+         <pointsize>9</pointsize>
          <weight>75</weight>
          <bold>true</bold>
          <kerning>true</kerning>
         </font>
        </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(229, 59, 7);</string>
-       </property>
        <property name="text">
-        <string>停止</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QToolButton" name="load_raw_data_btn">
-       <property name="text">
-        <string>导入网管原始数据</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="5">
-      <widget class="QLabel" name="load_4g_site_info_msg">
-       <property name="text">
-        <string>成功</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="5">
-      <widget class="QLabel" name="out_put_dir_msg">
-       <property name="text">
-        <string>成功</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="4">
-      <widget class="QProgressBar" name="load_5g_site_info_prgbar">
-       <property name="maximumSize">
-        <size>
-         <width>120</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="2">
-      <widget class="QPushButton" name="start_raw_data_btn">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>爱奇艺黑体</family>
-         <pointsize>7</pointsize>
-         <kerning>true</kerning>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(85, 255, 0);</string>
-       </property>
-       <property name="text">
-        <string>解析</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="3">
-      <widget class="QPushButton" name="stop_4g_site_info_btn">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>爱奇艺黑体</family>
-         <pointsize>7</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-         <kerning>true</kerning>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(229, 59, 7);</string>
-       </property>
-       <property name="text">
-        <string>停止</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QToolButton" name="load_5g_site_info_btn">
-       <property name="text">
-        <string>导入5G物理站信息表</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QToolButton" name="load_check_rule_btn">
-       <property name="text">
-        <string>导入核查规则配置表</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="5">
-      <widget class="QLabel" name="load_4g_common_msg">
-       <property name="text">
-        <string>成功</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="3">
-      <widget class="QPushButton" name="stop_5g_site_info_btn">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>30</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>爱奇艺黑体</family>
-         <pointsize>7</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-         <kerning>true</kerning>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background-color: rgb(229, 59, 7);</string>
-       </property>
-       <property name="text">
-        <string>停止</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="5">
-      <widget class="QLabel" name="load_check_rule_msg">
-       <property name="text">
-        <string>成功</string>
+        <string>未导入</string>
        </property>
       </widget>
      </item>
@@ -464,8 +252,8 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="4">
-      <widget class="QProgressBar" name="load_4g_common_prgbar">
+     <item row="4" column="4">
+      <widget class="QProgressBar" name="load_raw_data_prgbar">
        <property name="maximumSize">
         <size>
          <width>120</width>
@@ -477,8 +265,21 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="2">
-      <widget class="QPushButton" name="start_5g_common_btn">
+     <item row="2" column="0">
+      <widget class="QToolButton" name="load_5g_site_info_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>导入5G物理站信息表</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QPushButton" name="start_5g_site_info_btn">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -492,6 +293,8 @@
         <font>
          <family>爱奇艺黑体</family>
          <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
          <kerning>true</kerning>
         </font>
        </property>
@@ -503,20 +306,254 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="3">
+      <widget class="QPushButton" name="stop_4g_common_btn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>爱奇艺黑体</family>
+         <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(229, 59, 7);</string>
+       </property>
+       <property name="text">
+        <string>停止</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="3">
+      <widget class="QPushButton" name="stop_raw_data_btn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>爱奇艺黑体</family>
+         <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(229, 59, 7);</string>
+       </property>
+       <property name="text">
+        <string>停止</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="6">
+      <widget class="QLabel" name="load_4g_common_msg">
+       <property name="text">
+        <string>未导入</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QToolButton" name="load_4g_common_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>导入4G工参表</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="6">
+      <widget class="QLabel" name="load_4g_site_info_msg">
+       <property name="text">
+        <string>未导入</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="3">
+      <widget class="QPushButton" name="stop_5g_site_info_btn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>爱奇艺黑体</family>
+         <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(229, 59, 7);</string>
+       </property>
+       <property name="text">
+        <string>停止</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QPushButton" name="start_raw_data_btn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>爱奇艺黑体</family>
+         <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(85, 255, 0);</string>
+       </property>
+       <property name="text">
+        <string>解析</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="5">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="5">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="5">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="3">
+      <widget class="QPushButton" name="stop_4g_site_info_btn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>爱奇艺黑体</family>
+         <pointsize>7</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(229, 59, 7);</string>
+       </property>
+       <property name="text">
+        <string>停止</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QToolButton" name="load_4g_site_info_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>导入4G物理站信息表</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QToolButton" name="load_5g_common_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>导入5G工参表</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="6">
+      <widget class="QLabel" name="load_5g_site_info_msg">
+       <property name="text">
+        <string>未导入</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="4">
+      <widget class="QProgressBar" name="load_5g_site_info_prgbar">
+       <property name="maximumSize">
+        <size>
+         <width>120</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QToolButton" name="load_raw_data_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>解析网管原始数据</string>
+       </property>
+      </widget>
+     </item>
     </layout>
-   </widget>
-   <widget class="Line" name="line">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>240</y>
-      <width>381</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
    </widget>
    <widget class="QWidget" name="horizontalLayoutWidget">
     <property name="geometry">
@@ -543,7 +580,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../../../../.designer/icons/华为1.png</normaloff>../../../../.designer/icons/华为1.png</iconset>
+         <normaloff>../../../../../.designer/icons/华为1.png</normaloff>../../../../../.designer/icons/华为1.png</iconset>
        </property>
       </widget>
      </item>
@@ -563,7 +600,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../../../../.designer/icons/ZTE大.png</normaloff>../../../../.designer/icons/ZTE大.png</iconset>
+         <normaloff>../../../../../.designer/icons/ZTE大.png</normaloff>../../../../../.designer/icons/ZTE大.png</iconset>
        </property>
        <property name="checkable">
         <bool>true</bool>
@@ -580,7 +617,7 @@
        </property>
        <property name="icon">
         <iconset>
-         <normaloff>../../../../.designer/icons/ericsson.png</normaloff>../../../../.designer/icons/ericsson.png</iconset>
+         <normaloff>../../../../../.designer/icons/ericsson.png</normaloff>../../../../../.designer/icons/ericsson.png</iconset>
        </property>
       </widget>
      </item>
@@ -591,7 +628,7 @@
      <rect>
       <x>10</x>
       <y>250</y>
-      <width>271</width>
+      <width>211</width>
       <height>41</height>
      </rect>
     </property>
@@ -615,6 +652,143 @@
       <widget class="QProgressBar" name="check_prgbar">
        <property name="value">
         <number>0</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>251</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QRadioButton" name="g4_radio">
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="text">
+        <string>4G</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>../../../../../.designer/icons/华为1.png</normaloff>../../../../../.designer/icons/华为1.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="g5_radio">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <weight>75</weight>
+         <bold>true</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="acceptDrops">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>5G</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>../../../../../.designer/icons/ZTE大.png</normaloff>../../../../../.designer/icons/ZTE大.png</iconset>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="gridLayoutWidget_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>80</y>
+      <width>420</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="0" column="2">
+      <widget class="QToolButton" name="huawei_command_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>华为命令</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QToolButton" name="load_check_rule_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>规则配置表</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="5">
+      <widget class="QLabel" name="set_work_dir_label">
+       <property name="text">
+        <string> </string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4">
+      <widget class="QToolButton" name="set_work_dir_btn">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>工作目录</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="load_check_rule_label">
+       <property name="text">
+        <string>     </string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QLabel" name="huaweicommand_btn_label">
+       <property name="text">
+        <string> </string>
        </property>
       </widget>
      </item>

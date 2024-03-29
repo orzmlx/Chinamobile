@@ -14,7 +14,7 @@ def is_input_valid(df, check_columns, value_check_column, valid_values):
 
 
 def check_columns_valid(df, demand_cols):
-    return demand_cols in df.columns.tolist()
+    return demand_cols <= df.columns.tolist()
 
 
 def check_columns_first_row(df, column_name, valid_values):

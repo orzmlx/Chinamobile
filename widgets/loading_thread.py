@@ -2,6 +2,7 @@ from random import randint
 
 # -*- coding:utf-8 -*-
 from model.data_watcher import DataWatcher
+from model.signal_message import message
 
 try:
     from PyQt5.QtCore import QTimer, QThread, pyqtSignal
@@ -31,67 +32,48 @@ PushButtonLine {
 class LoadingThread(QThread):
     handle = -1
     valueChanged = pyqtSignal(int)
-    finished = pyqtSignal(int)
+    finished = pyqtSignal(message)
 
     def __init__(self, path: str = None,
-                 msg_label: QLabel = None,
-                 prgbar: QProgressBar = None,
                  watcher: DataWatcher = None,
+                 name: str = None,
                  *args, **kwargs):
         super(LoadingThread, self).__init__(*args, **kwargs)
         # self.totalValue = randint(100, 200)  # 模拟最大
         self.path = path
         self.watcher = watcher
-        self.msg_label = msg_label
-        self.prgbar = prgbar
+        self.name = name
         # self.manufacturer = manufacturer
 
-    def setPath(self, path):
+    def setName(self, name):
+        self.name = name
+
+    def setWorkDir(self, path):
         self.path = path
 
     def setWatcher(self, watcher):
         self.watcher = watcher
 
-    def setPrgBar(self, prgbar):
-        self.prgbar = prgbar
-
-    def setMsgLabel(self, msgLabel):
-        self.msg_label = msgLabel
-
     def run(self):
-        self.msg_label.setText("加载中....")
-        self.prgbar.setValue(0)
-        if os.path.isdir(self.path):
-            self.msg_label.setText("成功")
-            return
         try:
             self.handle = ctypes.windll.kernel32.OpenThread(  # @UndefinedVariable
                 win32con.PROCESS_ALL_ACCESS, False, int(QThread.currentThreadId()))
             # INPUT_FILENAME = self.path
             LINES_TO_READ_FOR_ESTIMATION = 20
             CHUNK_SIZE_PER_ITERATION = 10 ** 5
-            temp = pd.read_csv(self.path, nrows=LINES_TO_READ_FOR_ESTIMATION, encoding='gbk')
-            # N = len(temp.to_csv(index=False))
-            df = [temp[:0]]
-            # total = int(
-            #     os.path.getsize(INPUT_FILENAME) / N * LINES_TO_READ_FOR_ESTIMATION / CHUNK_SIZE_PER_ITERATION) + 1
-            # # self._timer.start(2)
-            # self.prgbar.setMaximum(total)
-            for i, chunk in enumerate(
-                    pd.read_csv(self.path, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='gbk')):
-                df.append(chunk)
-                # self.prgbar.setValue(self.prgbar.value() + 1)
+            data = pd.DataFrame()
+            try:
+                dfs = pd.read_csv(self.path, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='utf8')
+            except:
+                dfs = pd.read_csv(self.path, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='gbk')
+            for i, chunk in enumerate(dfs):
+                data = chunk if data.empty else pd.concat([data, chunk], axis=0)
                 self.valueChanged.emit(i)
-            data = temp[:0].append(df)
-            if self.watcher.update(self.prgbar.objectName(), data):
-                self.msg_label.setText("成功")
+            if self.watcher.update_csv(self.name, data):
+                self.finished.emit(message(2, '成功'))
             else:
-                self.msg_label.setText("数据验证失败")
-                self.prgbar.setValue(0)
-            self.finished.emit(1)
-        except Exception as e:
-            self.msg_label.setText("加载失败")
-            self.prgbar.setValue(0)
-            self.finished.emit(1)
+                self.finished.emit(message(-1, "数据验证失败"))
 
-        # return data
+        except Exception as e:
+            # self.prgbar.setValue(0)
+            self.finished.emit(message(-1, str(e)))

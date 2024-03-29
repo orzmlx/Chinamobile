@@ -4,6 +4,7 @@ import openpyxl
 import huaweiutils
 import copy
 import zteutils
+from read_raw_exception import ReadRawException
 from timer import Timer
 import logging
 import sys
@@ -27,7 +28,7 @@ class ZteRawDataReader:
         self.raw_file = raw_file
         self.manufacturer = manufacturer
         # raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
-        self.temp_path = os.path.join(zte_raw_data_path, system, raw_file.name.split('.')[0], "temp")
+        self.temp_path = os.path.join(zte_raw_data_path, system, raw_file.name.replace('.xlsx', ''), "temp")
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)
 
@@ -35,7 +36,7 @@ class ZteRawDataReader:
         zte_demand_param = pd.read_excel(zte_config_file_path, engine='openpyxl', sheet_name='需求参数')
         zte_demand_param = zte_demand_param[zte_demand_param['厂家'] == self.manufacturer]
         logging.info("开始分离原始文件:" + os.path.split(self.raw_file)[1])
-        f_name = os.path.basename(self.raw_file).split('.')[0]
+        f_name = os.path.basename(self.raw_file).replace('.xlsx', '')
         # 获取上一级目录,将原始数据的读取结果存放在上一级目录
         raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
         for j in tqdm(range(len(zte_demand_param)), desc="分离sheet表进度"):
@@ -44,6 +45,8 @@ class ZteRawDataReader:
             sheet_name = row['CSV名'].strip()
             # 读取每一个sheet
             sheet_df = self.read_raw_data(row, self.raw_file)
+            if sheet_df.empty:
+                raise ReadRawException('zte', "", "原始数据读取结果为空,请检查列名")
             sheet_df.to_pickle(os.path.join(raw_output_path, sheet_name))
             timer.stop()
             logging.info(sheet_name + f':{timer.stop():.2f} sec')
@@ -66,7 +69,7 @@ class ZteRawDataReader:
         # 根据配置中需要的文件名,来读取中兴原始文件中的数据
         demand_params = zte_demand_param['CSV名'].unique().tolist()
         f = self.raw_file
-        f_name = os.path.basename(f).split('.')[0]
+        f_name = os.path.basename(f).replace('.xlsx', '')
         # 获取上一级目录,将原始数据的读取结果存放在上一级目录
         raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
         for j in tqdm(range(len(demand_params)), desc="原始文件:" + f_name + "标清理进度"):
@@ -129,9 +132,15 @@ class ZteRawDataReader:
                 if len(rename_dict) > 0:
                     merge_result.rename(columns=rename_dict, inplace=True)
             # self.mapToband(merge_result)
+            #删除没有找到CGI的行
+            merge_result.dropna(subset=['CGI'], inplace=True, how='any', axis=0)
             gather_out_path = os.path.join(self.temp_path, new_file_name + '.csv')
             merge_result.to_csv(os.path.join(gather_out_dir, new_file_name + '.csv'), index=False, encoding='utf_8_sig')
             merge_result.to_csv(gather_out_path, index=False, encoding='utf_8_sig')
+        # 删除temp中的.csv文件
+        temp_csv_file = huaweiutils.find_file(self.temp_path, '.csv')
+        for f in temp_csv_file:
+            os.remove(f)
 
     def process_data_by_sheet(self, sheet_df, zte_param_process, sheet_name, raw_output_path, process_split_char=','):
         sheet_process = zte_param_process[zte_param_process['CSV名'] == sheet_name]
@@ -189,6 +198,7 @@ class ZteRawDataReader:
         demand_cols = list(filter(lambda x: x is not None and x != '', demand_cols))
         # 有可能会有超过100万行的sheet,导致改表在excel中分表
         concat_result = pd.DataFrame()
+        exception_msg = None
         for sheet_index in range(1, sys.maxsize):
             timer = Timer()
             try:
@@ -207,6 +217,8 @@ class ZteRawDataReader:
                 if sheet_index >= 2:
                     logging.info("sheet:【" + sheet_name + "】:>>>存在超过100万行分表情况!!!<<<")
             except Exception as e:
+                print(e)
+                exception_msg = e
                 logging.info("sheet:【" + sheet_name + "】:不存超过100万行分表情况!")
                 break
             # finally:
