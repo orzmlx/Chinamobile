@@ -1,11 +1,11 @@
 # -*- coding:utf-8 -*-
+import os
 from datetime import datetime
 
 import pandas as pd
-import os
-import huaweiconfiguration
-import huaweiutils
-import zte_configuration
+
+from configuration import huawei_configuration
+from utils import huaweiutils
 from model import validator
 
 
@@ -162,8 +162,8 @@ class DataWatcher:
         enode_df = pd.read_csv(os.path.join(checked_raw_path, 'LST ENODEBFUNCTION.csv'))
         cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
         cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
-            huaweiconfiguration.G4_CELL_IDENTITY].apply(str)
-        base_info_df = cell_df[['网元', huaweiconfiguration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
+            huawei_configuration.G4_CELL_IDENTITY].apply(str)
+        base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
         # base_info_df['频带'] = base_info_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
         # base_info_df = base_info_df.rename(columns={'频带': '频段'}, inplace=True)
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
@@ -202,7 +202,7 @@ class DataWatcher:
             os.path.join(checked_raw_path, 'LST GNODEBFUNCTION.csv'), dtype=str)
         ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
-            huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
+            huawei_configuration.G5_CELL_IDENTITY].apply(str)
         base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带']]
         base_info_df['频带'] = base_info_df['频带'].map(
             {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})

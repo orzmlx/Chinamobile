@@ -4,7 +4,7 @@ import os
 
 from PyQt5.QtCore import qWarning
 
-import huaweiutils
+from utils import huaweiutils
 
 
 def is_input_valid(df, check_columns, value_check_column, valid_values):

@@ -1,17 +1,12 @@
 # -*- coding:utf-8 -*-
 
-import pandas as pd
-import os
-from huaweirawdatareader import *
-import huaweirawdatareader
-import huaweiutils
 import copy
-import math
-import numpy as np
 import itertools
-from openpyxl import load_workbook
-from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
-import zte_configuration
+
+import numpy as np
+
+from configuration import zte_configuration
+from reader.huawei_raw_datareader import *
 from model.data_watcher import DataWatcher
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
@@ -24,7 +19,7 @@ class Evaluation:
                  # f_name: str,
                  used_commands,
                  cities=['湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '衢州', '绍兴', '台州', '温州', '舟山'],
-                 countries=huaweiconfiguration.COUNTRIES_DICT
+                 countries=huawei_configuration.COUNTRIES_DICT
                  ):
         """
             一个是文件名对应的列名字典
@@ -74,8 +69,8 @@ class Evaluation:
         self.freq_config_df['参数组标识'] = self.freq_config_df['参数组标识'].astype(str)
         self.freq_config_df['QCI'] = self.freq_config_df['QCI'].astype(str)
         self.qci_file_name = 'LST NRCELLQCIBEARERQCI.csv' if self.system == '5G' else 'LST CELLQCIPARAQCI.csv'
-        self.freq_config_df = self.sort_config(self.freq_config_df)
-        self.cell_config_df = self.sort_config(self.cell_config_df)
+        self.freq_config_df = self.precheck_config(self.freq_config_df)
+        self.cell_config_df = self.precheck_config(self.cell_config_df)
         self.cell_df = pd.DataFrame()
         self.freq_df = pd.DataFrame()
         self.pre_params = []
@@ -84,14 +79,14 @@ class Evaluation:
     def _inference_city(self, df):
         na_city_df = df[df['地市'].isna()]
         countries = self.countries.keys()
-        city_file_keys = huaweiconfiguration.FILE_CITY_DICT.keys()
+        city_file_keys = huawei_configuration.FILE_CITY_DICT.keys()
         for index, row in na_city_df.iterrows():
             net_element = row['网元']
             find = False
-            if self.manufacturer == 'huawei':
+            if self.manufacturer == '华为':
                 for key in city_file_keys:
                     if os.path.basename(self.file_path).find(key) >= 0:
-                        df.at[index, '地市'] = huaweiconfiguration.FILE_CITY_DICT[key]
+                        df.at[index, '地市'] = huawei_configuration.FILE_CITY_DICT[key]
                         find = True
                         break
             if not find:
@@ -112,24 +107,25 @@ class Evaluation:
         elif self.system == '5G' and self.manufacturer == '中兴':
             return zte_configuration.G5_CELL_IDENTITY
         elif self.system == '5G' and self.manufacturer == '华为':
-            return huaweiconfiguration.G5_CELL_IDENTITY
+            return huawei_configuration.G5_CELL_IDENTITY
         elif self.system == '4G' and self.manufacturer == '华为':
-            return huaweiconfiguration.G4_CELL_IDENTITY
+            return huawei_configuration.G4_CELL_IDENTITY
 
-    def sort_config(self, config):
+    def precheck_config(self, config):
         """
             按qci重新命名参数
         """
         if config.empty:
-            logging.info('>>>>>>>>>>配置表为空.....<<<<<<<<<<<')
+            logging.info('===============配置表为空===============')
             return
-        config0 = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
+        merged_config = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # config0.sort_values(by=['伴随参数命令'], inplace=True)
-        config0 = config0[~config0['推荐值'].isna()]
-        config0[['原始参数名称', '参数名称']] = config0.apply(lambda x: Evaluation.rename_col_by_qci(x), axis=1).apply(
+        merged_config = merged_config[~merged_config['推荐值'].isna()]
+        merged_config[['原始参数名称', '参数名称']] = merged_config.apply(lambda x: Evaluation.rename_col_by_qci(x),
+                                                                axis=1).apply(
             pd.Series)
-
-        return config0
+        merged_config = merged_config[merged_config['推荐值'] != '/']
+        return merged_config
 
     @staticmethod
     def rename_col_by_qci(row):
@@ -245,15 +241,18 @@ class Evaluation:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
         current_cols = df.columns.tolist()
         if premise_param in current_cols:
+            df[param].fillna(value=0, inplace=True)
+            df[param] = df[param].apply(int)
+            df[premise_param].fillna(value=0, inplace=True)
             if cal_param.find(',') >= 0:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
                 multuple1 = int(splits[1])
-                df[param] = df[param].apply(int)
+                # df[param] = df[param].apply(int)
                 df[premise_param] = df[premise_param].apply(int)
                 df[param] = df[param] * multiple0 + df[premise_param] * multuple1
             else:
-                df[param] = df[param].apply(int)
+                # df[param] = df[param].apply(int)
                 df[param] = df[param] * int(cal_param)
         if premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
@@ -335,10 +334,10 @@ class Evaluation:
         all_param = list(config_df[['原始参数名称', '主命令', 'QCI']].apply(tuple).values)
         all_param = list(set(tuple(t) for t in all_param))
         # all_param = []
-        self.check_params(config_df, False)
+        checked_config = self.check_params(config_df, False)
         command_identities = config_df['参数组标识'].tolist()
         command_identities = list(filter(lambda x: not 'nan' == x, command_identities))
-        command_grouped = config_df.groupby(['主命令', 'QCI'])
+        command_grouped = checked_config.groupby(['主命令', 'QCI'])
         read_result_list = []
         qci_params = ['网元', self.cell_identity, '服务质量等级']
         read_qci = False
@@ -425,23 +424,6 @@ class Evaluation:
         res = non_qci_res.merge(merge_qci_df, how='left',
                                 on=['网元', self.cell_identity]) if not merge_qci_df.empty else non_qci_res
         return res
-
-    # def update_name_by_qci(self, df, name, qci):
-    #     """
-    #         如果一个参数同时有QCI=1或者QCI=9,那后面加上语音
-    #
-    #     """
-    #
-    #     new_name = name + "_" + str(qci)
-    #     df.renmae(columns={name: new_name}, inplace=Trues)
-    #     # if qci == 1:
-    #     #     suffix = '语音'
-    #     # elif qci == 5:
-    #     #     suffix = '数据'
-    #     # elif qci == 9:
-    #     #     suffix = '数据'
-    #     # else:
-    #     #     raise Exception('未知的QCI类型:' + str(qci))
 
     def read_data_by_command(self, file_name, params, g):
         # 区分开关和非开关参数,剩下的params中都是非开关类参数
@@ -699,22 +681,4 @@ class Evaluation:
             copy_second_dict = copy.deepcopy(second_class_dict)
             first_class_dict[c] = copy_second_dict
         return order_content, first_class_dict
-# if __name__ == "__main__":
 
-
-#     filepaths = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G"
-#     standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-#     g5_common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
-#     g4_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0121\\LTE资源大表-0121.csv"
-#     g4_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
-#     g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv"
-#     raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
-#
-#     raw_files = os.listdir(os.path.join(filepaths, 'raw_data'))
-#     raw_file_name_list = []
-#     for f in raw_files:
-#         f_name = os.path.split(f)[1]
-#         raw_file_name = os.path.join(filepaths, f_name.split('.')[0])
-#         report = HuaweiIntermediateGen(raw_file_name, standard_path, g4_common_table, g5_common_table,
-#                                        g4_site_info, g5_site_info, '4G')
-#         report.generate_report()

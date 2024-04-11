@@ -1,15 +1,13 @@
 # -*- coding:utf-8 -*-
-import pandas as pd
 from PyQt5.QtWidgets import QErrorMessage
 
 from model.data_watcher import DataWatcher
 from model.signal_message import message
+from handler.check_thread import CheckThread
 from ui.huaweistartup import Ui_mainWindow
-from widgets.check_thread import CheckThread
-from widgets.file_dialog_group import FileDialogGroup
-from widgets.load_csv_group import LoadCsvGroup
-from widgets.loading_thread import LoadingThread
-from widgets.radiobtn_gp import RadioButtonGp
+from ui.file_dialog_group import FileDialogGroup
+from ui.load_csv_group import LoadCsvGroup
+from ui.radiobtn_gp import RadioButtonGp
 
 
 class EnhancedStartUp(Ui_mainWindow):
@@ -21,8 +19,6 @@ class EnhancedStartUp(Ui_mainWindow):
         self.check_err_msg.setWindowTitle("错误提示")
         # self.check_test_preparation()
 
-
-
     def finished(self, msg: message):
         if msg.code == 2:
             self.check_prgbar.setValue(self.check_prgbar.maximum())
@@ -33,9 +29,6 @@ class EnhancedStartUp(Ui_mainWindow):
             self.check_err_msg.showMessage(msg.signal_message)
 
         self.check_btn.setEnabled(True)
-
-
-
 
     def check(self, watcher: DataWatcher):
         self.check_btn.setEnabled(False)
@@ -51,14 +44,15 @@ class EnhancedStartUp(Ui_mainWindow):
 
         self.watcher = DataWatcher(object_names)
         self.check_thread = CheckThread(self.watcher)
-
+        self.check_thread.finished.connect(self.finished)
+        self.check_thread.valueChanged.connect(self.check_prgbar.setValue)
         manufacturer_radio_button_group = [self.huawei_radio, self.zte_radio, self.zte_radio]
-        system_radios = [self.g5_radio,self.g4_radio ]
-
+        system_radios = [self.g5_radio, self.g4_radio]
         self.check_btn.clicked.connect(lambda: self.check(self.watcher))
         self.system_radio_button_group = RadioButtonGp(system_radios, 'systems', self.watcher)
 
-        self.manufacturer_radio_button_group = RadioButtonGp(manufacturer_radio_button_group, 'manufacturers', self.watcher)
+        self.manufacturer_radio_button_group = RadioButtonGp(manufacturer_radio_button_group, 'manufacturers',
+                                                             self.watcher)
 
         self.set_huawei_command = FileDialogGroup(self.huawei_command_btn,
                                                   self.huaweicommand_btn_label,

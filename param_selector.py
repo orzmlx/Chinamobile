@@ -1,15 +1,9 @@
-import pandas as pd
-import os
-from huaweirawdatareader import *
-import huaweirawdatareader
-import huaweiutils
+from reader.huawei_raw_datareader import *
+from utils import huaweiutils
 import copy
-import math
 import numpy as np
 import itertools
-from openpyxl import load_workbook
-from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
-import zte_configuration
+from configuration import zte_configuration
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
@@ -21,7 +15,7 @@ class param_selector:
                  g4_site_info, g5_site_info,
                  system, used_commands, manufacturer,
                  cities=['湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '衢州', '绍兴', '台州', '温州', '舟山'],
-                 countries=huaweiconfiguration.COUNTRIES_DICT
+                 countries=huawei_configuration.COUNTRIES_DICT
                  ):
         """
             一个是文件名对应的列名字典
@@ -74,8 +68,8 @@ class param_selector:
         self.freq_config_df['参数组标识'] = self.freq_config_df['参数组标识'].astype(str)
         self.freq_config_df['QCI'] = self.freq_config_df['QCI'].astype(str)
         self.qci_file_name = 'LST NRCELLQCIBEARERQCI.csv' if self.system == '5G' else 'LST CELLQCIPARAQCI.csv'
-        self.freq_config_df = self.sort_config(self.freq_config_df)
-        self.cell_config_df = self.sort_config(self.cell_config_df)
+        self.freq_config_df = self.pre_check_config(self.freq_config_df)
+        self.cell_config_df = self.pre_check_config(self.cell_config_df)
         self.cell_df = pd.DataFrame()
         self.freq_df = pd.DataFrame()
         self.pre_params = []
@@ -104,14 +98,14 @@ class param_selector:
     def inference_city(self, df):
         na_city_df = df[df['地市'].isna()]
         countries = self.countries.keys()
-        city_file_keys = huaweiconfiguration.FILE_CITY_DICT.keys()
+        city_file_keys = huawei_configuration.FILE_CITY_DICT.keys()
         for index, row in na_city_df.iterrows():
             net_element = row['网元']
             find = False
             if self.manufacturer == 'huawei':
                 for key in city_file_keys:
                     if os.path.basename(self.file_path).find(key) >= 0:
-                        df.at[index, '地市'] = huaweiconfiguration.FILE_CITY_DICT[key]
+                        df.at[index, '地市'] = huawei_configuration.FILE_CITY_DICT[key]
                         find = True
                         break
             if not find:
@@ -126,19 +120,19 @@ class param_selector:
                         df.at[index, '地市'] = self.countries[c]
                         find = True
 
-    def sort_config(self, config):
+    def pre_check_config(self, config):
         """
             按qci重新命名参数
         """
         if config.empty:
-            logging.info('>>>>>>>>>>配置表为空.....<<<<<<<<<<<')
+            logging.info('=================配置表为空.=================')
             return
         config0 = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # config0.sort_values(by=['伴随参数命令'], inplace=True)
         config0 = config0[~config0['推荐值'].isna()]
         config0[['原始参数名称', '参数名称']] = config0.apply(lambda x: param_selector.rename_col_by_qci(x), axis=1).apply(
             pd.Series)
-
+        config0 = config0[config0['推荐值'] != '/']
         return config0
 
     @staticmethod
@@ -166,14 +160,14 @@ class param_selector:
         enode_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST ENODEBFUNCTION.csv'))
         cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
         cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
-            huaweiconfiguration.G4_CELL_IDENTITY].apply(str)
-        base_info_df = cell_df[['网元', huaweiconfiguration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
+            huawei_configuration.G4_CELL_IDENTITY].apply(str)
+        base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
         # base_info_df['频带'] = base_info_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
         # base_info_df = base_info_df.rename(columns={'频带': '频段'}, inplace=True)
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
         base_info_df['厂家'] = self.manufacturer
-        self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
+        self.cell_identity = huawei_configuration.G4_CELL_IDENTITY
         return base_info_df
 
     def get_zte_5g_base_info(self):
@@ -201,7 +195,7 @@ class param_selector:
             os.path.join(self.file_path, 'raw_result', 'LST GNODEBFUNCTION.csv'), dtype=str)
         ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
-            huaweiconfiguration.G5_CELL_IDENTITY].apply(str)
+            huawei_configuration.G5_CELL_IDENTITY].apply(str)
         base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带']]
         base_info_df['频带'] = base_info_df['频带'].map(
             {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
@@ -209,7 +203,7 @@ class param_selector:
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(self.site_info, how='left', on=['CGI'])
         base_info_df['厂家'] = self.manufacturer
-        self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
+        self.cell_identity = huawei_configuration.G5_CELL_IDENTITY
         return base_info_df
 
     def get_4g_common(self, band_list):
@@ -230,6 +224,7 @@ class param_selector:
         na_area_common_df = common_table[common_table['区域类别'].isna()]
         self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
         common_table['区域类别'].fillna(value='农村', inplace=True)
+        return common_table
 
     def get_5g_common(self):
         common_table = pd.read_csv(self.g5_common_table, usecols=['覆盖类型', '覆盖场景', 'CGI', '地市', '工作频段', 'CELL区域类别'],
@@ -308,6 +303,8 @@ class param_selector:
         if self.manufacturer == 'zte':
             on = ['CGI']
         # df = df.merge(self.base_info_df, how='left', on=on)
+        df[self.cell_identity] = df[self.cell_identity].apply(str)
+        self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
         df_new = self.base_info_df.merge(df, how='left', on=on)
         # df.rename(columns={'频带': '频段'}, inplace=True)
         self.inference_city(df_new)
@@ -342,18 +339,19 @@ class param_selector:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
         current_cols = df.columns.tolist()
         if premise_param in current_cols:
+            df[param].fillna(value=0, inplace=True)
+            df[param] = df[param].apply(int)
+            df[premise_param].fillna(value=0, inplace=True)
             if cal_param.find(',') >= 0:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
                 multuple1 = int(splits[1])
-                df[param] = df[param].apply(int)
                 df[premise_param] = df[premise_param].apply(int)
                 df[param] = df[param] * multiple0 + df[premise_param] * multuple1
             else:
-                df[param] = df[param].apply(int)
+                # df[param] = df[param].apply(int)
                 df[param] = df[param] * int(cal_param)
         if premise_param == 'nan' and cal_param != 'nan':
-
             df[param].fillna(value="99999", inplace=True)
             df[param] = df[param].apply(int) * float(cal_param)
             df.loc[df[param] > 9000, param] = np.nan
@@ -424,19 +422,15 @@ class param_selector:
                         copy_config_df = copy_config_df.append(pre_df, ignore_index=True)
                     self.pre_params.append(p[0])
         return copy_config_df
-        # if is_freq:
-        #     self.freq_config_df = copy_config_df
-        # else:
-        #     self.cell_config_df = copy_config_df
 
     def get_cell_table(self, config_df):
         all_param = list(config_df[['原始参数名称', '主命令', 'QCI']].apply(tuple).values)
         all_param = list(set(tuple(t) for t in all_param))
         # all_param = []
-        self.check_params(config_df, False)
+        checked_config = self.check_params(config_df, False)
         command_identities = config_df['参数组标识'].tolist()
         command_identities = list(filter(lambda x: not 'nan' == x, command_identities))
-        command_grouped = config_df.groupby(['主命令', 'QCI'])
+        command_grouped = checked_config.groupby(by=['主命令', 'QCI'], group_keys=True)
         read_result_list = []
         qci_params = ['网元', self.cell_identity, '服务质量等级']
         read_qci = False
@@ -444,6 +438,7 @@ class param_selector:
         qci_path = os.path.join(self.file_path, 'raw_result', self.qci_file_name)
         for p, g in command_grouped:
             command = p[0]
+            print(command)
             qci = p[1]
             params = g['原始参数名称'].unique().tolist()
             command = huaweiutils.remove_digit(command, [",", ":"])
@@ -755,6 +750,7 @@ class param_selector:
             # huaweiutils.create_header(os.path.join(out, 'param_check_cell.xlsx'), first_class_dict, base_cols)
 
         if type == 'freq' or type == 'all':
+            base_cols.append("对端频带")
             freq_df_list = self.get_freq_table(self.freq_config_df)
             for df in freq_df_list:
                 d = df[0]
