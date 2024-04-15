@@ -442,7 +442,7 @@ class param_selector:
             qci = p[1]
             params = g['原始参数名称'].unique().tolist()
             command = huaweiutils.remove_digit(command, [",", ":"])
-            if not command in self.used_commands or qci == '1' or qci == '5':
+            if not command in self.used_commands:
                 logging.info("该命令没有在此次参数核查中使用:" + command + 'QCI:' + str(qci))
                 continue
             file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
@@ -464,8 +464,8 @@ class param_selector:
             param = p[0]
             command = p[1]
             qci = p[2]
-            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands \
-                    or qci == '1' or qci == '5':
+            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands:
+                # or qci == '1' or qci == '5':
                 continue
             self.processing_param_value(merge_qci_result, param, command)
             merge_qci_result = self.judge_compliance(merge_qci_result, param, command, config_df)
@@ -497,12 +497,17 @@ class param_selector:
                         r[0].rename(columns={c: c + "_" + suffix + str(qci)}, inplace=True)
                 res = qci_df[qci_df['服务质量等级'] == qci]
                 on = list(set(cols) & set(res.columns.tolist()))
-                qci_res = res[on].merge(r[0], how='left', on=on)
+                # 这里QCI表作为左表,必须保存小区标识这个列。否则后期无法匹配到CGI
+                left_on = copy.deepcopy(on)
+                if self.cell_identity not in on:
+                    left_on.append(self.cell_identity)
+                qci_res = res[left_on].merge(r[0], how='left', on=on)
                 qci_res_cols = qci_res.columns.tolist()
                 last_cols = list(set(qci_res_cols) - set(qci_params))
                 qci_res = qci_res[last_cols]
                 # 如果on中没有cell.identity,那么会有很多重复
-                if not self.cell_identity in r[0].columns.tolist():
+                # if not self.cell_identity in r[0].columns.tolist():
+                if not self.cell_identity in qci_res_cols:
                     qci_res.drop_duplicates(subset=['网元'], keep='last', inplace=True, ignore_index=False)
                 qci_res_list.append(qci_res[last_cols])
             else:
@@ -518,23 +523,6 @@ class param_selector:
         res = non_qci_res.merge(merge_qci_df, how='left',
                                 on=['网元', self.cell_identity]) if not merge_qci_df.empty else non_qci_res
         return res
-
-    # def update_name_by_qci(self, df, name, qci):
-    #     """
-    #         如果一个参数同时有QCI=1或者QCI=9,那后面加上语音
-    #
-    #     """
-    #
-    #     new_name = name + "_" + str(qci)
-    #     df.renmae(columns={name: new_name}, inplace=Trues)
-    #     # if qci == 1:
-    #     #     suffix = '语音'
-    #     # elif qci == 5:
-    #     #     suffix = '数据'
-    #     # elif qci == 9:
-    #     #     suffix = '数据'
-    #     # else:
-    #     #     raise Exception('未知的QCI类型:' + str(qci))
 
     def read_data_by_command(self, file_name, params, g):
         # 区分开关和非开关参数,剩下的params中都是非开关类参数

@@ -1,14 +1,13 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox
-import os
-import sys
-import pandas as pd
 import logging
-import threading
 import math
+import os
+import threading
 import time
-import openpyxl
+import tkinter as tk
 from datetime import datetime
+from tkinter import filedialog, messagebox
+
+import pandas as pd
 
 out_put_path = ""
 last_week_data = pd.DataFrame()

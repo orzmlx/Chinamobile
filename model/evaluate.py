@@ -41,14 +41,18 @@ class Evaluation:
         self.standard_alone_df = pd.DataFrame()
         self.cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
-
-        self.g4_freq_band_dict, band_list = watcher.g4_prepare() if self.system == '4G' else {}, []
-
+        self.band_list = []
+        self.g4_freq_band_dict = {}
+        if self.system == '4G':
+            g4_common_df = watcher.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
+            self.g4_freq_band_dict, self.band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
+        # prepare_res = watcher.g4_prepare() if self.system == '4G' else {}, []
+        # self.g4_freq_band_dict = prepare_res[0]
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
-        self.all_co_location = [np.nan]  # 所有的共址类型
-        self.base_info_df = watcher.get_base_info(band_list, f_name)
+        self.all_co_location = [np.nan]  # 所有的共址.类型
+        self.base_info_df = watcher.get_base_info(self.band_list, f_name)
         self._inference_city(self.base_info_df)
         # self.base_info_df = self.get_base_info(band_list)
         self.end_band = 'FDD-900|FDD-1800|F|A|D|E|4.9G|2.6G|700M'
@@ -207,6 +211,8 @@ class Evaluation:
         if self.manufacturer == 'zte':
             on = ['CGI']
         # df = df.merge(self.base_info_df, how='left', on=on)
+        df[self.cell_identity] = df[self.cell_identity].apply(str)
+        self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
         df_new = self.base_info_df.merge(df, how='left', on=on)
         # df.rename(columns={'频带': '频段'}, inplace=True)
         self._inference_city(df_new)
@@ -348,7 +354,8 @@ class Evaluation:
             qci = p[1]
             params = g['原始参数名称'].unique().tolist()
             command = huaweiutils.remove_digit(command, [",", ":"])
-            if not command in self.used_commands or qci == '1' or qci == '5':
+            # if not command in self.used_commands or qci == '1' or qci == '5':
+            if not command in self.used_commands:
                 logging.info("该命令没有在此次参数核查中使用:" + command + 'QCI:' + str(qci))
                 continue
             file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
@@ -370,8 +377,8 @@ class Evaluation:
             param = p[0]
             command = p[1]
             qci = p[2]
-            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands \
-                    or qci == '1' or qci == '5':
+            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands:
+                # or qci == '1' or qci == '5':
                 continue
             self.processing_param_value(merge_qci_result, param, command)
             merge_qci_result = self.judge_compliance(merge_qci_result, param, command, config_df)
@@ -403,12 +410,15 @@ class Evaluation:
                         r[0].rename(columns={c: c + "_" + suffix + str(qci)}, inplace=True)
                 res = qci_df[qci_df['服务质量等级'] == qci]
                 on = list(set(cols) & set(res.columns.tolist()))
-                qci_res = res[on].merge(r[0], how='left', on=on)
+                left_on = copy.deepcopy(on)
+                if self.cell_identity not in on:
+                    left_on.append(self.cell_identity)
+                qci_res = res[left_on].merge(r[0], how='left', on=on)
                 qci_res_cols = qci_res.columns.tolist()
                 last_cols = list(set(qci_res_cols) - set(qci_params))
                 qci_res = qci_res[last_cols]
                 # 如果on中没有cell.identity,那么会有很多重复
-                if not self.cell_identity in r[0].columns.tolist():
+                if not self.cell_identity in qci_res_cols:
                     qci_res.drop_duplicates(subset=['网元'], keep='last', inplace=True, ignore_index=False)
                 qci_res_list.append(qci_res[last_cols])
             else:
@@ -611,13 +621,13 @@ class Evaluation:
         #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
         return base_cols + order_content, class_dict
 
-    def generate_report(self, type, base_cols):
+    def generate_report(self, check_type, base_cols):
         """
          输入的推荐值和需要核查的参数
         """
         first_class_dict = {}
         freq_class_dict = {}
-        if type == 'cell' or type == 'all':
+        if check_type == 'cell' or check_type == 'all':
             cell_df = self.get_cell_table(self.cell_config_df)
             order_cols, first_class_dict = self.sort_result(cell_df.columns.tolist(), self.cell_config_df, base_cols)
             cell_df = cell_df[order_cols]
@@ -638,7 +648,8 @@ class Evaluation:
             cell_df.to_csv(os.path.join(out, 'param_check_cell.csv'), index=False, encoding='utf_8_sig')
             # huaweiutils.create_header(os.path.join(out, 'param_check_cell.xlsx'), first_class_dict, base_cols)
 
-        if type == 'freq' or type == 'all':
+        if check_type == 'freq' or check_type == 'all':
+            base_cols.append("对端频带")
             freq_df_list = self.get_freq_table(self.freq_config_df)
             for df in freq_df_list:
                 d = df[0]
@@ -681,4 +692,3 @@ class Evaluation:
             copy_second_dict = copy.deepcopy(second_class_dict)
             first_class_dict[c] = copy_second_dict
         return order_content, first_class_dict
-

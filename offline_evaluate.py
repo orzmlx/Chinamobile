@@ -107,7 +107,7 @@ def create_header(path, class_dict, base_cols):
 
 
 def combine_evaluation(dir0, result_path, suffix, cell_class_dict):
-    logging.info(">>>>>合并核查结果....<<<<<")
+    logging.info("================合并核查结果================")
     items = pathlib.Path(dir0).rglob('*')
     all_result = pd.DataFrame()
     for item in items:
@@ -127,7 +127,7 @@ def evaluate(filepath, system, manufacturer, date, base_cols):
     freq_class_dict = {}
     for f in raw_files:
         f_name = os.path.split(f)[1]
-        logging.info('>>>>>>开始处理文件:' + f_name + '<<<<<<<<')
+        logging.info('==============开始处理文件:' + f_name + '==============')
         raw_file_dir = os.path.join(filepath, manufacturer, date, system, f_name.split('.')[0])
         if len(used_command) == 0:
             raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
@@ -139,11 +139,10 @@ def evaluate(filepath, system, manufacturer, date, base_cols):
                 if not df.empty:
                     command = os.path.split(f)[1].split('.')[0]
                     used_command.append(command)
-        # if f_name.find('hz2') <0:
-        #     continue
+
         selector = param_selector(raw_file_dir, standard_path, g4_common_table, g5_common_table,
                                   g4_site_info, g5_site_info, system, used_command, manufacturer)
-        cell_class_dict, freq_class_dict = selector.generate_report('freq', base_cols)
+        cell_class_dict, freq_class_dict = selector.generate_report('cell', base_cols)
         del selector
     return cell_class_dict, freq_class_dict
 
@@ -178,7 +177,7 @@ if __name__ == '__main__':
     system = FIVE_GEN
     base_cols = g5_base_cols if system == FIVE_GEN else g4_base_cols
     path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\"
-    g5_command_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240121\\5G\\华为45G互操作固定通报参数20231225.txt"
+    g5_command_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt"
     g4_command_path = "C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果_test.xlsx"
     standard_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\参数核查规则0409.xlsx"
@@ -191,13 +190,13 @@ if __name__ == '__main__':
 
     cell_header_class_dict = None
     #read_raw_data(path, '4G', date, 'huawei')
-    #read_raw_data(path, system, date, ZTE)
+    read_raw_data(path, system, date, HUAWEI)
     # read_raw_data(path, FIVE_GEN, date, ERICSSON)
     target_directory = os.path.join(path, HUAWEI, date, system)
     all_cell_check_result_path = os.path.join(target_directory, check_result_name)
     report_path = os.path.join(target_directory, HUAWEI, date, '互操作参数核查结果.xlsx')
-    cell_header_class_dict, freq_header_class_dict = evaluate(path, system, HUAWEI, date, base_cols)
-    combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name, cell_header_class_dict)
+    # cell_header_class_dict, freq_header_class_dict = evaluate(path, system, HUAWEI, date, base_cols)
+    # combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name, cell_header_class_dict)
 # freq_cell_suffix = ['LST NRCELLFREQRELATION_freq.csv', 'LST NRCELLEUTRANNFREQ_freq.csv']
 # for f in freq_cell_suffix:
 #     path = os.path.join(target_directory, f)

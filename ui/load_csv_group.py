@@ -82,11 +82,8 @@ class LoadCsvGroup(QToolButton, QLabel):
             self.start_btn.setEnabled(True)
             prgbar_total = self.get_df_total(self.data_path)
             self.prgbar.setMaximum(prgbar_total)
+        self.loadingThread.setLoadFilePath(self.data_path)
 
-            # else:
-            #     self.msg_label.setText("成功")
-            #     self.watcher.setConfigPath(self.data_path)
-        self.loadingThread.setWorkDir(self.data_path)
 
     def selectDir(self):
         fd = QFileDialog(
@@ -168,6 +165,13 @@ class LoadCsvGroup(QToolButton, QLabel):
                 self.prgbar.setValue(1)
             if self.msg_label is not None:
                 self.msg_label.setText('成功')
+        elif msg.code == -2:
+            self.em.showMessage(msg.signal_message)
+            self.msg_label.setText("重新解析中..")
+            self.loadingThread.started.disconnect()
+            self.loadingThread.finished.connect(self.finished)
+            self.prgbar.setValue(0)
+            self.loadingThread.start()
         else:
             self.msg_label.setText("失败")
             self.em.showMessage(msg.signal_message)

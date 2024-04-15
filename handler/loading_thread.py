@@ -29,7 +29,7 @@ class LoadingThread(QThread):
                  *args, **kwargs):
         super(LoadingThread, self).__init__(*args, **kwargs)
         # self.totalValue = randint(100, 200)  # 模拟最大
-        self.path = path
+        self.filePath = None
         self.watcher = watcher
         self.name = name
         # self.manufacturer = manufacturer
@@ -37,8 +37,8 @@ class LoadingThread(QThread):
     def setName(self, name):
         self.name = name
 
-    def setWorkDir(self, path):
-        self.path = path
+    def setLoadFilePath(self, path):
+        self.filePath = path
 
     def setWatcher(self, watcher):
         self.watcher = watcher
@@ -52,9 +52,9 @@ class LoadingThread(QThread):
             CHUNK_SIZE_PER_ITERATION = 10 ** 5
             data = pd.DataFrame()
             try:
-                dfs = pd.read_csv(self.path, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='utf8')
+                dfs = pd.read_csv(self.filePath, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='utf8')
             except:
-                dfs = pd.read_csv(self.path, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='gbk')
+                dfs = pd.read_csv(self.filePath, chunksize=CHUNK_SIZE_PER_ITERATION, low_memory=False, encoding='gbk')
             for i, chunk in enumerate(dfs):
                 data = chunk if data.empty else pd.concat([data, chunk], axis=0)
                 self.valueChanged.emit(i)

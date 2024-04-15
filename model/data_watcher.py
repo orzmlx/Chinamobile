@@ -1,9 +1,7 @@
 # -*- coding:utf-8 -*-
 import os
 from datetime import datetime
-
 import pandas as pd
-
 from configuration import huawei_configuration
 from utils import huaweiutils
 from model import validator
@@ -34,50 +32,60 @@ class DataWatcher:
 
     def set_huawei_command_path(self, path):
         self.huawei_command_path = path
-        self.parse_raw_data_ready = self.is_ready_for_parse()
+        # self.parse_raw_data_ready = self.is_ready_for_check()
 
     def setSystem(self, system):
         self.system = system
-        self.parse_raw_data_ready = self.is_ready_for_parse()
+        # self.parse_raw_data_ready = self.is_ready_for_check()
 
     def setManufacturer(self, manufacturer):
         self.manufacturer = manufacturer
-        self.parse_raw_data_ready = self.is_ready_for_parse()
+        # self.parse_raw_data_ready = self.is_ready_for_check()
 
     def setWorkDir(self, output_dir):
         self.work_dir = output_dir
-        self.parse_raw_data_ready = self.is_ready_for_parse()
+        # self.parse_raw_data_ready = self.is_ready_for_check()
 
     def setRawDataDir(self, raw_data_dir):
         self.raw_data_dir = raw_data_dir
-        self.parse_raw_data_ready = self.is_ready_for_parse()
+        # self.parse_raw_data_ready = self.is_ready_for_check()
 
     def setConfigPath(self, config_path):
         self.config_path = config_path
-        self.parse_raw_data_ready = self.is_ready_for_parse()
+        # self.parse_raw_data_ready = self.is_ready_for_check()
 
-    def is_ready_for_parse(self):
+    def is_ready_for_check(self):
+        return self.__is_common_input_ready() and self.__is_data_input_ready()
+
+    def __is_data_input_ready(self):
+        return not self.get_common_info().empty and not self.get_site_info().empty
+
+    def __is_common_input_ready(self):
         return self.manufacturer is not None and self.work_dir is not None and \
                self.config_path is not None and self.raw_data_dir is not None
 
     def get_4g_common_df(self):
         return self.data_dict['load_4g_common_btn']
+        # return pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
 
     def get_5g_common_df(self):
-        # return self.data_dict['load_5g_common_btn']
-        return pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\5G资源大表-20240324.csv',
-                           encoding='gbk')
+        return self.data_dict['load_5g_common_btn']
+        # return pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\5G资源大表-20240324.csv',
+        #                    encoding='gbk')
 
     def get_4g_siteifo_df(self):
-        site_info = self.data_dict['load_4g_site_info_btn'][['CGI', '5G频段']]
+        # site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_4g.csv',
+        #                         usecols=['CGI', '4G频段'])
+        site_info = self.data_dict['load_4g_site_info_btn'][['CGI', '4G频段']]
         site_info.rename(columns={'4G频段': '共址类型'}, inplace=True)
         return site_info
 
     def get_5g_siteifo_df(self):
-        # return self.data_dict['load_5g_site_info_btn']
-        site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_5g.csv',
-                                encoding='utf8', usecols=['CGI', '5G频段'])
-
+        site_info = self.data_dict['load_5g_site_info_btn'][['CGI', '5G频段']]
+        # site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_5g.csv',
+        #                         encoding='utf8', usecols=['CGI', '5G频段'])
+        # self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
+        # self.site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
         site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
         return site_info
 
@@ -126,15 +134,15 @@ class DataWatcher:
             self.get_5g_common_df()
 
     def g4_prepare(self):
-        g4_common_table = self.get_site_info('4G')
-        g4_common_df = g4_common_table[['中心载频信道号', '工作频段', '频率偏置']]
+        # g4_common_table = self.get_4g_common_df()
+        g4_common_df = self.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
         g4_freq_band_dict, g4_band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
         return g4_freq_band_dict, g4_band_list
 
     def get_base_info(self, band_list, f_name):
         if self.manufacturer == '华为':
             if self.system == '4G':
-                self.g4_base_info_df = self.get_huawei_4g_base_info(band_list, f_name)
+                self.g4_base_info_df = self.get_huawei_4g_base_info(f_name, band_list)
                 self.all_band = huaweiutils.list_to_str(band_list)
             else:
                 self.g5_base_info_df = self.get_huawei_5g_base_info(f_name)

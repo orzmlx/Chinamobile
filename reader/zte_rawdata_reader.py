@@ -127,7 +127,7 @@ class ZteRawDataReader:
                 if len(rename_dict) > 0:
                     merge_result.rename(columns=rename_dict, inplace=True)
             # self.mapToband(merge_result)
-            #删除没有找到CGI的行
+            # 删除没有找到CGI的行
             merge_result.dropna(subset=['CGI'], inplace=True, how='any', axis=0)
             gather_out_path = os.path.join(self.temp_path, new_file_name + '.csv')
             merge_result.to_csv(os.path.join(gather_out_dir, new_file_name + '.csv'), index=False, encoding='utf_8_sig')
@@ -208,6 +208,7 @@ class ZteRawDataReader:
                                                          "columns": demand_cols,
                                                          'ignore_errors': True,
                                                          "batch_size": 500})
+
                 csv_df = csv_df.to_pandas()
                 if sheet_index >= 2:
                     logging.info("sheet:【" + sheet_name + "】:>>>存在超过100万行分表情况!!!<<<")

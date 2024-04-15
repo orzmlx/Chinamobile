@@ -14,9 +14,7 @@ class EnhancedStartUp(Ui_mainWindow):
 
     def __int__(self, *args, **kwargs):
         super().__init__()
-        self.watcher = None
-        self.check_err_msg = QErrorMessage.qtHandler()
-        self.check_err_msg.setWindowTitle("错误提示")
+
         # self.check_test_preparation()
 
     def finished(self, msg: message):
@@ -25,8 +23,10 @@ class EnhancedStartUp(Ui_mainWindow):
             if self.check_prgbar.maximum() == 0:
                 self.check_prgbar.setMaximum(1)
                 self.check_prgbar.setValue(1)
+
         else:
             self.check_err_msg.showMessage(msg.signal_message)
+            self.check_prgbar.setValue(0)
 
         self.check_btn.setEnabled(True)
 
@@ -37,6 +37,9 @@ class EnhancedStartUp(Ui_mainWindow):
 
     def setupUi(self, MainWindow):
         super().setupUi(MainWindow)
+        self.watcher = None
+        self.check_err_msg = QErrorMessage.qtHandler()
+        self.check_err_msg.setWindowTitle("错误提示")
         object_names = [self.load_5g_common_prgbar.objectName(), self.load_4g_common_prgbar.objectName(),
                         self.load_5g_site_info_prgbar.objectName(), self.load_4g_site_info_prgbar.objectName()
                         # self.load_raw_data_prgbar.objectName()

@@ -1,4 +1,5 @@
 from utils import huaweiutils
+import logging
 
 
 class HuaweiRawDataFile(object):
@@ -7,6 +8,7 @@ class HuaweiRawDataFile(object):
         self.system = system
         self.out_put_dict = {}
         self.checked_unit_number = 0
+        self.to_be_correct_command = dict()
         self.command_col_dict = {}
         self.__word__method = {"成功条数": "get_success_number",
                                "失败条数": "get_fail_number",
@@ -401,6 +403,7 @@ class HuaweiRawDataFile(object):
         self.out_put_dict = {}
         self.checked_unit_number = 0
         self.command_col_dict = {}
+        self.command_to_be_corrected = {}
         self.__word__method = {"成功条数": "get_success_number",
                                "失败条数": "get_fail_number",
                                huawei_configuration.COMMAND: "get_command",
@@ -640,6 +643,20 @@ class HuaweiRawDataFile(object):
             new_dict[key] = []
             if len(value) > 0:
                 new_dict[key].append(value)
+            # length = huaweiutils.is_lists_of_same_length(new_dict)
+            # if length > 1:
+            #     if len(value) > 0:
+            #         fill_empty_list = [''] * (length-1)
+            #         fill_empty_list.append(value)
+            #     else:
+            #         fill_empty_list = [''] * length
+            #     new_dict[key] = fill_empty_list
+            # elif length == 1 or length == 0:
+            #     new_dict[key] = []
+            #     if len(value) > 0:
+            #         new_dict[key].append(value)
+            # elif length == -1:
+            #     print()
 
     def __merge_same_command_data(self):
         """
@@ -654,9 +671,19 @@ class HuaweiRawDataFile(object):
             file_name = d.replace(";", "")
             try:
                 df = pd.DataFrame(self.command_content_dict[d])
-            except:
-                raise Exception(
-                    "请检查【" + d + "】命令下的参数设置是否齐全,当前的列的数量:【" + str(list(self.command_content_dict[d].keys())) + '】')
+            except Exception as e:
+                logging.info("命令:" + d + "列表长度不一致")
+                if str(e) == 'All arrays must be of the same length':
+                    # n_d = d.replace(" ", "_").replace(":", "_").replace("=","_")
+                    self.command_to_be_corrected[d] = list(self.command_content_dict[d].keys())
+                    continue
+                # raise ReadRawException(message="检查【" + d + "】命令下的参数设置是否齐全",
+                #                        raw_message=str(e),
+                #                        system=self.system,
+                #                        manufacturer='huawei',
+                #                        model=(d, list(self.command_content_dict[d].keys())),
+                #                        code=-1)
+
             # NRDU小区改成NR小区
             if ~df.empty:
                 df.reset_index(inplace=True, drop=True)
@@ -690,6 +717,10 @@ class HuaweiRawDataFile(object):
         """
         raw_file_name: str = os.path.split(self.raw_data_inpath)[1].split('.')[0]
         self.__merge_same_command_data()
+        # 如果有需要增加字段的,后面不需要跑，直接跳过重新来
+        if len(self.command_to_be_corrected) > 0:
+            logging.info("有不一致列名,后续自动修后重新启动")
+            return
         for f, df in self.out_put_dict.items():
             huaweiutils.output_csv(df, f, os.path.join(self.out_path, raw_file_name, 'raw_result'), True)
             self.files_cols_dict[f] = df.columns.tolist()

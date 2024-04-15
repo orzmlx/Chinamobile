@@ -1,19 +1,15 @@
-import shutil
-import pandas as pd
+import copy
+import itertools
 import logging
-import pkgutil
 import os
+import pathlib
+import shutil
 from copy import deepcopy
 from difflib import SequenceMatcher
-import numpy as np
-import pathlib
-import math
-import copy
-import patoolib
-from openpyxl import load_workbook
-from openpyxl.styles import Font, Alignment, NamedStyle, PatternFill
-import itertools
+
+import pandas as pd
 from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
 
@@ -133,7 +129,7 @@ def create_header(df, path, class_dict, base_cols):
 
 
 def unzip_all_files(path):
-    import zipfile
+
     os.chmod(path, 7)
     zip_files = find_file(path, '.zip')
     if len(zip_files) == 0:
@@ -165,12 +161,20 @@ def get_content_col(base_cols, cols):
     return content_cols
 
 
-# def sort_result(cols, config, base_cols):
-#     content_cols = get_content_col(base_cols ,cols)
-#     order_content, class_dict = order_content_cols(config, content_cols)
-#     # base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
-#     #              '双工模式', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
-#     return base_cols + order_content, class_dict
+def is_lists_of_same_length(dict_obj):
+    """
+    判断字典对应的列表是否都是相同长度，如果都相同，那么返回这个长度
+    :param dict_obj:
+    :return: int
+    """
+    if len(dict_obj) == 0:
+        return 0
+    first_key = next(iter(dict_obj))
+    first_length = len(dict_obj[first_key])
+    if all(len(dict_obj[key]) == first_length for key in dict_obj):
+        return first_length
+    else:
+        return -1
 
 
 def find_file(directory, file_extension):
@@ -197,6 +201,8 @@ def only_has_digtal_diff(str1, str2):
     """
         判断两个字符串不相同的部分
     """
+    if str1 == str2:
+        return False
     matcher = SequenceMatcher(None, str1, str2)
     match_codes = matcher.get_opcodes()
     replace_num = 0

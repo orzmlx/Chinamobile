@@ -115,8 +115,9 @@ LST_NRCELLQCIBEARER_QCI_1 = ['网元', 'NR小区标识', '服务质量等级', '
                              '负载均衡的上行吞吐率门限(千比特/秒)', '负载均衡的下行缓存数据量(千比特)',
                              '负载均衡的上行BSR数据量(千比特)', '负载均衡的检查时长(秒)', 'NSA用户异频切换测量参数组标识',
                              '低速用户同频切换测量参数组标识', '低速用户异频切换测量参数组标识', 'RedCap用户DRX参数组标识',
-                             '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识', 'QCI算法参数组标识', '业务差异化算法开关',
-                             'WTCP算法开关', 'WTCP参数组标识']
+                             # '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识', 'QCI算法参数组标识', '业务差异化算法开关',
+                             # 'WTCP算法开关', 'WTCP参数组标识'
+                             ]
 
 LST_NRCELLQCIBEARER_QCI_5 = LST_NRCELLQCIBEARER_QCI_1
 LST_NRCELLQCIBEARER_QCI_9 = LST_NRCELLQCIBEARER_QCI_1
@@ -363,7 +364,9 @@ G5_COMMAND_COLS_LIST = [LST_NRDUCELL, LST_GNODEBFUNCTION, LST_NRCELLALGOSWITCH,
                         LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_1,
                         LST_NRCELLHOEUTRANMEAGRP_INTERRHOTOEUTRANMEASGRPID_2,
                         LST_NRDUCELLSRSMEAS, LST_NRDUCELLSELCONFIG,
-                        LST_NRCELLQCIBEARER_QCI_1, LST_NRCELLQCIBEARER_QCI_5, LST_NRCELLQCIBEARER_QCI_9,
+                        LST_NRCELLQCIBEARER_QCI_1,
+                        LST_NRCELLQCIBEARER_QCI_5,
+                        LST_NRCELLQCIBEARER_QCI_9,
                         LST_NRCELLSERVEXP, LST_GNBQCIALGOPARAMGRP, LST_NRCELLRESELCONFIG, LST_NRCELLFREQRELATION,
                         LST_NRCELLEUTRANNFREQ, LST_NRDUCELLINTRFIDENT,
                         LST_NRCELLINTRAFHOMEAGRP_INTRAFREQHOMEASGROUPID_0,

@@ -17,27 +17,6 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="\myenv\Lib\site-packages\numpy\core\tests\data\umath-validation-set-cos.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\myenv\Lib\site-packages\numpy\core\tests\data\umath-validation-set-exp.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\myenv\Lib\site-packages\numpy\core\tests\data\umath-validation-set-log.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
       </map>
     </option>
   </component>
