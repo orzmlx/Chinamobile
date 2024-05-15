@@ -24,6 +24,9 @@ class DataWatcher:
         now = datetime.now()
         self.date = now.strftime('%Y%m%d')
 
+    def setDate(self, date):
+        self.date = date
+
     def set_files_number(self, number):
         self.files_number = number
 
@@ -69,21 +72,20 @@ class DataWatcher:
         # return pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
 
     def get_5g_common_df(self):
-        return self.data_dict['load_5g_common_btn']
-        # return pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\5G资源大表-20240324.csv',
-        #                    encoding='gbk')
+        # return self.data_dict['load_5g_common_btn']
+        return pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\5G资源大表-20240324.csv', encoding='gbk')
 
     def get_4g_siteifo_df(self):
-        # site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_4g.csv',
-        #                         usecols=['CGI', '4G频段'])
-        site_info = self.data_dict['load_4g_site_info_btn'][['CGI', '4G频段']]
+        site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_4g.csv',
+                                usecols=['CGI', '4G频段'])
+        # site_info = self.data_dict['load_4g_site_info_btn'][['CGI', '4G频段']]
         site_info.rename(columns={'4G频段': '共址类型'}, inplace=True)
         return site_info
 
     def get_5g_siteifo_df(self):
-        site_info = self.data_dict['load_5g_site_info_btn'][['CGI', '5G频段']]
-        # site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_5g.csv',
-        #                         encoding='utf8', usecols=['CGI', '5G频段'])
+        # site_info = self.data_dict['load_5g_site_info_btn'][['CGI', '5G频段']]
+        site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_5g.csv',
+                                encoding='utf8', usecols=['CGI', '5G频段'])
         # self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
         # self.site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
         site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
@@ -154,7 +156,13 @@ class DataWatcher:
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
                 self.all_band = '4.9G|2.6G|700M|nan'
-
+        elif self.manufacturer == '爱立信':
+            if self.system == '5G':
+                self.g5_base_info_df = self.get_eri_5g_base_info(f_name)
+                self.all_band = '4.9G|2.6G|700M|nan'
+            else:
+                self.g4_base_info_df = self.get_eri_4g_base_info(band_list)
+                self.all_band = huaweiutils.list_to_str(band_list)
         base_inf_df = self.g4_base_info_df if self.system == '4G' else self.g5_base_info_df
 
         return base_inf_df
@@ -180,6 +188,25 @@ class DataWatcher:
         # self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
         return base_info_df
 
+    def get_eri_5g_base_info(self, f_name):
+
+        site_info = self.get_site_info()
+        common_table = self.get_5g_common()
+        checked_raw_path = os.path.join(self.get_checked_raw_path(), 'kget', 'raw_result')
+        cell_cu_df = pd.read_csv(os.path.join(checked_raw_path, 'NRCellCU.csv'))
+        reserved_cols = list(filter(lambda x: x.endswith('ref'), cell_cu_df.columns.tolist()))
+        # 只保留Ref列,还有MO	MeContext	city	cellName
+        fixed_cols = ['MO', 'MeContext', 'cellName', 'CGI']
+        fixed_cols.extend(reserved_cols)
+        cell_cu_df = cell_cu_df[fixed_cols]
+        # cell_cu_df.dropna(axis=1, how='all', inplace=True)
+        base_info_df = cell_cu_df.merge(common_table, how='left', on=['CGI'])
+        base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
+        base_info_df['频段'] = base_info_df['工作频段'].map(
+            {"NR-D": "2.6G", "NR-700": "700M", "NR-C": "4.9G"})
+        base_info_df['厂家'] = self.manufacturer
+        return base_info_df
+
     def get_zte_5g_base_info(self):
         site_info = self.get_site_info()
         common_table = self.get_5g_common()
@@ -189,6 +216,7 @@ class DataWatcher:
                                        ['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], dtype=str)
 
         base_info_df = cell_df.rename(columns={'用户标识': 'NRDU小区名称'})
+        # base_info_df = base_info_df.rename(columns={'工作频段': '频段'})
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
         base_info_df['厂家'] = self.manufacturer

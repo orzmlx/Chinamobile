@@ -13,6 +13,8 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
 
+from configuration import zte_configuration
+
 replace_char = ['秒', 'dB']
 
 
@@ -128,18 +130,39 @@ def create_header(df, path, class_dict, base_cols):
     wb.save(os.path.join(os.path.split(path)[0], '互操作小区级核查结果.csv'))
 
 
-def unzip_all_files(path):
-
+def unzip_all_files(path, dest_path=None, zipped_file=[]):
+    """
+     解压原始log文件到目标文件夹，防止解压文件中包含解压文件，进行递归解压，当解压文件数量没有提升
+    :param path:
+    :param dest_path:
+    :param zipped_file:
+    :return:
+    """
+    if path == '' or path is None:
+        return
     os.chmod(path, 7)
+    if dest_path is not None:
+        os.chmod(dest_path, 7)
     zip_files = find_file(path, '.zip')
+    if 0 < len(zipped_file) == len(zip_files):
+        return
     if len(zip_files) == 0:
         return
     for file in zip_files:
-        dest_dir = str(file).replace('.zip', '')
+        base_name = os.path.basename(file)
+        if base_name in zipped_file:
+            continue
+        dest_dir = str(file).replace('.zip', '') \
+            if dest_path is None else os.path.join(dest_path, base_name.replace('.zip', ''))
+
         # patoolib.extract_archive(file,dest_dir)
-        shutil.unpack_archive(file, dest_dir)
-        os.remove(file)
-    unzip_all_files(path)
+        try:
+            shutil.unpack_archive(file, extract_dir=dest_dir)
+            # os.remove(file)
+        except Exception as e:
+            logging.info(e)
+        zipped_file.append(base_name)
+    unzip_all_files(path, dest_path, zipped_file)
 
     # f = zipfile.ZipFile(f, 'r')  # 压缩文件位置
 
@@ -350,7 +373,7 @@ def judge(df, param):
         recommand = str(recommand)
         if value == 'nan':
             # judge_res.append("没有找到参考值")
-            judge_res.append(False)
+            judge_res.append(True)
             continue
         if recommand == 'nan':
             judge_res.append(True)
@@ -385,8 +408,10 @@ def linear_calculation(x, m1, b, m2):
 
 
 def mapToBand(x, band_dict):
+    if 'nan' == str(x):
+        return '其他频段'
     for key, item in band_dict.items():
-        if str(x) in list(item):  # 证明该频段是4G频段
+        if str(x) in item:  # 证明该频段是4G频段
             return key
     return '其他频段'
 
@@ -409,10 +434,10 @@ def generate_4g_frequency_band_dict(df):
         value_set = g4_freq_band_dict.get(band, set())
         value_set.add(str(SSB))
         g4_freq_band_dict[band] = value_set
-    return g4_freq_band_dict, band_list
+    return zte_configuration.band_dict, band_list
 
 
-def read_csv(file_name, usecols, dtype=None):
+def read_csv(file_name, usecols=None, dtype=None):
     try:
         return pd.read_csv(file_name, usecols=usecols, dtype=dtype) if dtype != None else pd.read_csv(file_name,
                                                                                                       usecols=usecols)
@@ -436,11 +461,12 @@ def merge_dfs(lst, on, cell_identity):
         return pd.DataFrame()
     init_df = lst[0]
     for i in range(len(lst)):
+        copy_on = copy.deepcopy(on)
         if i == 0:
             continue
         if cell_identity in lst[i].columns.tolist() and cell_identity in init_df:
-            on.append(cell_identity)
-        init_df = init_df.merge(lst[i], how='left', on=on)
+            copy_on.append(cell_identity)
+        init_df = init_df.merge(lst[i], how='left', on=copy_on)
     return init_df
 
 
@@ -527,16 +553,16 @@ if __name__ == "__main__":
     # str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # # print(only_has_digtal_diff(str1, str2))
     # print(remove_digit(str1, ['=']))
-    # path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\20240326\\5G'
+    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240426\\5G'
 
-    # combine_file_by_name(path)
+    combine_file_by_name(path)
     # path = 'C:\\Users\\No.1\\Desktop\\分表'
     # split_csv(path, 200000)
-    path = 'C:\\Users\\No.1\\Desktop\\zip_test'
+    # path = 'C:\\Users\\No.1\\Desktop\\zip_test'
     # unzip_all_files(path)
-    huawei_txts = find_file(path, '.txt')
-    dest = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240327\\5G\\raw_data'
-    if not os.path.exists(dest):
-        os.makedirs(dest)
-    for txt in huawei_txts:
-        shutil.move(str(txt), dest)
+    # huawei_txts = find_file(path, '.txt')
+    # dest = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240327\\5G\\raw_data'
+    # if not os.path.exists(dest):
+    #     os.makedirs(dest)
+    # for txt in huawei_txts:
+    #     shutil.move(str(txt), dest)

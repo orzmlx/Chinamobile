@@ -1,9 +1,15 @@
 # -*- coding:utf-8 -*-
-from PyQt5.QtWidgets import QErrorMessage
+
+try:
+    from PyQt5.QtWidgets import QErrorMessage
+except ImportError:
+    from PySide6.QtWidgets import QErrorMessage
+
+# from PySide6.QtWidgets import QErrorMessage
 
 from model.data_watcher import DataWatcher
 from model.signal_message import message
-from handler.check_thread import CheckThread
+from backend.check_thread import CheckThread
 from ui.huaweistartup import Ui_mainWindow
 from ui.file_dialog_group import FileDialogGroup
 from ui.load_csv_group import LoadCsvGroup
@@ -49,7 +55,7 @@ class EnhancedStartUp(Ui_mainWindow):
         self.check_thread = CheckThread(self.watcher)
         self.check_thread.finished.connect(self.finished)
         self.check_thread.valueChanged.connect(self.check_prgbar.setValue)
-        manufacturer_radio_button_group = [self.huawei_radio, self.zte_radio, self.zte_radio]
+        manufacturer_radio_button_group = [self.huawei_radio, self.zte_radio, self.eri_radio]
         system_radios = [self.g5_radio, self.g4_radio]
         self.check_btn.clicked.connect(lambda: self.check(self.watcher))
         self.system_radio_button_group = RadioButtonGp(system_radios, 'systems', self.watcher)
@@ -75,7 +81,8 @@ class EnhancedStartUp(Ui_mainWindow):
                                                 self.load_5g_common_prgbar,
                                                 # self.load_5g_common_label,
                                                 self.start_5g_common_btn,
-                                                self.stop_5g_common_btn,
+                                                # self.stop_5g_common_btn,
+                                                None,
                                                 self.load_5g_common_msg,
                                                 self.watcher
                                                 # self.loadingThread
@@ -84,7 +91,8 @@ class EnhancedStartUp(Ui_mainWindow):
                                                 self.load_4g_common_prgbar,
                                                 # self.load_4g_common_label,
                                                 self.start_4g_common_btn,
-                                                self.stop_4g_common_btn,
+
+                                                None,
                                                 self.load_4g_common_msg,
                                                 self.watcher
                                                 # self.loadingThread
@@ -93,7 +101,8 @@ class EnhancedStartUp(Ui_mainWindow):
                                                       self.load_5g_site_info_prgbar,
                                                       # self.load_5g_site_info_label,
                                                       self.start_5g_site_info_btn,
-                                                      self.stop_5g_site_info_btn,
+
+                                                      None,
                                                       self.load_5g_site_info_msg,
                                                       self.watcher
                                                       # self.loadingThread
@@ -102,7 +111,8 @@ class EnhancedStartUp(Ui_mainWindow):
                                                       self.load_4g_site_info_prgbar,
                                                       # self.load_4g_site_info_label,
                                                       self.start_4g_site_info_btn,
-                                                      self.stop_4g_site_info_btn,
+                                                      # self.stop_4g_site_info_btn,
+                                                      None,
                                                       self.load_4g_site_info_msg,
                                                       self.watcher
                                                       # self.loadingThread
@@ -112,7 +122,8 @@ class EnhancedStartUp(Ui_mainWindow):
                                                   self.load_raw_data_prgbar,
                                                   # self.load_raw_data_label,
                                                   self.start_raw_data_btn,
-                                                  self.stop_raw_data_btn,
+
+                                                  None,
                                                   self.load_raw_data_msg,
                                                   self.watcher
                                                   # self.loadingThread

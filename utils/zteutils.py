@@ -5,7 +5,7 @@ import os
 import pathlib
 import re
 import sys
-
+import logging
 import pandas as pd
 from openpyxl import Workbook
 
@@ -13,7 +13,8 @@ importlib.reload(sys)
 
 
 def get_action_charactors():
-    return [':', 'match', 'eq', 'extract']
+    # 这里在爱立信数据时，eq改成equal
+    return [':', 'match', 'equal', 'extract']
 
 
 def get_action_names():
@@ -21,7 +22,9 @@ def get_action_names():
 
 
 def union_action(df, action_tuples_list, action_name, new_col_name, index):
-    if action_name == '删除整行':
+    if action_name == '删除整列':
+        action_df = action_delete(df, action_tuples_list, index, axis=1)
+    elif action_name == '删除整行':
         action_df = action_delete(df, action_tuples_list, index)
     elif action_name == '合并':
         if new_col_name is None:
@@ -45,17 +48,19 @@ def find_operators(str):
 
 def filter(df, operator, col_name, range):
     if operator == 'match':
-        filter_df = df[col_name].str.contains(range)
+        filter_df = df[col_name].str.contains(range, flags=re.IGNORECASE)
     elif operator == ':':
-        filter_df = df[df[col_name].str.contains(range)]
-    elif operator == 'eq':
-        filter_df = df[df[col_name] == range]
+
+        filter_df = df if range == '整体' else df[df[col_name].str.contains(range, flags=re.IGNORECASE)]
+
+    elif operator == 'equal':
+        filter_df = df[df[col_name].str.lower() == range.lower()]
     else:
         raise Exception("未定义的操作符:" + operator)
     return filter_df
 
 
-def action_delete(df, action_tuples, index):
+def action_delete(df, action_tuples, index, axis=0):
     """
         删除就是过滤的逻辑，删除过滤后的结果
     """
@@ -68,7 +73,7 @@ def action_delete(df, action_tuples, index):
         # 筛选出来的df,全部在原df中通过Index删除
         filter_df = filter(df, operator, col_name, range)
         index = filter_df.index.tolist()
-        df.drop(index=index, axis=0, inplace=True)
+        df.drop(index=index, axis=axis, inplace=True)
     return df
 
 
@@ -86,8 +91,16 @@ def split_column(x, pattern, operator, index):
 def action_columns_merge(df, action_tuples_list, new_column_name, index):
     constant = None
     df[new_column_name] = ""
+    math_way = False
+    math_operator = None
+
     for action_tuple in action_tuples_list:
         col_name = action_tuple[0].strip() if action_tuple[0] is not None else None
+        if 'add' == col_name or 'subtract' == col_name:
+            math_way = True
+            math_operator = col_name
+            df[new_column_name] = 0
+            continue
         action_range = action_tuple[1].strip() if action_tuple[1] is not None else None
         operator = action_tuple[2].strip() if action_tuple[2] is not None else None
         if operator == 'match' or operator == 'extract':
@@ -102,7 +115,7 @@ def action_columns_merge(df, action_tuples_list, new_column_name, index):
             # # 规整列的顺序,确保新的列在最后一个
             # df = df[cols]
         elif operator == ':' and action_range == '整体':
-            df[col_name + "#"] = df[col_name]
+            df[col_name + "#"] = df[col_name].apply(str)
             if constant is not None:
                 df[col_name + "#"] = constant + df[col_name + "#"]
                 constant = None
@@ -114,12 +127,28 @@ def action_columns_merge(df, action_tuples_list, new_column_name, index):
         else:
             raise Exception("未定义的操作符:" + operator + "出错行数:" + str(index))
     cols = df.columns.tolist()
-    for c in cols:
-        if c.find('#') >= 0:
-            df[new_column_name] = df[new_column_name] + df[c]
-            df.drop([c], axis=1, inplace=True)
-    if constant is not None:
-        df[new_column_name] = df[new_column_name] + constant
+    if math_way:
+        try:
+            left_operator_col = action_tuples_list[0][0]
+            right_operator_col = action_tuples_list[2][0]
+            df[left_operator_col + "#"].fillna(value=0, inplace=True)
+            df[right_operator_col + "#"].fillna(value=0, inplace=True)
+            df[left_operator_col + "#"] = df[left_operator_col + "#"].apply(float)
+            df[right_operator_col + "#"] = df[right_operator_col + "#"].apply(float)
+            df[new_column_name] = df[left_operator_col + "#"] + df[
+                right_operator_col + "#"] if math_operator == 'add' else \
+                df[left_operator_col + "#"] - df[right_operator_col + "#"]
+            df.drop([left_operator_col + "#"], axis=1, inplace=True)
+            df.drop([right_operator_col + "#"], axis=1, inplace=True)
+        except:
+            logging.info("列之间算术计算错误")
+    else:
+        for c in cols:
+            if c.find('#') >= 0:
+                df[new_column_name] = df[new_column_name] + df[c]
+                df.drop([c], axis=1, inplace=True)
+        if constant is not None:
+            df[new_column_name] = df[new_column_name] + constant
     return df
 
 

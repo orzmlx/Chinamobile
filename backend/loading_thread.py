@@ -2,11 +2,13 @@
 import ctypes
 
 import pandas as pd
-import win32con
 from PyQt5.QtCore import QThread, pyqtSignal
+
+# from PySide6.QtCore import QThread, Signal
 
 from model.data_watcher import DataWatcher
 from model.signal_message import message
+from processor.processor import Processor
 
 StyleSheet = '''
 PushButtonLine {
@@ -26,12 +28,14 @@ class LoadingThread(QThread):
     def __init__(self, path: str = None,
                  watcher: DataWatcher = None,
                  name: str = None,
+                 processor: Processor = None,
                  *args, **kwargs):
         super(LoadingThread, self).__init__(*args, **kwargs)
         # self.totalValue = randint(100, 200)  # 模拟最大
         self.filePath = None
         self.watcher = watcher
         self.name = name
+        self.processor = processor
         # self.manufacturer = manufacturer
 
     def setName(self, name):
@@ -45,8 +49,8 @@ class LoadingThread(QThread):
 
     def run(self):
         try:
-            self.handle = ctypes.windll.kernel32.OpenThread(  # @UndefinedVariable
-                win32con.PROCESS_ALL_ACCESS, False, int(QThread.currentThreadId()))
+            # self.handle = ctypes.windll.kernel32.OpenThread(  # @UndefinedVariable
+            #     win32con.PROCESS_ALL_ACCESS, False, int(QThread.))
             # INPUT_FILENAME = self.path
             LINES_TO_READ_FOR_ESTIMATION = 20
             CHUNK_SIZE_PER_ITERATION = 10 ** 5
@@ -62,7 +66,6 @@ class LoadingThread(QThread):
                 self.finished.emit(message(2, '成功'))
             else:
                 self.finished.emit(message(-1, "数据验证失败"))
-
         except Exception as e:
             # self.prgbar.setValue(0)
             self.finished.emit(message(-1, str(e)))

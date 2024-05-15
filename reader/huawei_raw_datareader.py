@@ -1,3 +1,7 @@
+from pathlib import Path
+
+from exception.read_raw_exception import ReadRawException
+from reader.reader import Reader
 from utils import huaweiutils
 import logging
 
@@ -371,23 +375,23 @@ class HuaweiRawDataFile(object):
         return fact_number
 
 
-if __name__ == "__main__":
-    # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_nb_20240126_093224.txt'
-    # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
-    # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs1_20240125_104929.txt'
-    # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\QCI\\华为5G-QCI-159\\MML任务结果_gt_20231226_112108.txt"
-    rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G\\raw_data\\MML任务结果_zs_20240201_103223.txt"
-    # commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为5G异频异系统切换重选语音数据-全量.txt"
-    commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
-    outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\"
-    # 工参表路径
-    # common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
-    # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, '4G')
-    rawFile.read_huawei_txt()
-    # rawFile.output_handover_result(qci=9)
-    rawFile.output_format_data()
-    # rawFile.output_handover_result(9)
+# if __name__ == "__main__":
+#     # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_nb_20240126_093224.txt'
+#     # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs_20240118_150344.txt'
+#     # rawDataPath = 'C:\\Users\\No.1\\Desktop\\teleccom\\MML任务结果_zs1_20240125_104929.txt'
+#     # rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\QCI\\华为5G-QCI-159\\MML任务结果_gt_20231226_112108.txt"
+#     rawDataPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\4G\\raw_data\\MML任务结果_zs_20240201_103223.txt"
+#     # commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为5G异频异系统切换重选语音数据-全量.txt"
+#     commandPath = "C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
+#     outputPath = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\"
+#     # 工参表路径
+#     # common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
+#     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
+#     rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, '4G')
+#     rawFile.read_huawei_txt()
+#     # rawFile.output_handover_result(qci=9)
+#     rawFile.output_format_data()
+#     # rawFile.output_handover_result(9)
 from collections import deque
 import pandas as pd
 import logging
@@ -396,8 +400,9 @@ import re
 from configuration import huawei_configuration
 
 
-class HuaweiRawDataFile(object):
-    def __init__(self, raw_data_inpath, command_file_path, out_path, system):
+class HuaweiRawDataFile(Reader):
+
+    def __init__(self, command_file_path, out_path, system):
         self.to_be_continue = False
         self.system = system
         self.out_put_dict = {}
@@ -417,7 +422,7 @@ class HuaweiRawDataFile(object):
             [huawei_configuration.COMMAND, "网元", "报文", huawei_configuration.RETURN_CODE, huawei_configuration.QUERY])
         self.phases_dict = {huawei_configuration.COMMAND: [], "网元": [], "报文": [],
                             huawei_configuration.RETURN_CODE: [], huawei_configuration.QUERY: []}
-        self.raw_data_inpath = raw_data_inpath
+        self.raw_data_inpath = None
         self.out_path = os.path.join(out_path, system)
         self.fail_command_number = 0
         self.success_command_number = 0
@@ -438,6 +443,9 @@ class HuaweiRawDataFile(object):
         self.exist_cols = []
         self.current_network_element = ""
         self.files_cols_dict = {}
+
+    def setRawFile(self, filePath: Path):
+        self.raw_data_inpath = str(filePath)
 
     def parse_param(self, params):
         result = []
@@ -672,17 +680,18 @@ class HuaweiRawDataFile(object):
             try:
                 df = pd.DataFrame(self.command_content_dict[d])
             except Exception as e:
+                print("请检查【" + d + "】命令下的参数设置是否齐全,当前的列的数量:【" + str(list(self.command_content_dict[d].keys())) + '】')
                 logging.info("命令:" + d + "列表长度不一致")
-                if str(e) == 'All arrays must be of the same length':
-                    # n_d = d.replace(" ", "_").replace(":", "_").replace("=","_")
-                    self.command_to_be_corrected[d] = list(self.command_content_dict[d].keys())
-                    continue
-                # raise ReadRawException(message="检查【" + d + "】命令下的参数设置是否齐全",
-                #                        raw_message=str(e),
-                #                        system=self.system,
-                #                        manufacturer='huawei',
-                #                        model=(d, list(self.command_content_dict[d].keys())),
-                #                        code=-1)
+                # if str(e) == 'All arrays must be of the same length':
+                #     # n_d = d.replace(" ", "_").replace(":", "_").replace("=","_")
+                #     self.command_to_be_corrected[d] = list(self.command_content_dict[d].keys())
+                #     continue
+                raise ReadRawException(message="检查【" + d + "】命令下的参数设置是否齐全",
+                                       raw_message=str(e),
+                                       system=self.system,
+                                       manufacturer='huawei',
+                                       model=(d, list(self.command_content_dict[d].keys())),
+                                       code=-1)
 
             # NRDU小区改成NR小区
             if ~df.empty:
@@ -701,7 +710,10 @@ class HuaweiRawDataFile(object):
                     if len(res) == 0:
                         continue
                     if huaweiutils.only_has_digtal_diff(out_name, f) and len(out_name) == len(f):
-                        pre_df = pd.concat([pre_df, df], axis=0)
+                        try:
+                            pre_df = pd.concat([pre_df, df], axis=0)
+                        except Exception as e:
+                            print(e)
                         # f = huaweiutils.remove_digit(f,['='])
                         out_put_dict[f] = pre_df
                         is_add = True
@@ -712,6 +724,7 @@ class HuaweiRawDataFile(object):
         self.out_put_dict = out_put_dict
 
     def output_format_data(self):
+        self.read_huawei_txt()
         """
             华为按命令行导出数据
         """
@@ -803,7 +816,7 @@ if __name__ == "__main__":
     # 工参表路径
     # common_table = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\5G资源大表-20231227.csv"
     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果.xlsx"
-    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath, '4G')
+    rawFile = HuaweiRawDataFile(rawDataPath, commandPath, outputPath)
     rawFile.read_huawei_txt()
     # rawFile.output_handover_result(qci=9)
     rawFile.output_format_data()

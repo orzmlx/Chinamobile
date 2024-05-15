@@ -71,6 +71,28 @@ def test2(string):
     print(len(splits))
 
 
+def filter():
+    try:
+        df = pd.read_csv(
+            'C:\\Users\\No.1\\Documents\\WeChat Files\\wxid_5zkc7x50zh3822\\FileStorage\\File\\2024-04\\5G驻留比终端统计表(天)(1).csv')
+    except:
+        df = pd.read_csv(
+            'C:\\Users\\No.1\\Documents\\WeChat Files\\wxid_5zkc7x50zh3822\\FileStorage\\File\\2024-04\\5G驻留比终端统计表(天)(1).csv',
+            encoding='gbk')
+
+    filter_df = df[(df['用户类型'] == 'SA单模') & (df['区域类型'] == '省级-全网')]
+    types = ['小米', '红米', '华为', '荣耀', '三星', 'HI NOVA', 'VIVO']
+    res = pd.DataFrame()
+    for t in types:
+        type_df = filter_df[filter_df['终端型号'].str.contains(t)]
+        if res.empty:
+            res = type_df
+        else:
+            res = pd.concat([res, type_df], axis=0)
+
+    res.to_csv("C:\\Users\\No.1\\Desktop\\teleccom\\5G终端过滤.csv", index=False, encoding='utf_8_sig')
+
+
 if __name__ == "__main__":
     # str1 = "LST NRCELLHOEUTRANMEAGRPINTERRHOTOEUTRANMEASGRPID=0"
     # str2 = "LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=0;"
@@ -96,4 +118,4 @@ if __name__ == "__main__":
     # progress_thread.start()
     # read_thread.join()
     # progress_thread.join()
-    read_csv()
+    filter()

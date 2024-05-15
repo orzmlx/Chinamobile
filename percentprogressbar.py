@@ -10,14 +10,14 @@ Created on 2018年9月4日
 @description: 
 """
 
-try:
-    from PyQt5.QtCore import pyqtProperty, QSize, Qt, QRectF, QTimer
-    from PyQt5.QtGui import QColor, QPainter, QFont
-    from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QSlider
-except ImportError:
-    from PySide2.QtCore import Property as pyqtProperty, QSize, Qt, QRectF, QTimer
-    from PySide2.QtGui import QColor, QPainter, QFont
-    from PySide2.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QSlider
+# try:
+#     from PyQt5.QtCore import pyqtProperty, QSize, Qt, QRectF, QTimer
+#     from PyQt5.QtGui import QColor, QPainter, QFont
+#     from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QSlider
+# except ImportError:
+from PySide6.QtCore import Property as pyqtProperty, QSize, Qt, QRectF, QTimer
+from PySide6.QtGui import QColor, QPainter, QFont
+from PySide6.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QSlider
 
 
 class PercentProgressBar(QWidget):

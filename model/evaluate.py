@@ -5,7 +5,7 @@ import itertools
 
 import numpy as np
 
-from configuration import zte_configuration
+from configuration import zte_configuration, ericsson_configuration
 from reader.huawei_raw_datareader import *
 from model.data_watcher import DataWatcher
 
@@ -53,7 +53,8 @@ class Evaluation:
         self.all_band = ""  # 所有的频带
         self.all_co_location = [np.nan]  # 所有的共址.类型
         self.base_info_df = watcher.get_base_info(self.band_list, f_name)
-        self._inference_city(self.base_info_df)
+        if self.manufacturer == '华为':
+            self._inference_city(self.base_info_df)
         # self.base_info_df = self.get_base_info(band_list)
         self.end_band = 'FDD-900|FDD-1800|F|A|D|E|4.9G|2.6G|700M'
         # self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
@@ -75,17 +76,20 @@ class Evaluation:
         self.qci_file_name = 'LST NRCELLQCIBEARERQCI.csv' if self.system == '5G' else 'LST CELLQCIPARAQCI.csv'
         self.freq_config_df = self.precheck_config(self.freq_config_df)
         self.cell_config_df = self.precheck_config(self.cell_config_df)
+        self.config = pd.DataFrame()
         self.cell_df = pd.DataFrame()
         self.freq_df = pd.DataFrame()
         self.pre_params = []
         self.cover_filter_list = ['高铁']
+        self.pre_param_dict = {}
+        self.key_col = self.get_key_col()
 
     def _inference_city(self, df):
         na_city_df = df[df['地市'].isna()]
         countries = self.countries.keys()
         city_file_keys = huawei_configuration.FILE_CITY_DICT.keys()
         for index, row in na_city_df.iterrows():
-            net_element = row['网元']
+            net_element = row[self.key_col]
             find = False
             if self.manufacturer == '华为':
                 for key in city_file_keys:
@@ -105,6 +109,14 @@ class Evaluation:
                         df.at[index, '地市'] = self.countries[c]
                         find = True
 
+    def get_key_col(self):
+        if self.manufacturer == '中兴':
+            return ''
+        elif self.manufacturer == '华为':
+            return '网元'
+        elif self.manufacturer == '爱立信':
+            return 'MeContext'
+
     def get_cell_identity(self):
         if self.system == '4G' and self.manufacturer == '中兴':
             return zte_configuration.G4_CELL_IDENTITY
@@ -114,6 +126,10 @@ class Evaluation:
             return huawei_configuration.G5_CELL_IDENTITY
         elif self.system == '4G' and self.manufacturer == '华为':
             return huawei_configuration.G4_CELL_IDENTITY
+        elif self.system == '5G' and self.manufacturer == '爱立信':
+            return ericsson_configuration.G5_CELL_IDENTITY
+        elif self.system == '4G' and self.manufacturer == '爱立信':
+            return ericsson_configuration.G4_CELL_IDENTITY
 
     def precheck_config(self, config):
         """
@@ -125,49 +141,59 @@ class Evaluation:
         merged_config = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # config0.sort_values(by=['伴随参数命令'], inplace=True)
         merged_config = merged_config[~merged_config['推荐值'].isna()]
-        merged_config[['原始参数名称', '参数名称']] = merged_config.apply(lambda x: Evaluation.rename_col_by_qci(x),
+        merged_config[['原始参数名称', '参数名称']] = merged_config.apply(lambda x: Evaluation.generate_unique_name(x),
                                                                 axis=1).apply(
             pd.Series)
         merged_config = merged_config[merged_config['推荐值'] != '/']
         return merged_config
 
     @staticmethod
-    def rename_col_by_qci(row):
+    def generate_unique_name(row):
+        '''
+            由于不同的厂家，参数名存在不同情况的重复，因此参数由以下组合形成
+            row['原始参数名称'] + "_" + row['参数名称'] + "_" + row['二级表头']可以唯一确定一个参数
+        '''
         qci = str(row['QCI'])
+        unique_name = row['原始参数名称'] + "_" + row['参数名称'] + "_" + row['二级表头']
         if qci != 'nan':
-            if qci == '1' or qci == '5':
-                suffix = '语音'
-            elif qci == '9':
-                suffix = '数据'
-            else:
-                raise Exception("未知的QCI值:" + qci)
-            original_name = row['原始参数名称'] + "_" + suffix + qci
-            name = row['参数名称'] + "_" + suffix + qci
-            return original_name, name
+            # if qci == '1' or qci == '5':
+            #     suffix = '语音'
+            # elif qci == '9':
+            #     suffix = '数据'
+            # else:
+            #     raise Exception("未知的QCI值:" + qci)
+            original_name = row['原始参数名称'] + "_" + qci
+
+            return original_name, unique_name
         else:
-            return row['原始参数名称'], row['参数名称']
+            return row['原始参数名称'], unique_name
 
     def get_base_cols(self):
-        return ['网元'] if self.manufacturer == '华为' else ['网元CU', 'CGI']
+        if self.manufacturer == '华为':
+            return [self.get_key_col()]
+        elif self.manufacturer == '中兴':
+            return ['网元CU', 'CGI']
+        elif self.manufacturer == '爱立信':
+            return [self.get_key_col()]
 
-    def find_switch_cols(self, file_name, switch_params):
+    def find_huawei_switch_cols(self, file_name, switch_params):
+
         find_params = {}
-        base_cols = self.get_base_cols()
         try:
             df = pd.read_csv(file_name, nrows=1)
         except:
             df = pd.read_csv(file_name, nrows=1, encoding='gbk')
         cols = df.columns.tolist()
-        if self.cell_identity in cols:
-            base_cols.append(self.cell_identity)
-        if '服务质量等级' in cols:
-            base_cols.append('服务质量等级')
+        # if self.cell_identity in cols:
+        #     base_cols.append(self.cell_identity)
+        # if '服务质量等级' in cols:
+        #     base_cols.append('服务质量等级')
         if len(switch_params) == 0:
             logging.info("不需要在" + file_name + "中寻找开关参数")
-            return find_params, base_cols
+            return find_params
         if df.empty:
             logging.info(file_name + "中数据为空")
-            return find_params, base_cols
+            return find_params
         first_row = df.iloc[0]
         for param in switch_params:
             find = False
@@ -181,7 +207,7 @@ class Evaluation:
                     find = True
             if find is False:
                 raise Exception("在【" + file_name + "】没有找到【" + param + "】,请检查参数名称")
-        return find_params, base_cols
+        return find_params
 
     def before_add_judgement(self, df, g):
         """
@@ -201,13 +227,14 @@ class Evaluation:
                 all_freq = df[frequency_param].unique().tolist()
                 if self.is_4g_freq(all_freq):
                     # df[frequency_param] = 'LTE'
+                    df['频点'] = df[frequency_param]
                     df[frequency_param] = df[frequency_param].apply(huaweiutils.mapToBand,
                                                                     args=(self.g4_freq_band_dict,))
                     # 去掉对端非移动频点的行
-                    df = df[df[frequency_param] != '其他频段']
+                    # df = df[df[frequency_param] != '其他频段']
                 df.rename(columns={frequency_param: '对端频带'}, inplace=True)
         # self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
-        on = ['网元', self.cell_identity]
+        on = [self.key_col, self.cell_identity]
         if self.manufacturer == 'zte':
             on = ['CGI']
         # df = df.merge(self.base_info_df, how='left', on=on)
@@ -215,7 +242,9 @@ class Evaluation:
         self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
         df_new = self.base_info_df.merge(df, how='left', on=on)
         # df.rename(columns={'频带': '频段'}, inplace=True)
-        self._inference_city(df_new)
+
+        if self.manufacturer == '华为':
+            self._inference_city(df_new)
         return df_new
 
     def extra_handler(self, df, param):
@@ -241,25 +270,36 @@ class Evaluation:
         if self.extra_handler(df, param0):
             return
         premise_param = str(param_rule['伴随参数'].iloc[0])
+        premise_command = str(param_rule['伴随参数命令'].iloc[0])
         cal_param = str(param_rule['计算方法'].iloc[0])
+        if 'nan' == premise_param and 'nan' == premise_command:
+            return
         # 如果伴随参数为空，但是计算方式里面需要伴随参数，那么设置有问题
         if premise_param == 'nan' and cal_param.find(',') >= 0:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
-        current_cols = df.columns.tolist()
-        if premise_param in current_cols:
-            df[param].fillna(value=0, inplace=True)
-            df[param] = df[param].apply(int)
-            df[premise_param].fillna(value=0, inplace=True)
+        if premise_command in self.pre_param_dict.keys():
+            premise_command_df = self.pre_param_dict[premise_command]
+            if premise_param in premise_command_df.columns.tolist():
+                on = [self.key_col]
+                if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df:
+                    # merge出现空置，一定是数据类型不对
+                    premise_command_df[self.cell_identity] = premise_command_df[self.cell_identity].astype(str)
+                    on.append(self.cell_identity)
+                cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=on)
+            else:
+                raise Exception("缓存中找不到计算参数:" + premise_command)
+            cal_df[param0].fillna(value=0, inplace=True)
+            cal_df[param0] = cal_df[param0].apply(int)
+            cal_df[premise_param].fillna(value=0, inplace=True)
+            cal_df[premise_param] = cal_df[premise_param].apply(int)
             if cal_param.find(',') >= 0:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
                 multuple1 = int(splits[1])
-                # df[param] = df[param].apply(int)
-                df[premise_param] = df[premise_param].apply(int)
-                df[param] = df[param] * multiple0 + df[premise_param] * multuple1
+                cal_df[param0] = cal_df[param0] * multiple0 + cal_df[premise_param] * multuple1
             else:
-                # df[param] = df[param].apply(int)
-                df[param] = df[param] * int(cal_param)
+                cal_df[param0] = cal_df[param0] * int(cal_param)
+            df[param] = cal_df[param0]
         if premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
             df[param] = df[param].apply(int) * float(cal_param)
@@ -305,62 +345,53 @@ class Evaluation:
         primise_params_tuple = list(res_df[['伴随参数', '伴随参数命令']].apply(tuple).values)
         params_tuple = list(res_df[['原始参数名称', '主命令']].apply(tuple).values)
         for p in primise_params_tuple:
-            if str(p[0]) == 'nan' and str(p[1]) == 'nan':
+            """
+                将所有需要的计算的参数放入缓存
+            """
+            pre_param_name = str(p[0])
+            pre_param_command = str(p[1])
+            if pre_param_name == 'nan' and pre_param_command == 'nan':
                 continue
-            find = False
-            for q in params_tuple:
-                if np.all(p == q):
-                    find = True
-                    break
-            if not find:
-                if not self.cell_df.empty and p[0] in self.cell_df.columns.tolist():
-                    logging.info("伴随参数:" + p + "在小区级别参数中")
-                else:
-                    cal_param = \
-                        self.cal_rule[(self.cal_rule['伴随参数'] == p[0]) & (self.cal_rule['伴随参数命令'] == p[1])][
-                            '原始参数名称'].iloc[0]
-                    pre_df = pd.read_excel(self.standard_path, sheet_name="频点级别计算依赖参数", true_values=["是"],
-                                           false_values=["否"], dtype=str) if is_freq else \
-                        pd.read_excel(self.standard_path, sheet_name="小区级别计算依赖参数", true_values=["是"], dtype=str)
-                    # 如果有频点对应参数,row里面也加上
-                    logging.info(str(p) + '是为了计算【' + cal_param + '】必须存在的参数,在参数配置中加入该参数')
-                    pre_df = pre_df[(pre_df['原始参数名称'] == str(p[0])) & (pre_df['主命令'] == str(p[1]))]
-                    check = copy_config_df[
-                        (copy_config_df['原始参数名称'] == str(p[0])) & (copy_config_df['主命令'] == str(p[1]))]
-                    if check.empty:
-                        copy_config_df = copy_config_df.append(pre_df, ignore_index=True)
-                    self.pre_params.append(p[0])
+            pre_param_file = os.path.join(self.file_path, 'raw_result', pre_param_command + '.csv')
+
+            pre_param_df = pd.read_csv(pre_param_file)
+            on_cols = [pre_param_name]
+            pre_param_df_cols = pre_param_df.columns.tolist()
+            if self.cell_identity in pre_param_df_cols:
+                on_cols.append(self.cell_identity)
+            if self.key_col in pre_param_df_cols:
+                on_cols.append(self.key_col)
+            pre_param_df = pre_param_df[on_cols]
+            self.pre_param_dict[pre_param_command] = pre_param_df
         return copy_config_df
-        # if is_freq:
-        #     self.freq_config_df = copy_config_df
-        # else:
-        #     self.cell_config_df = copy_config_df
 
     def get_cell_table(self, config_df):
         all_param = list(config_df[['原始参数名称', '主命令', 'QCI']].apply(tuple).values)
         all_param = list(set(tuple(t) for t in all_param))
-        # all_param = []
         checked_config = self.check_params(config_df, False)
         command_identities = config_df['参数组标识'].tolist()
         command_identities = list(filter(lambda x: not 'nan' == x, command_identities))
         command_grouped = checked_config.groupby(['主命令', 'QCI'])
         read_result_list = []
-        qci_params = ['网元', self.cell_identity, '服务质量等级']
+        qci_params = [self.key_col, self.cell_identity, '服务质量等级']
         read_qci = False
         qci_df = pd.DataFrame()
         qci_path = os.path.join(self.file_path, 'raw_result', self.qci_file_name)
         for p, g in command_grouped:
             command = p[0]
             qci = p[1]
-            params = g['原始参数名称'].unique().tolist()
-            command = huaweiutils.remove_digit(command, [",", ":"])
+            params = g['参数名称'].unique().tolist()
+            if self.manufacturer == '华为':
+                command = huaweiutils.remove_digit(command, [",", ":"])
             # if not command in self.used_commands or qci == '1' or qci == '5':
-            if not command in self.used_commands:
+            # 华为的数据首先过滤以下命令,没有使用到的命令直接跳过
+            if not command in self.used_commands and self.manufacturer == '华为':
                 logging.info("该命令没有在此次参数核查中使用:" + command + 'QCI:' + str(qci))
                 continue
-            file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
+            file_name = os.path.join(self.file_path, 'raw_result', command.strip() + '.csv')
             read_res, base_cols = self.read_data_by_command(file_name, params, g)
-            if qci.isdigit():
+            if qci.isdigit() and self.manufacturer == '华为':
+                # 目前是有华为匹配QCI是下面代码的逻辑,爱立信是另外一套逻辑,中兴则不需要QCI
                 read_qci = True
                 qci = int(qci)
             read_result_list.append((read_res, qci))
@@ -368,45 +399,54 @@ class Evaluation:
         if read_qci or len(command_identities) > 0:
             qci_params.extend(command_identities)
             qci_df = pd.read_csv(qci_path, usecols=qci_params, dtype=str)
+            qci_df['服务质量等级'].fillna(value=-1, inplace=True)
             qci_df['服务质量等级'] = qci_df['服务质量等级'].astype(int)
-        merge_qci_result = self.merge_with_qci_data(qci_df, read_result_list, qci_params)
-        for p in all_param:
+        merge_qci_result = self.merge_qci_data(qci_df, read_result_list, qci_params)
+        modified_cols = [i for i in merge_qci_result.columns.tolist() if i.find('_') >= 0]
+        for p in modified_cols:
             if p in self.pre_params:
                 logging.info(p + '是计算依赖参数,不需要输出')
                 continue
-            param = p[0]
-            command = p[1]
-            qci = p[2]
-            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands:
+            origin_param = p.split('_')[0]
+            display_param = p.split('_')[1]
+            sec_class = p.split('_')[2]
+            standard = self.cell_config_df[self.cell_config_df['参数名称'] == p]
+            commands = standard['主命令'].unique().tolist()
+            if len(commands) > 1 or len(commands) == 0:
+                raise Exception("规则配置表错误,参数名:【" + display_param + '】,二级表头:【' + sec_class + '】出现重复或者没有找到相应配置')
+            command = commands[0]
+            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands and self.manufacturer == '华为':
                 # or qci == '1' or qci == '5':
                 continue
-            self.processing_param_value(merge_qci_result, param, command)
-            merge_qci_result = self.judge_compliance(merge_qci_result, param, command, config_df)
+            self.processing_param_value(merge_qci_result, origin_param, command)
+            merge_qci_result = self.judge_compliance(merge_qci_result, p,  standard)
         return merge_qci_result
 
-    def merge_with_qci_data(self, qci_df, read_result_list, qci_params):
-        # 获取不需要输出的列，例如同频参数标识列
-        qci_params.remove('网元')
-        qci_params.remove(self.cell_identity)
+    def merge_qci_data(self, qci_df, read_result_list, qci_params):
+
         """
+            华为数据专有逻辑
             将需要检查的数据合并成一张表
             这里的qci_df是全量
         """
+        qci_params.remove(self.key_col)
+        qci_params.remove(self.cell_identity)
         qci_res_list = []
         non_qci_res = self.base_info_df
         for r in read_result_list:
             cols = r[0].columns.tolist()
             qci = r[1]
-            if not 'nan' == qci:
+            if not 'nan' == qci and self.manufacturer == '华为':
+                # 同样下面的逻辑只使用与华为
                 if qci == 1 or qci == 5:
                     suffix = '语音'
                 elif qci == 9:
                     suffix = '数据'
                 else:
-                    raise Exception("未知的QCI值:" + qci)
+                    raise Exception("华为数据未知的QCI值:" + qci)
                 # 为了防止不同QCI的相同参数产生错误
                 for c in cols:
-                    if c != '网元' and c != self.cell_identity and c.find('参数组') < 0:
+                    if c != self.key_col and c != self.cell_identity and c.find('参数组') < 0:
                         r[0].rename(columns={c: c + "_" + suffix + str(qci)}, inplace=True)
                 res = qci_df[qci_df['服务质量等级'] == qci]
                 on = list(set(cols) & set(res.columns.tolist()))
@@ -419,35 +459,65 @@ class Evaluation:
                 qci_res = qci_res[last_cols]
                 # 如果on中没有cell.identity,那么会有很多重复
                 if not self.cell_identity in qci_res_cols:
-                    qci_res.drop_duplicates(subset=['网元'], keep='last', inplace=True, ignore_index=False)
+                    qci_res.drop_duplicates(subset=[self.key_col], keep='last', inplace=True, ignore_index=False)
                 qci_res_list.append(qci_res[last_cols])
             else:
-                on = ['网元', self.cell_identity]
-                # if 'NR小区标识' in cols:
-                #     on.append()
-                # try:
-                non_qci_res[self.cell_identity] = non_qci_res[self.cell_identity].astype(str)
-                non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
-                # except Exception as e:
-                #     logging.info(e)
-        merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=['网元'], cell_identity=self.cell_identity)
+                on = [self.key_col]
+                if self.cell_identity in r[0] and self.cell_identity in non_qci_res:
+                    on.append(self.cell_identity)
+                    non_qci_res[self.cell_identity] = non_qci_res[self.cell_identity].astype(str)
+                if self.manufacturer == '爱立信':
+                    # 如果是nrcell这张表就不用再次merge，因为该表已经在base_info_df中
+
+                    # 如果列里面有ref,那么连接列只需要ref就够了
+                    # 但是如果此时两边都有cellName列, 只按照ref合并就会造成重复,
+                    # 因此，在只以Ref为合并列的情况下,如果两边都有cellName,将右表的cellName删除,因为左表是base_info_df
+                    # 如果ref大于5(经验值),当做是nrcucell表,直接跳过(废除)
+                    refCols = list(filter(lambda x: x.endswith('ref'), r[0].columns.tolist()))
+                    # if len(refCols) > 5:
+                    #     continue
+                    if len(refCols) > 0:
+                        on = refCols
+                        on.append(self.key_col)
+                        # r[0].dropna(axis=1, inplace=True, how='all')
+                        # 两边都有cellName, 删除右表的cellName,以为mecontext列都是一致的,但是cellName会有错误
+                        if self.cell_identity in r[
+                            0].columns.tolist() and self.cell_identity in non_qci_res.columns.tolist():
+                            r[0].drop(columns=self.cell_identity, inplace=True)
+                # non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
+                non_qci_res = pd.merge(non_qci_res, r[0], how='left', on=on)
+                print()
+        merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=[self.key_col], cell_identity=self.cell_identity)
         res = non_qci_res.merge(merge_qci_df, how='left',
-                                on=['网元', self.cell_identity]) if not merge_qci_df.empty else non_qci_res
+                                on=[self.key_col, self.cell_identity]) if not merge_qci_df.empty else non_qci_res
         return res
+
+    def rename_eri_param(self, df, params, filename):
+        """
+            由于爱立信参数有太多重复名称,因此每个参数名称后面加上文件名
+        """
+        f_name = os.path.basename(filename).replace(".csv", "")
+        for p in params:
+            df.rename(columns={p: p + '_' + f_name}, inplace=True)
 
     def read_data_by_command(self, file_name, params, g):
         # 区分开关和非开关参数,剩下的params中都是非开关类参数
+        # 其中爱立信参数需要保留带Ref的参数, 方便与Base_info_df合并,这个参数最准确
         check_params = copy.deepcopy(params)
         switch_params = []
         for i in range(len(check_params) - 1, -1, -1):
             param = check_params[i]
-
-            is_switch = g[g['原始参数名称'] == param]['开关'].iloc[0]
+            # origin_param = param.split('_')[0]
+            is_switch = g[g['参数名称'] == param]['开关'].iloc[0]
             if not pd.isna(is_switch) and is_switch == '是':
                 switch_params.append(param)
                 check_params.remove(param)
         # 首先只读取一行数据，来找出switch开关在哪一行
-        switch_dict, base_cols = self.find_switch_cols(file_name, switch_params)
+        base_cols = self.get_base_cols()
+        switch_dict = {}
+        if self.manufacturer == '华为':
+            switch_dict = self.find_huawei_switch_cols(file_name, switch_params)
+
         g['参数组标识'] = g['参数组标识'].astype('str')
         identity = [item for item in g['参数组标识'].unique().tolist() if
                     item.strip() != '' and item.strip() != 'nan' and item.strip() is not None]
@@ -457,29 +527,43 @@ class Evaluation:
             frequency = g['频点标识'].unique().tolist()
             if len(frequency) > 0:
                 base_cols.append(frequency[0])
+
         # if self.manufacturer == 'zte':
         #     base_cols.append('CGI')
-        base_df = huaweiutils.read_csv(file_name, base_cols, str)
+        base_df = huaweiutils.read_csv(file_name, None, str)
+        if self.cell_identity in base_df.columns:
+            base_cols.append(self.cell_identity)
+        if '服务质量等级' in base_df.columns:
+            base_cols.append('服务质量等级')
         # 如果没有开关参数，那么赋值为base_info
         switch_df = pd.DataFrame()
         # 查看主命令是否存在标识,主命令对应标识应该一样
+        # 目前开关参数只针对华为有特殊的匹配方法
         if len(switch_dict) > 0:
             switch_cols = (list(set(switch_dict.values())))
             switch_cols.extend(base_cols)
             df = pd.read_csv(file_name, usecols=switch_cols, dtype=str)
-            switch_df = self.read_switch_data(df, base_df, switch_dict)
+            switch_df = self.read_switch_data(df, base_df[base_cols], switch_dict)
+            # if self.manufacturer == '爱立信':
+            self.rename_eri_param(switch_df, switch_cols, file_name)
         # 读取非开关参数
         non_switch_df = pd.DataFrame()
         if len(check_params) > 0:
             non_switch_col = copy.deepcopy(base_cols)
             # 之前为了区分相同参数下的不同qci,参数后加上了_QCI,在这里去掉，否则无法查到原始数据
             for i in range(len(check_params)):
-
                 if check_params[i].find('_') >= 0:
-                    check_params[i] = check_params[i].split('_')[0]
-            non_switch_col.extend(check_params)
+                    o_check_param = check_params[i].split('_')[0]
+                    non_switch_col.append(o_check_param)
             logging.debug("读取文件:【" + file_name + "】读取的列:【" + str(non_switch_col) + "】")
-            non_switch_df = huaweiutils.read_csv(file_name, non_switch_col, str)
+            # 读取开关参数和非开关参数均读取Ref,防止多次读取Ref列，用set过滤
+            if self.manufacturer == '爱立信':
+                refCols = list(filter(lambda x: x.endswith('ref'), base_df.columns.tolist()))
+                non_switch_col.extend(refCols)
+            non_switch_df = huaweiutils.read_csv(file_name, list(set(non_switch_col)), str)
+
+            # if self.manufacturer == '爱立信':
+            #     self.rename_eri_param(non_switch_df, check_params, file_name)
         if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
@@ -488,6 +572,14 @@ class Evaluation:
             return pd.DataFrame(), base_cols
         else:
             result_df = switch_df if not switch_df.empty else non_switch_df
+        # 针对不同列名的重复情况，需要扩展参数名,相同的参数名，可能对应多个参数
+        remove_col = set()
+        for p in params:
+            o_param = p.split('_')[0]
+            result_df[p] = result_df[o_param]
+            remove_col.add(o_param)
+        # 扩展完成之后删除
+        result_df.drop(labels=remove_col, inplace=True, axis=1)
         return result_df, base_cols
 
     def read_switch_data(self, df, base_df, switch_params):
@@ -505,19 +597,15 @@ class Evaluation:
             result_df = pd.concat([result_df, flatten_df], axis=1)
         return result_df
 
-    def judge_compliance(self, df, param, command, g):
-        # param0 = copy.deepcopy(param)
-        # if param0.find('_') >= 0:
-        #     param0 = param0.split('_')[0]
-        g_c = g[(g['原始参数名称'] == param) & (g['主命令'] == command)]
-        if g_c.empty:
+    def judge_compliance(self, df, param,  standard):
+        if standard.empty:
             raise Exception('参数【' + param + '】没有找到配置信息')
-        if '对端频带' not in g.columns.tolist():  # 表明是cell级别
-            standard = g[g['原始参数名称'] == param]
+        if '对端频带' not in standard.columns.tolist():  # 表明是cell级别
+            # standard = g[g['原始参数名称'] == param]
             df = self.add_cell_judgement(df, standard, param)
         else:  # 频点级别
             # 判断是4G频点还是5G频点
-            standard = g[(g['原始参数名称'] == param)]
+            standard = standard[(standard['原始参数名称'] == param)]
             df = self.add_freq_judgement(df, standard, param)
         return df
 
@@ -577,7 +665,8 @@ class Evaluation:
     def add_cell_judgement(self, df, standard, param):
         standard = self.expand_standard(standard, ['区域类别', '覆盖类型', '频段', '共址类型']).reset_index(drop=True)
         #  df = df.merge(standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']],how='left', on=['频段', '覆盖类型', '区域类别', '共址类型'])
-        df = pd.merge(df, standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']], how='left',
+        modified_standard = copy.deepcopy(standard)
+        df = pd.merge(df, modified_standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']], how='left',
                       on=['频段', '覆盖类型', '区域类别', '共址类型'])
         df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
         df[param + "#合规"] = huaweiutils.judge(df, param)
@@ -609,11 +698,11 @@ class Evaluation:
         return content_cols
 
     def sort_result(self, cols, config, base_cols):
-        # config.reset_index(inplace=True)
-        ordered_params = config['原始参数名称'].unique().tolist()
+        ordered_params = config['参数名称'].unique().tolist()
         content_cols = self.get_content_col(cols)
         order_content_cols = []
         for param in ordered_params:
+            param = param.strip()
             if param in content_cols:
                 order_content_cols.extend([param, param + '#推荐值', param + '#合规'])
         order_content, class_dict = self.order_content_cols(config, order_content_cols)
@@ -623,7 +712,7 @@ class Evaluation:
 
     def generate_report(self, check_type, base_cols):
         """
-         输入的推荐值和需要核查的参数
+            输入的推荐值和需要核查的参数
         """
         first_class_dict = {}
         freq_class_dict = {}
@@ -643,17 +732,21 @@ class Evaluation:
             if not os.path.exists(out):
                 os.makedirs(out)
             cell_df.dropna(subset=['CGI'], how='any', inplace=True)
+            cell_df.drop_duplicates(keep="first", inplace=True)
             # 不根据地市删除小区
             # cell_df.dropna(subset=['地市'], how='any', inplace=True)
+            # cell_df = self.format_result(cell_df, self.cell_config_df, base_cols)
             cell_df.to_csv(os.path.join(out, 'param_check_cell.csv'), index=False, encoding='utf_8_sig')
             # huaweiutils.create_header(os.path.join(out, 'param_check_cell.xlsx'), first_class_dict, base_cols)
-
         if check_type == 'freq' or check_type == 'all':
-            base_cols.append("对端频带")
+            base_cols.extend(["对端频带"])
             freq_df_list = self.get_freq_table(self.freq_config_df)
             for df in freq_df_list:
                 d = df[0]
                 sorted_cols, freq_class_dict = self.sort_result(d.columns.tolist(), self.freq_config_df, base_cols)
+                if '频点' in d.columns.tolist():
+                    index = sorted_cols.index('对端频带')
+                    sorted_cols.insert(index + 1, '频点')
                 d = d[sorted_cols]
                 # 将区域类型为空的之前填补成农村区域的站点还原
                 d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
@@ -661,9 +754,82 @@ class Evaluation:
                 if not os.path.exists(out):
                     os.makedirs(out)
                 d.dropna(subset=['地市'], how='any', inplace=True)
+                d.drop_duplicates(keep="first", inplace=True)
                 d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
                          index=False, encoding='utf_8_sig')
         return first_class_dict, freq_class_dict
+
+    def format_result(self, cell_df, config_df, base_col):
+        """
+            除了base_col之外,将所有厂家的参数名称统一转换成展示名称
+        """
+        exclude_cols = base_col
+        result_columns = cell_df.columns.tolist()
+        map_dict = self.param_map(result_columns, config_df, exclude_cols)
+        updated_columns = base_col
+        for c in result_columns:
+            if c in base_col:
+                continue
+            for key, value in map_dict.items():
+                if c.strip().find(key.strip()) >= 0:
+                    res = c.replace(key, value)
+                    updated_columns.append(res)
+                    break
+        cell_df.columns = updated_columns
+        if self.manufacturer == '爱立信':
+            cell_df.rename(columns={self.key_col: "网元", self.cell_identity: "NRDU小区名称"}, inplace=True)
+        return cell_df
+
+    def parse_origin_name_qci(self, param):
+        qci = None
+        if self.manufacturer == '华为':
+            if param.find('_') >= 0:
+                huawei_original_col = param.split('_')[0]
+                qci_str = param.split('_')[1]
+                qci = re.findall(r'\d+', qci_str)
+            else:
+                huawei_original_col = param
+            return huawei_original_col, None, qci
+        elif self.manufacturer == '爱立信':
+            if param.find('_') >= 0:
+                ericsson_original_param = param.split("_")[0].strip()
+                ericsson_command = param.split("_")[1].strip()
+                # qci = ericsson_command.split('_')[1] if ericsson_command.find('_') >= 0 else None
+                # if qci is not None:
+                #     if qci.strip().lower() == 'base':
+                #         qci = 9
+                #     elif qci.strip().lower() == '5qi1':
+                #         qci = 1
+                #     else:
+                #         raise Exception('没有定义的爱立信QCI值:' + qci)
+            else:
+                raise Exception('爱立信参数名称没有与命令合并,请检查参数:[' + param + "]")
+            return ericsson_original_param, ericsson_command, qci
+
+    def param_map(self, columns, config_df, exclude_cols):
+        filter_columns = [i for i in columns if i not in exclude_cols and i.find('#') < 0]
+        copy_config = copy.deepcopy(config_df)
+        param_dict = {}
+        for c in filter_columns:
+            original_col, command, qci = self.parse_origin_name_qci(c)
+            if qci is not None:
+                qci_filter = copy_config['QCI'] == qci
+                copy_config = copy_config.loc[qci_filter]
+            if command is not None:
+                command_filter = copy_config['主命令'] == command
+                copy_config = copy_config.loc[command_filter]
+            display_param = copy_config[copy_config['原始参数名称'] == original_col]['参数名称'].unique().tolist()
+            if len(display_param) == 1:
+                param_dict[c] = display_param[0]
+            elif len(display_param) == 0:
+                raise Exception("没有定义参数:" + display_param + '的展示名称')
+            else:
+                first_display_name = display_param[0]
+                param_dict[c] = first_display_name
+                drop_index = copy_config[
+                    (copy_config['参数名称'] == first_display_name) & (copy_config['原始参数名称'] == original_col)].index
+                copy_config.drop(drop_index, inplace=True)
+        return param_dict
 
     def order_content_cols(self, config, content_cols):
         clzz = np.array(config['类别'].unique().tolist())
@@ -675,15 +841,20 @@ class Evaluation:
             c = clzz[i]
             # 一级class列表是一个字典列表，每个字典中的key是二级表头
             first_class_content = []
-            class_config = config[config['类别'] == c]
-            param_names = class_config['原始参数名称'].unique().tolist()
+            class_config = copy.deepcopy(config[config['类别'] == c])
+            # if self.manufacturer == '爱立信':
+            #     class_config['原始参数名称'] = class_config['原始参数名称'] + "_" + class_config['主命令']
+            param_names = class_config['参数名称'].unique().tolist()
+            param_names = [i.strip() for i in param_names]
             used_cols = list(set(param_names) & set(content_cols))
             if len(used_cols) == 0:
                 continue
             second_class_dict = {}
             for u in used_cols:
                 # 一个参数只可能对应一个二级表头，下面的代码的结果取第一个
-                second_class = class_config[class_config['原始参数名称'] == u]['二级表头'].unique().tolist()[0]
+                # if self.manufacturer == '爱立信':
+                #     u = u.split('_')[0]
+                second_class = class_config[class_config['参数名称'].str.strip() == u]['二级表头'].unique().tolist()[0]
                 second_cols = second_class_dict.get(second_class, [])
                 second_cols.extend([u, u + '#推荐值', u + '#合规'])
                 second_class_dict[second_class] = second_cols

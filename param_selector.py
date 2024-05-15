@@ -74,6 +74,7 @@ class param_selector:
         self.freq_df = pd.DataFrame()
         self.pre_params = []
         self.cover_filter_list = ['高铁']
+        self.pre_param_dict = {}
 
     def get_base_info(self, band_list):
         if self.manufacturer == 'huawei':
@@ -90,7 +91,8 @@ class param_selector:
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
                 self.all_band = '4.9G|2.6G|700M|nan'
-
+        elif self.manufacturer == 'ericsson':
+                pass
         base_inf_df = self.g4_base_info_df if self.system == '4G' else self.g5_base_info_df
         self.inference_city(base_inf_df)
         return base_inf_df
@@ -293,10 +295,11 @@ class param_selector:
                 all_freq = df[frequency_param].unique().tolist()
                 if self.is_4g_freq(all_freq):
                     # df[frequency_param] = 'LTE'
+                    df['频点'] = df[frequency_param]
                     df[frequency_param] = df[frequency_param].apply(huaweiutils.mapToBand,
                                                                     args=(self.g4_freq_band_dict,))
                     # 去掉对端非移动频点的行
-                    df = df[df[frequency_param] != '其他频段']
+                    # df = df[df[frequency_param] != '其他频段']
                 df.rename(columns={frequency_param: '对端频带'}, inplace=True)
         # self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
         on = ['网元', self.cell_identity]
@@ -333,24 +336,36 @@ class param_selector:
         if self.extra_handler(df, param0):
             return
         premise_param = str(param_rule['伴随参数'].iloc[0])
+        premise_command = str(param_rule['伴随参数命令'].iloc[0])
         cal_param = str(param_rule['计算方法'].iloc[0])
+        if 'nan' == premise_param and 'nan' == premise_command:
+            return
         # 如果伴随参数为空，但是计算方式里面需要伴随参数，那么设置有问题
         if premise_param == 'nan' and cal_param.find(',') >= 0:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
-        current_cols = df.columns.tolist()
-        if premise_param in current_cols:
-            df[param].fillna(value=0, inplace=True)
-            df[param] = df[param].apply(int)
-            df[premise_param].fillna(value=0, inplace=True)
+        if premise_command in self.pre_param_dict.keys():
+            premise_command_df = self.pre_param_dict[premise_command]
+            if premise_param in premise_command_df.columns.tolist():
+                on = ['网元']
+                if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df:
+                    # merge出现空置，一定是数据类型不对
+                    premise_command_df[self.cell_identity] = premise_command_df[self.cell_identity].astype(str)
+                    on.append(self.cell_identity)
+                cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=on)
+            else:
+                raise Exception("缓存中找不到计算参数:" + premise_command)
+            cal_df[param0].fillna(value=0, inplace=True)
+            cal_df[param0] = cal_df[param0].apply(int)
+            cal_df[premise_param].fillna(value=0, inplace=True)
+            cal_df[premise_param] = cal_df[premise_param].apply(int)
             if cal_param.find(',') >= 0:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
                 multuple1 = int(splits[1])
-                df[premise_param] = df[premise_param].apply(int)
-                df[param] = df[param] * multiple0 + df[premise_param] * multuple1
+                cal_df[param0] = cal_df[param0] * multiple0 + cal_df[premise_param] * multuple1
             else:
-                # df[param] = df[param].apply(int)
-                df[param] = df[param] * int(cal_param)
+                cal_df[param0] = cal_df[param0] * int(cal_param)
+            df[param] = cal_df[param0]
         if premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
             df[param] = df[param].apply(int) * float(cal_param)
@@ -396,37 +411,29 @@ class param_selector:
         primise_params_tuple = list(res_df[['伴随参数', '伴随参数命令']].apply(tuple).values)
         params_tuple = list(res_df[['原始参数名称', '主命令']].apply(tuple).values)
         for p in primise_params_tuple:
-            if str(p[0]) == 'nan' and str(p[1]) == 'nan':
+            """
+                将所有需要的计算的参数放入缓存
+            """
+            pre_param_name = str(p[0])
+            pre_param_command = str(p[1])
+            if pre_param_name == 'nan' and pre_param_command == 'nan':
                 continue
-            find = False
-            for q in params_tuple:
-                if np.all(p == q):
-                    find = True
-                    break
-            if not find:
-                if not self.cell_df.empty and p[0] in self.cell_df.columns.tolist():
-                    logging.info("伴随参数:" + p + "在小区级别参数中")
-                else:
-                    cal_param = \
-                        self.cal_rule[(self.cal_rule['伴随参数'] == p[0]) & (self.cal_rule['伴随参数命令'] == p[1])][
-                            '原始参数名称'].iloc[0]
-                    pre_df = pd.read_excel(self.standard_path, sheet_name="频点级别计算依赖参数", true_values=["是"],
-                                           false_values=["否"], dtype=str) if is_freq else \
-                        pd.read_excel(self.standard_path, sheet_name="小区级别计算依赖参数", true_values=["是"], dtype=str)
-                    # 如果有频点对应参数,row里面也加上
-                    logging.info(str(p) + '是为了计算【' + cal_param + '】必须存在的参数,在参数配置中加入该参数')
-                    pre_df = pre_df[(pre_df['原始参数名称'] == str(p[0])) & (pre_df['主命令'] == str(p[1]))]
-                    check = copy_config_df[
-                        (copy_config_df['原始参数名称'] == str(p[0])) & (copy_config_df['主命令'] == str(p[1]))]
-                    if check.empty:
-                        copy_config_df = copy_config_df.append(pre_df, ignore_index=True)
-                    self.pre_params.append(p[0])
+            pre_param_file = os.path.join(self.file_path, 'raw_result', pre_param_command + '.csv')
+
+            pre_param_df = pd.read_csv(pre_param_file)
+            on_cols = [pre_param_name]
+            pre_param_df_cols = pre_param_df.columns.tolist()
+            if self.cell_identity in pre_param_df_cols:
+                on_cols.append(self.cell_identity)
+            if '网元' in pre_param_df_cols:
+                on_cols.append('网元')
+            pre_param_df = pre_param_df[on_cols]
+            self.pre_param_dict[pre_param_command] = pre_param_df
         return copy_config_df
 
     def get_cell_table(self, config_df):
         all_param = list(config_df[['原始参数名称', '主命令', 'QCI']].apply(tuple).values)
         all_param = list(set(tuple(t) for t in all_param))
-        # all_param = []
         checked_config = self.check_params(config_df, False)
         command_identities = config_df['参数组标识'].tolist()
         command_identities = list(filter(lambda x: not 'nan' == x, command_identities))
@@ -438,7 +445,6 @@ class param_selector:
         qci_path = os.path.join(self.file_path, 'raw_result', self.qci_file_name)
         for p, g in command_grouped:
             command = p[0]
-            print(command)
             qci = p[1]
             params = g['原始参数名称'].unique().tolist()
             command = huaweiutils.remove_digit(command, [",", ":"])
@@ -455,6 +461,7 @@ class param_selector:
         if read_qci or len(command_identities) > 0:
             qci_params.extend(command_identities)
             qci_df = pd.read_csv(qci_path, usecols=qci_params, dtype=str)
+            qci_df['服务质量等级'].fillna(value=-1, inplace=True)
             qci_df['服务质量等级'] = qci_df['服务质量等级'].astype(int)
         merge_qci_result = self.merge_with_qci_data(qci_df, read_result_list, qci_params)
         for p in all_param:
@@ -463,7 +470,6 @@ class param_selector:
                 continue
             param = p[0]
             command = p[1]
-            qci = p[2]
             if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands:
                 # or qci == '1' or qci == '5':
                 continue
@@ -512,9 +518,6 @@ class param_selector:
                 qci_res_list.append(qci_res[last_cols])
             else:
                 on = ['网元', self.cell_identity]
-                # if 'NR小区标识' in cols:
-                #     on.append()
-                # try:
                 non_qci_res[self.cell_identity] = non_qci_res[self.cell_identity].astype(str)
                 non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
                 # except Exception as e:
@@ -732,17 +735,21 @@ class param_selector:
             if not os.path.exists(out):
                 os.makedirs(out)
             cell_df.dropna(subset=['CGI'], how='any', inplace=True)
+            cell_df.drop_duplicates(keep="first", inplace=True)
             # 不根据地市删除小区
             # cell_df.dropna(subset=['地市'], how='any', inplace=True)
             cell_df.to_csv(os.path.join(out, 'param_check_cell.csv'), index=False, encoding='utf_8_sig')
             # huaweiutils.create_header(os.path.join(out, 'param_check_cell.xlsx'), first_class_dict, base_cols)
 
         if type == 'freq' or type == 'all':
-            base_cols.append("对端频带")
+            base_cols.extend(["对端频带"])
             freq_df_list = self.get_freq_table(self.freq_config_df)
             for df in freq_df_list:
                 d = df[0]
                 sorted_cols, freq_class_dict = self.sort_result(d.columns.tolist(), self.freq_config_df, base_cols)
+                if '频点' in d.columns.tolist():
+                    index = sorted_cols.index('对端频带')
+                    sorted_cols.insert(index+1, '频点')
                 d = d[sorted_cols]
                 # 将区域类型为空的之前填补成农村区域的站点还原
                 d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
@@ -750,6 +757,7 @@ class param_selector:
                 if not os.path.exists(out):
                     os.makedirs(out)
                 d.dropna(subset=['地市'], how='any', inplace=True)
+                d.drop_duplicates(keep="first", inplace=True)
                 d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
                          index=False, encoding='utf_8_sig')
         return first_class_dict, freq_class_dict

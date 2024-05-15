@@ -153,14 +153,14 @@
 #     return layout
 #
 #
-# def form(margin, spacing, *handler):
+# def form(margin, spacing, *backend):
 #     """Create a QFormLayout with the specified sizes and items"""
 #     layout = QtWidgets.QFormLayout()
 #     layout.setSpacing(spacing)
 #     layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.ExpandingFieldsGrow)
 #     set_margin(layout, margin)
 #
-#     for idx, (name, widget) in enumerate(handler):
+#     for idx, (name, widget) in enumerate(backend):
 #         if isinstance(name, (str, ustr)):
 #             layout.addRow(name, widget)
 #         else:
@@ -170,13 +170,13 @@
 #     return layout
 #
 #
-# def grid(margin, spacing, *handler):
+# def grid(margin, spacing, *backend):
 #     """Create a QGridLayout with the specified sizes and items"""
 #     layout = QtWidgets.QGridLayout()
 #     layout.setSpacing(spacing)
 #     set_margin(layout, margin)
 #
-#     for row in handler:
+#     for row in backend:
 #         item = row[0]
 #         if isinstance(item, QtWidgets.QWidget):
 #             layout.addWidget(*row)
@@ -186,8 +186,8 @@
 #     return layout
 #
 #
-# def splitter(orientation, *handler):
-#     """Create a spliter over the specified handler
+# def splitter(orientation, *backend):
+#     """Create a spliter over the specified backend
 #
 #     :param orientation: Qt.Horizontal or Qt.Vertical
 #
@@ -197,7 +197,7 @@
 #     layout.setHandleWidth(defs.handle_width)
 #     layout.setChildrenCollapsible(True)
 #
-#     for idx, widget in enumerate(handler):
+#     for idx, widget in enumerate(backend):
 #         layout.addWidget(widget)
 #         layout.setStretchFactor(idx, 1)
 #
@@ -321,7 +321,7 @@
 #
 #
 # def prompt_n(msg, inputs):
-#     """Presents the user with N input handler and returns the results"""
+#     """Presents the user with N input backend and returns the results"""
 #     dialog = QtWidgets.QDialog(active_window())
 #     dialog.setWindowModality(Qt.WindowModal)
 #     dialog.setWindowTitle(msg)
@@ -766,7 +766,7 @@
 #
 #
 # def create_action_button(tooltip=None, icon=None, visible=None):
-#     """Create a small toolbutton for use in dock title handler"""
+#     """Create a small toolbutton for use in dock title backend"""
 #     button = tool_button()
 #     if tooltip is not None:
 #         button.setToolTip(tooltip)
@@ -875,11 +875,11 @@
 #         self.label.setText(title)
 #
 #     def add_title_widget(self, widget):
-#         """Add handler to the title area"""
+#         """Add backend to the title area"""
 #         self.title_layout.addWidget(widget)
 #
 #     def add_corner_widget(self, widget):
-#         """Add handler to the corner area"""
+#         """Add backend to the corner area"""
 #         self.corner_layout.addWidget(widget)
 #
 #     def update_tooltips(self):
@@ -1025,18 +1025,18 @@
 # class BlockSignals:
 #     """Context manager for blocking a signals on a widget"""
 #
-#     def __init__(self, *handler):
-#         self.handler = handler
+#     def __init__(self, *backend):
+#         self.backend = backend
 #         self.values = []
 #
 #     def __enter__(self):
-#         """Block Qt signals for all of the captured handler"""
-#         self.values = [widget.blockSignals(True) for widget in self.handler]
+#         """Block Qt signals for all of the captured backend"""
+#         self.values = [widget.blockSignals(True) for widget in self.backend]
 #         return self
 #
 #     def __exit__(self, exc_type, exc_val, exc_tb):
 #         """Restore Qt signals when we exit the scope"""
-#         for widget, value in zip(self.handler, self.values):
+#         for widget, value in zip(self.backend, self.values):
 #             widget.blockSignals(value)
 #
 #
@@ -1066,8 +1066,8 @@
 #         """Perform a long-running task"""
 #         return ()
 #
-#     def connect(self, handler):
-#         self.channel.result.connect(handler, type=Qt.QueuedConnection)
+#     def connect(self, backend):
+#         self.channel.result.connect(backend, type=Qt.QueuedConnection)
 #
 #
 # class SimpleTask(Task):

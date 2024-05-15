@@ -30,6 +30,17 @@ def read_raw_data(path, system, date, manufacturer):
     command_file_path = g5_command_path if system == '5G' else g4_command_path
     outputPath = os.path.join(path, manufacturer, date)
     # progress_bar = tqdm(total=len(list(items)), desc='解析【'+ manufacturer + "】原始数据...", unit='item')
+    # if manufacturer == HUAWEI:
+    #     reader = HuaweiRawDataFile(command_file_path, outputPath, system)
+    # elif manufacturer == ZTE:
+    #     zte_config = os.path.join(path, manufacturer, '工参案例V13.xlsx')
+    #     reader = ZteRawDataReader(outputPath, zte_config, system)
+    # elif manufacturer == ERICSSON:
+    #     eri_config = os.path.join(path, manufacturer, '参数核查规则0409.xlsx')
+    #     reader = EricssonDataReader(outputPath, eri_config, system)
+    #     reader.auto_check_ref()
+    # else:
+    #     raise Exception('未知厂商:' + manufacturer)
     for item in items:
         has_file = True
         f_name = os.path.basename(str(item)).replace('.xlsx', '')
@@ -42,23 +53,24 @@ def read_raw_data(path, system, date, manufacturer):
             print(f_path + '已经存在')
             continue
         if manufacturer == HUAWEI:
-            reader = HuaweiRawDataFile(str(item), command_file_path, outputPath, system)
-            reader.read_huawei_txt()
+            reader = HuaweiRawDataFile(command_file_path, outputPath, system)
+            reader.setRawFile(item)
+            # reader.read_huawei_txt()
             reader.output_format_data()
         elif manufacturer == ZTE:
             zte_config = os.path.join(path, manufacturer, '工参案例V13.xlsx')
 
-            reader = ZteRawDataReader(item, outputPath, zte_config, system, ZTE_NAME)
+            reader = ZteRawDataReader(item, outputPath, zte_config, system)
             try:
                 reader.output_format_data()
             except ReadRawException as e:
                 logging.info('文件名:' + str(item) + "读取失败")
                 continue
         elif manufacturer == ERICSSON:
-            eri_config = os.path.join(path, manufacturer, '工参案例V12.xlsx')
-            reader = EricssonDataReader(item, outputPath, eri_config, system, ERICSSON_NAME)
+            eri_config = os.path.join(path, manufacturer, '参数核查规则0429.xlsx')
+            reader = EricssonDataReader(outputPath, eri_config, system)
+            reader.setRawFile(str(item))
             reader.output_format_data()
-            break
         else:
             raise Exception('未知厂商:' + manufacturer)
         del reader
@@ -168,36 +180,37 @@ def combine_by_manufacturer(dir, suffix, config, result_path, header_class_dict)
 
 if __name__ == '__main__':
     g5_base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段',
-                 '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+                    '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
     g4_base_cols = ['地市', '网元', '小区名称', '本地小区标识', 'CGI', '频段',
-                 '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+                    '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
     check_result_name = "all_cell_check_result.csv"
     cell_check_result_name = "param_check_cell.csv"
     date = '20240407'
     system = FIVE_GEN
     base_cols = g5_base_cols if system == FIVE_GEN else g4_base_cols
-    path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\"
+    work_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\"
     g5_command_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt"
     g4_command_path = "C:\\Users\\No.1\\Desktop\\teleccom\\华为4G异频异系统切换重选语音数据-全量.txt"
     # standard_path = "C:\\Users\\No.1\\Desktop\\teleccom\\互操作参数核查结果_test.xlsx"
-    standard_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\参数核查规则0409.xlsx"
-    g5_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\5G资源大表-20240327.csv"
+    # standard_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\地市规则\\参数核查规则0429.xlsx"
+    standard_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\ericsson\\参数核查规则0429.xlsx"
+    g5_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\5G资源大表-0421.csv"
     g4_common_table = "C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0121\\LTE资源大表-0121.csv"
     g4_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_4g.csv"
-    g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv"
+    g5_site_info = "C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g-20240403.csv"
     raw_data_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\raw_data"
     cities = ['湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '衢州', '绍兴', '台州', '温州', '舟山', '汇总']
 
     cell_header_class_dict = None
-    #read_raw_data(path, '4G', date, 'huawei')
-    read_raw_data(path, system, date, HUAWEI)
-    # read_raw_data(path, FIVE_GEN, date, ERICSSON)
-    target_directory = os.path.join(path, HUAWEI, date, system)
+    # read_raw_data(path, system, date, 'huawei')
+    # read_raw_data(work_path, system, date, ZTE)
+    read_raw_data(work_path, system, date, ERICSSON)
+    target_directory = os.path.join(work_path, HUAWEI, date, system)
     all_cell_check_result_path = os.path.join(target_directory, check_result_name)
     report_path = os.path.join(target_directory, HUAWEI, date, '互操作参数核查结果.xlsx')
-    # cell_header_class_dict, freq_header_class_dict = evaluate(path, system, HUAWEI, date, base_cols)
+    # cell_header_class_dict, freq_header_class_dict = evaluate(work_path, system, ERICSSON, date, base_cols)
     # combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name, cell_header_class_dict)
-# freq_cell_suffix = ['LST NRCELLFREQRELATION_freq.csv', 'LST NRCELLEUTRANNFREQ_freq.csv']
+# # freq_cell_suffix = ['LST NRCELLFREQRELATION_freq.csv', 'LST NRCELLEUTRANNFREQ_freq.csv']
 # for f in freq_cell_suffix:
 #     path = os.path.join(target_directory, f)
 #     combine_evaluation(target_directory, path, f)

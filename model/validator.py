@@ -2,8 +2,6 @@
 
 import os
 
-from PyQt5.QtCore import qWarning
-
 from utils import huaweiutils
 
 
@@ -41,7 +39,7 @@ def is_4g_site_info_valid(df):
 
 def is_raw_data_valid(path, manufacturer):
     if manufacturer is None:
-        qWarning("有其他文件正在导入")
+        return False
     if os.path.isdir(path):
         files = []
         if manufacturer == 'huawei':

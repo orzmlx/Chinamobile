@@ -1,10 +1,8 @@
-from haversine import haversine
-import time
-from shapely.geometry import Point, Polygon, LineString
-import numpy as np
 import math
-import geopandas as gpd
-from geopy.distance import distance
+import time
+
+from haversine import haversine
+from shapely.geometry import Point, LineString
 
 
 def get_sector_normal_line(angle, lat, lon, radius):

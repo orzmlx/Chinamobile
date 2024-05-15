@@ -1,5 +1,5 @@
 class ReadRawException(Exception):
-    def __init__(self, manufacturer, system=None,
+    def __init__(self, manufacturer=None, system=None,
                  raw_message=None, message=None, code=-1, model=None):
         self.message = message
         self.raw_message = raw_message

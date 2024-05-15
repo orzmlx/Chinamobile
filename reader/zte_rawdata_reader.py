@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+
+from reader.reader import Reader
 from utils import zteutils, huaweiutils
 from exception.read_raw_exception import ReadRawException
 from utils.timer import Timer
@@ -15,23 +17,30 @@ import polars as pl
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
 
-class ZteRawDataReader:
-    def __init__(self, raw_file, zte_raw_data_path, zte_config_file_path, system, manufacturer):
+class ZteRawDataReader(Reader):
+    def __init__(self, raw_file, zte_raw_data_path, zte_config_file_path, system):
         self.zte_config_file_path = zte_config_file_path
         self.zte_raw_data_path = zte_raw_data_path
         self.system = system
-        self.raw_file = raw_file
-        self.manufacturer = manufacturer
+        self.raw_file = str(raw_file)
+        self.manufacturer = '中兴'
         # raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
         self.temp_path = os.path.join(zte_raw_data_path, system, raw_file.name.replace('.xlsx', ''), "temp")
+        if not os.path.exists(self.temp_path):
+            os.makedirs(self.temp_path)
+
+    def setRawFile(self, filePath):
+        self.raw_file = filePath
+        self.temp_path = os.path.join(self.zte_raw_data_path, self.system, self.raw_file.name.replace('.xlsx', ''),
+                                      "temp")
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)
 
     def depart_sheet(self, zte_config_file_path, zte_raw_data_path, system):
         zte_demand_param = pd.read_excel(zte_config_file_path, engine='openpyxl', sheet_name='需求参数')
         zte_demand_param = zte_demand_param[zte_demand_param['厂家'] == self.manufacturer]
-        logging.info("开始分离原始文件:" + os.path.split(self.raw_file)[1])
-        f_name = os.path.basename(self.raw_file).replace('.xlsx', '')
+        logging.info("开始分离原始文件:" + os.path.split(str(self.raw_file))[1])
+        f_name = os.path.basename(str(self.raw_file)).replace('.xlsx', '')
         # 获取上一级目录,将原始数据的读取结果存放在上一级目录
         raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
         for j in tqdm(range(len(zte_demand_param)), desc="分离sheet表进度"):
@@ -138,7 +147,7 @@ class ZteRawDataReader:
             os.remove(f)
 
     def process_data_by_sheet(self, sheet_df, zte_param_process, sheet_name, raw_output_path, process_split_char=','):
-        sheet_process = zte_param_process[zte_param_process['CSV名'] == sheet_name]
+        sheet_process = zte_param_process[zte_param_process['CSV名'].str.lower() == sheet_name.lower()]
         if sheet_process.empty:
             logging.info(sheet_name + '不需要进行数据清洗')
             return
@@ -166,7 +175,8 @@ class ZteRawDataReader:
         if str(process) == 'nan':
             logging.info('没有发现任何处理,行号:' + str(index))
             return sheet_df
-        row_processes = process.split(split_char) if process.find(split_char) >= 0 else [process]
+        row_processes = process.split(split_char) if split_char is not None and process.find(split_char) >= 0 else [
+            process]
         action_tuple_list = []
         for p in row_processes:
             exist_operators = zteutils.find_operators(p)

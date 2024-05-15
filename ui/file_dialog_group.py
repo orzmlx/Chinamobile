@@ -1,6 +1,13 @@
 # -*- coding:utf-8 -*-
 
-from PyQt5.QtWidgets import QLabel, QToolButton, QFileDialog
+try:
+    from PyQt5.QtWidgets import QLabel, QToolButton, QFileDialog
+except ImportError:
+    from PySide6.QtWidgets import QLabel, QToolButton, QFileDialog
+
+
+
+# from PySide6.QtWidgets import QLabel, QToolButton, QFileDialog
 
 from model.data_watcher import DataWatcher
 import os

@@ -3,16 +3,31 @@ import ctypes
 import os
 
 import pandas as pd
-from PyQt5.Qt import QToolButton, QProgressBar, QFileDialog, QLabel
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QPushButton, QErrorMessage
 
-from handler.loading_thread import LoadingThread
-from handler.parse_raw_thread import ParseRawThread
+from processor.huawei_processor import HuaweiProcessor
+from processor.zte_processor import ZteProcessor
+
+try:
+    from PyQt5.QtWidgets import QPushButton
+    from PyQt5.QtWidgets import QToolButton, QProgressBar, QFileDialog, QLabel, QErrorMessage
+    from PyQt5.QtCore import QTimer
+except ImportError:
+    from PySide6.QtWidgets import QPushButton
+    from PySide6.QtWidgets import QToolButton, QProgressBar, QFileDialog, QLabel, QErrorMessage
+    from PySide6.QtCore import QTimer
+# from PySide6.QtWidgets import QPushButton
+# from PySide6.QtWidgets import QToolButton, QProgressBar, QFileDialog, QLabel, QErrorMessage
+# from PySide6.QtCore import QTimer
+
+from backend.loading_thread import LoadingThread
+from backend.parse_raw_thread import ParseRawThread
 from utils import huaweiutils
 from model.data_watcher import DataWatcher
 from model.signal_message import message
 
+
+class EricssonProcssor(object):
+    pass
 
 
 class LoadCsvGroup(QToolButton, QLabel):
@@ -40,18 +55,31 @@ class LoadCsvGroup(QToolButton, QLabel):
         self._timer = QTimer()
         self.watcher = watcher
         self.data_path = None
+        self.prg_len = 0
         # self.manufacturer = manufacturer
         self.setup_ui()
-
+        # self.stop_btn.setEnabled(False)
         # self.parseThread = ParseRawThread(watcher=watcher)
+        processor = self.get_processor(self.watcher)
         self.loadingThread = LoadingThread(self.data_path,
                                            self.watcher,
-                                           self.load_btn.objectName()
+                                           self.load_btn.objectName(),
+                                           processor
                                            ) if self.load_btn.objectName() != 'load_raw_data_btn' else ParseRawThread(
             watcher=watcher)
         self.loadingThread.finished.connect(self.finished)
         if self.prgbar is not None:
             self.loadingThread.valueChanged.connect(self.prgbar.setValue)
+
+    def get_processor(self, watcher):
+        if watcher.manufacturer == '华为':
+            return HuaweiProcessor()
+        elif watcher.manufacturer == '爱立信':
+            return EricssonProcssor()
+        elif watcher.manufacturer == '中兴':
+            return ZteProcessor()
+        else:
+            raise Exception(watcher.manufacturer + '没有定义任何解析原始文件的方法')
 
     def get_df_total(self, path):
         try:
@@ -81,9 +109,9 @@ class LoadCsvGroup(QToolButton, QLabel):
             # if self.load_btn.objectName() != 'load_check_rule_btn':
             self.start_btn.setEnabled(True)
             prgbar_total = self.get_df_total(self.data_path)
+            self.prg_len = prgbar_total
             self.prgbar.setMaximum(prgbar_total)
         self.loadingThread.setLoadFilePath(self.data_path)
-
 
     def selectDir(self):
         fd = QFileDialog(
@@ -99,11 +127,23 @@ class LoadCsvGroup(QToolButton, QLabel):
                 self.watcher.setRawDataDir(self.data_path)
                 self.start_btn.setEnabled(True)
                 self.msg_label.setText("解压中...")
-                huaweiutils.unzip_all_files(self.data_path)
-                huawei_txts = huaweiutils.find_file(self.data_path, '.txt')
+                huaweiutils.unzip_all_files(self.data_path, zipped_file=[])
+                if self.watcher.manufacturer is None:
+                    self.em.showMessage('请先设置厂商')
+                    return
+                else:
+                    suffix = '.txt' if self.watcher.manufacturer == '华为' else '.csv'
+                huawei_txts = huaweiutils.find_file(self.data_path, suffix)
                 self.prgbar.setMaximum(len(huawei_txts))
                 self.watcher.set_files_number(len(huawei_txts))
                 self.msg_label.setText("解压完成")
+
+    def get_raw_files_suffix(self):
+        if self.watcher.manufacturer is None:
+            self.em.showMessage('请先设置厂商')
+            return None
+        else:
+            return
 
     def setup_ui(self):
         if self.load_btn.objectName() == 'out_put_dir_btn':
@@ -133,11 +173,6 @@ class LoadCsvGroup(QToolButton, QLabel):
                     del self.loadingThread
         except RuntimeError:
             pass
-        # try:
-        #     self._timer.stop()
-        #     self.setText(self.msg_label.setText("失败"))
-        # except RuntimeError:
-        #     pass
 
     def onStopThread(self):
 
@@ -145,12 +180,12 @@ class LoadCsvGroup(QToolButton, QLabel):
             self.loadingThread.handle, 0)
         print('终止线程', self.loadingThread.handle, ret)
         self.start_btn.setEnabled(True)
-        self.stop_btn.setEnabled(False)
+        # self.stop_btn.setEnabled(False)
 
     def onStart(self):
         self.msg_label.setText("加载中....")
         self.prgbar.setValue(0)
-        self.stop_btn.setEnabled(True)
+        # self.stop_btn.setEnabled(True)
         self.start_btn.setEnabled(False)
         if self.prgbar is not None:
             self.load_btn.setEnabled(False)
@@ -168,7 +203,7 @@ class LoadCsvGroup(QToolButton, QLabel):
         elif msg.code == -2:
             self.em.showMessage(msg.signal_message)
             self.msg_label.setText("重新解析中..")
-            self.loadingThread.started.disconnect()
+            # self.loadingThread.started.
             self.loadingThread.finished.connect(self.finished)
             self.prgbar.setValue(0)
             self.loadingThread.start()
@@ -177,5 +212,5 @@ class LoadCsvGroup(QToolButton, QLabel):
             self.em.showMessage(msg.signal_message)
 
         self.start_btn.setEnabled(True)
-        self.stop_btn.setEnabled(False)
+        # self.stop_btn.setEnabled(False)
         self.load_btn.setEnabled(True)

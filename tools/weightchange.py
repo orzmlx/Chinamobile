@@ -1,3 +1,5 @@
+import copy
+
 import pandas as pd
 import math
 from utils import gutils
@@ -321,13 +323,16 @@ class WeightChange:
         else:
             return abs(dr2 - dr1)
 
+    # def get_g5_directions(self, df):
+    #     g5_directions = df[df['频段'].str.contains('NR-D', na=False)]['方位角'].unique().tolist()
+    #     if len(g5_directions) == 0:
+    #         g5_directions = df[df['频段'].str.contains('NR-700', na=False)]['方位角'].unique().tolist()
+    #         if len(g5_directions) == 0:
+    #             g5_directions = df[df['频段'].str.contains('NR-C', na=False)]['方位角'].unique().tolist()
+    #     return g5_directions
+
     def get_g5_directions(self, df):
-        g5_directions = df[df['频段'].str.contains('NR-D', na=False)]['方位角'].unique().tolist()
-        if len(g5_directions) == 0:
-            g5_directions = df[df['频段'].str.contains('NR-700', na=False)]['方位角'].unique().tolist()
-            if len(g5_directions) == 0:
-                g5_directions = df[df['频段'].str.contains('NR-C', na=False)]['方位角'].unique().tolist()
-        return g5_directions
+        return df[df['频段'].str.contains('2.6G', na=False)]['方位角'].unique().tolist()
 
     @staticmethod
     def is_in_buff(angle, direction, buff):
@@ -418,14 +423,14 @@ class WeightChange:
             WeightChange.get_proper_point_by_distance,
             axis=1, args=(self.g5_common_df, 30), result_type="expand")
 
-    def classify_site_number(self, path):
+    def classify_site_number(self, df):
         # cut_bins = [-10, 0, 60, 120, 180, 240, 300, 360]
-        df = pd.read_csv(path, encoding='gbk')
+        # df = pd.read_csv(path, encoding='gbk')
         df['方位角'].fillna(inplace=True, value=0.001)
         df.sort_values(by=['方位角'], inplace=True, ascending=True)
         df.reset_index(drop=True, inplace=True)
         df['label'] = ""
-        grouped = df.groupby('共扇区编号')
+        grouped = df.groupby('物理站编号')
         group_number = len(grouped)
         index0 = 0
         prg = 0
@@ -444,14 +449,15 @@ class WeightChange:
             for label, row in g.iterrows():
                 # for row in g.itertuples():
                 direction = row['方位角']
-                band = row['频段']
+                band = row['工作频段']
                 if direction == 0.001:
                     continue
                 if str(band) == 'nan':
                     continue
                 for index, d in enumerate(g5_directions):
                     # 因为所有都是顺序排列
-                    if direction == d and band.find('NR') >= 0:
+                    # if direction == d and band.find('NR') >= 0:
+                    if direction == d:
                         df.at[label, 'label'] = index + 1
                         break
                     if g5_directions[len(g5_directions) - 1] < direction < 360:
@@ -501,7 +507,38 @@ class WeightChange:
         # df['label'] = df['label'].astype(str)
         # df['共扇区编号'] = df['场景编号'] + '_' + df['label']
         # df['方位角'] = df['方位角'].replace(-0.001, 0.001)
-        df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\22问题小区清单.csv.csv", index=False, encoding='utf_8_sig')
+        df.to_csv("C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\zte\\22问题小区清单.csv.csv", index=False,
+                  encoding='utf_8_sig')
+
+    def label_dist(self, common_df_2_6, common_df_700):
+        # common_df_2_6 = common_df[common_df['工作频段'] == 'NR-D']
+        # common_df_2_6['周围700'] = []
+        # common_df_700 = common_df[common_df['工作频段'] == '700M']
+        # common_df_700['周围2.6'] = []
+        index0 = 0
+        res = []
+        prg = 0
+        for city, lat, lon, cgi in zip(common_df_2_6['地市'], common_df_2_6['纬度'], common_df_2_6['经度'],
+                                       common_df_2_6['CGI']):
+            index0 = index0 + 1
+            c_prg = round(index0 / len(common_df_2_6), 3)
+            # print(index0)
+            if c_prg > prg:
+                print("{:.2f}%".format(c_prg * 100))
+                prg = c_prg
+            for city1, lat1, lon1, cgi1 in zip(common_df_700['地市'], common_df_700['纬度'], common_df_700['经度'],
+                                               common_df_700['CGI']):
+                if city != city1:
+                    continue
+                lat_node_decimal_part = abs(lat1 - lat)
+                lon_node_decimal_part = abs(lon1 - lon)
+                if lat_node_decimal_part > 0.01 or lon_node_decimal_part > 0.01:
+                    continue
+                real_distance = gutils.haversine((lat1, lon1), (lat, lon))
+                if real_distance < 0.7:
+                    res.append((cgi, 1, cgi1))
+                    break
+        return res
 
 
 if __name__ == "__main__":
@@ -524,7 +561,12 @@ if __name__ == "__main__":
     # result = [x * y  for x, y in zip(list1, list2)]
     # print(result)
     path = "C:\\Users\\No.1\\Desktop\\teleccom\\22问题小区清单.csv"
-    weightchange.classify_site_number(path)
+    g5_site_info = 'C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv'
+    g5_common_info = 'C:\\Users\\No.1\\Documents\\WeChat Files\\wxid_5zkc7x50zh3822\\FileStorage\\File\\2024-04\\5G资源大表-20240417.csv'
+    # g5_site_info_df = pd.read_csv(g5_site_info, usecols=['物理站编号', 'CGI'])
+    # g5_common_df = pd.read_csv(g5_common_info, usecols=['方位角', 'CGI', '工作频段'], encoding='gbk')
+    # df = g5_site_info_df.merge(g5_common_df, on=['CGI'], how='left')
+    # weightchange.classify_site_number(df)
     # real_distances = []
     # bands = []
     # cgis = []
@@ -543,3 +585,22 @@ if __name__ == "__main__":
     #      "经度": g5_lons, "纬度": g5_lats,
     #      "方位角": directions, "站点方位角": angles})
     # result.to_csv(os.path.join(os.path.split(path)[0], '优化结果1.csv'), index=False, encoding='utf_8_sig')
+    g5_common_df = pd.read_csv(g5_common_info, usecols=['地市', 'CGI', '工作频段', '经度', '纬度'], encoding='gbk')
+
+    cities = ['舟山', '衢州', '温州', '湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '绍兴', '台州']
+    all_res = pd.DataFrame()
+    for c in cities:
+        city_df = copy.deepcopy(g5_common_df[g5_common_df['地市'] == c])
+        common_df_2_6 = g5_common_df[(g5_common_df['工作频段'] == 'NR-D') & (g5_common_df['地市'] == c)]
+        common_df_700 = g5_common_df[(g5_common_df['工作频段'] == 'NR-700') & (g5_common_df['地市'] == c)]
+        tp1 = weightchange.label_dist(common_df_2_6, common_df_700)
+        df1 = pd.DataFrame(tp1, columns=["CGI", "周围700M", '700M_CGI'])
+        tp2 = weightchange.label_dist(common_df_700, common_df_2_6)
+        df2 = pd.DataFrame(tp2, columns=["CGI", "周围2.6G", '2.6g_CGI'])
+        city_df = city_df.merge(df1, how='left', on=['CGI'])
+        city_df = city_df.merge(df2, how='left', on=['CGI'])
+        if all_res.empty:
+            all_res = city_df
+        else:
+            all_res = pd.concat([all_res, city_df])
+    all_res.to_csv('C:\\Users\\No.1\\Desktop\\teleccom\\工参.csv', index=False, encoding='utf-8-sig')

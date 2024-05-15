@@ -1,11 +1,17 @@
 # -*- coding:utf-8 -*-
 import logging
 import sys
-
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication
-
+try:
+    from PyQt5 import QtWidgets
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtWidgets import QApplication
+except ImportError:
+    from PySide6 import QtWidgets
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+# from PySide6 import QtWidgets
+# from PySide6.QtCore import Qt
+# from PySide6.QtWidgets import QApplication
 from ui.enhanced_startup import EnhancedStartUp
 
 logging.basicConfig(filename='C:\\Users\\No.1\\Desktop\\error.log', level=logging.DEBUG)
@@ -25,4 +31,5 @@ if __name__ == '__main__':
         MainWindow.show()
         sys.exit(app.exec_())
     except Exception as e:
-        logging.debug(e)
+        print(e)
+        # logging.debug(e)
