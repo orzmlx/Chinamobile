@@ -26,8 +26,6 @@ from model.data_watcher import DataWatcher
 from model.signal_message import message
 
 
-class EricssonProcssor(object):
-    pass
 
 
 class LoadCsvGroup(QToolButton, QLabel):
@@ -60,26 +58,17 @@ class LoadCsvGroup(QToolButton, QLabel):
         self.setup_ui()
         # self.stop_btn.setEnabled(False)
         # self.parseThread = ParseRawThread(watcher=watcher)
-        processor = self.get_processor(self.watcher)
         self.loadingThread = LoadingThread(self.data_path,
                                            self.watcher,
                                            self.load_btn.objectName(),
-                                           processor
                                            ) if self.load_btn.objectName() != 'load_raw_data_btn' else ParseRawThread(
             watcher=watcher)
         self.loadingThread.finished.connect(self.finished)
+        self.loadingThread.total_file_number.connect(self.total_parse_number)
         if self.prgbar is not None:
             self.loadingThread.valueChanged.connect(self.prgbar.setValue)
 
-    def get_processor(self, watcher):
-        if watcher.manufacturer == '华为':
-            return HuaweiProcessor()
-        elif watcher.manufacturer == '爱立信':
-            return EricssonProcssor()
-        elif watcher.manufacturer == '中兴':
-            return ZteProcessor()
-        else:
-            raise Exception(watcher.manufacturer + '没有定义任何解析原始文件的方法')
+
 
     def get_df_total(self, path):
         try:
@@ -126,16 +115,16 @@ class LoadCsvGroup(QToolButton, QLabel):
             elif self.load_btn.objectName() == 'load_raw_data_btn':
                 self.watcher.setRawDataDir(self.data_path)
                 self.start_btn.setEnabled(True)
-                self.msg_label.setText("解压中...")
-                huaweiutils.unzip_all_files(self.data_path, zipped_file=[])
+                # self.msg_label.setText("解压中...")
+                # huaweiutils.unzip_all_files(self.data_path, zipped_file=[])
                 if self.watcher.manufacturer is None:
                     self.em.showMessage('请先设置厂商')
                     return
                 else:
                     suffix = '.txt' if self.watcher.manufacturer == '华为' else '.csv'
-                huawei_txts = huaweiutils.find_file(self.data_path, suffix)
-                self.prgbar.setMaximum(len(huawei_txts))
-                self.watcher.set_files_number(len(huawei_txts))
+                # huawei_txts = huaweiutils.find_file(self.data_path, suffix)
+                # self.prgbar.setMaximum(len(huawei_txts))
+                # self.watcher.set_files_number(len(huawei_txts))
                 self.msg_label.setText("解压完成")
 
     def get_raw_files_suffix(self):
@@ -189,8 +178,11 @@ class LoadCsvGroup(QToolButton, QLabel):
         self.start_btn.setEnabled(False)
         if self.prgbar is not None:
             self.load_btn.setEnabled(False)
-
         self.loadingThread.start()
+
+    def total_parse_number(self, number):
+        if number > 0 and number is not None:
+            self.prgbar.setMaximum(number)
 
     def finished(self, msg: message):
         if msg.code == 2:

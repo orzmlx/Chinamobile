@@ -41,7 +41,7 @@ class FileDialogGroup(QToolButton, QLabel):
         self.data_path = fd.getOpenFileName(self, "Select TXT file", "", "TXT files (*.txt)")[0]
         self.path_label.setText(os.path.basename(self.data_path))
         if self.file_btn.objectName() == 'huawei_command_btn':
-            self.watcher.set_huawei_command_path(self.data_path)
+            self.watcher.tset_huawei_command_path(self.data_path)
 
     def selectExcelFile(self):
         fd = QFileDialog()

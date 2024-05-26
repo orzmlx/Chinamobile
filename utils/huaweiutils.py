@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 import copy
 import itertools
 import logging
@@ -11,11 +13,14 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
+from pandas import DataFrame
 from tqdm import tqdm
 
-from configuration import zte_configuration
+from configuration import zte_configuration, huawei_configuration
 
 replace_char = ['秒', 'dB']
+
+logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
 
 def split_csv(path, chunksize):
@@ -242,8 +247,10 @@ def only_has_digtal_diff(str1, str2):
 
 
 def add_4g_cgi(cell_df, enode_df):
-    cell_df = cell_df[cell_df['NB-IoT小区指示'] == '否']
+    cell_df = cell_df[cell_df['NB-IoT小区指示'] != '是']
     cell_df = pd.merge(cell_df, enode_df[['网元', 'eNodeB标识']], on='网元')
+    cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
+        huawei_configuration.G4_CELL_IDENTITY].apply(str)
     return cell_df
 
 
@@ -394,13 +401,13 @@ def judge(df, param):
     return judge_res
 
 
-def get_judge(recommand, value):
-    if recommand.find('[') >= 0 and recommand.find(']') >= 0:
-        return range_judge(value, recommand)
-    elif recommand.find(',') >= 0:
-        return list_judge(value, recommand)
+def get_judge(recommend, value):
+    if recommend.find('[') >= 0 and recommend.find(']') >= 0:
+        return range_judge(value, recommend)
+    elif recommend.find(',') >= 0:
+        return list_judge(value, recommend)
     else:
-        return single_value_judge(value, recommand)
+        return single_value_judge(value, recommend)
 
 
 def linear_calculation(x, m1, b, m2):
@@ -437,14 +444,21 @@ def generate_4g_frequency_band_dict(df):
     return zte_configuration.band_dict, band_list
 
 
-def read_csv(file_name, usecols=None, dtype=None):
+def read_csv(file_name, usecols=None, dtype=None, manufacturer=None) -> DataFrame:
     try:
-        return pd.read_csv(file_name, usecols=usecols, dtype=dtype) if dtype != None else pd.read_csv(file_name,
-                                                                                                      usecols=usecols)
-    except:
-        return pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') if dtype != None else pd.read_csv(
-            file_name,
-            usecols=usecols, encoding='gbk')
+        res_df = pd.read_csv(file_name, usecols=usecols, dtype=dtype) if dtype is not None else pd.read_csv(file_name,
+                                                                                                            usecols=usecols)
+    except Exception as e:
+        logging.info(e)
+        logging.info("改用gbk编码方式重新去取csv文件")
+        res_df = pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') \
+            if dtype is not None else pd.read_csv(file_name, usecols=usecols, encoding='gbk')
+    # 中兴的header有的文件有两行，这里去掉一行
+    if manufacturer == '中兴':
+        skipheader = res_df.iloc[0]
+        if 'CGI' in res_df.columns.tolist() and skipheader['CGI'] == 'CGI':
+            res_df.drop(0, inplace=True)
+    return res_df
 
 
 def list_to_str(check_list):

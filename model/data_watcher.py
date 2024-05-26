@@ -2,7 +2,7 @@
 import os
 from datetime import datetime
 import pandas as pd
-from configuration import huawei_configuration
+from configuration import huawei_configuration, ericsson_configuration, zte_configuration
 from utils import huaweiutils
 from model import validator
 
@@ -18,6 +18,7 @@ class DataWatcher:
         self.config_path = None
         self.system = None
         self.huawei_command_path = None
+        self.processor = None
         self.files_number = 0
         for name in data_names:
             self.data_dict[name] = pd.DataFrame()
@@ -43,6 +44,7 @@ class DataWatcher:
 
     def setManufacturer(self, manufacturer):
         self.manufacturer = manufacturer
+
         # self.parse_raw_data_ready = self.is_ready_for_check()
 
     def setWorkDir(self, output_dir):
@@ -68,8 +70,8 @@ class DataWatcher:
                self.config_path is not None and self.raw_data_dir is not None
 
     def get_4g_common_df(self):
-        return self.data_dict['load_4g_common_btn']
-        # return pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
+        # return self.data_dict['load_4g_common_btn']
+        return pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
 
     def get_5g_common_df(self):
         # return self.data_dict['load_5g_common_btn']
@@ -77,18 +79,20 @@ class DataWatcher:
 
     def get_4g_siteifo_df(self):
         site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_4g.csv',
-                                usecols=['CGI', '4G频段'])
+                                usecols=['CGI', '4G频段', '物理站编号'])
         # site_info = self.data_dict['load_4g_site_info_btn'][['CGI', '4G频段']]
         site_info.rename(columns={'4G频段': '共址类型'}, inplace=True)
+        site_info.drop_duplicates(subset=['CGI'], keep='first', inplace=True)
         return site_info
 
     def get_5g_siteifo_df(self):
         # site_info = self.data_dict['load_5g_site_info_btn'][['CGI', '5G频段']]
         site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_5g.csv',
-                                encoding='utf8', usecols=['CGI', '5G频段'])
+                                encoding='utf8', usecols=['CGI', '5G频段', '物理站编号'])
         # self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
         # self.site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
         site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)
+        site_info.drop_duplicates(subset=['CGI'], keep='first', inplace=True)
         return site_info
 
     def get_output_path(self):
@@ -151,7 +155,7 @@ class DataWatcher:
                 self.all_band = '4.9G|2.6G|700M|nan'
         elif self.manufacturer == '中兴':
             if self.system == '4G':
-                self.g4_base_info_df = self.get_zte_4g_base_info(band_list)
+                self.g4_base_info_df = self.get_zte_4g_base_info()
                 self.all_band = huaweiutils.list_to_str(band_list)
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
@@ -167,6 +171,12 @@ class DataWatcher:
 
         return base_inf_df
 
+    def get_eri_4g_base_info(self, band_list):
+        pass
+
+    def get_zte_4g_base_info(self):
+        return self.get_zte_5g_base_info()
+
     def get_huawei_4g_base_info(self, f_name, band_list):
         """
             获取基本信息列
@@ -177,19 +187,13 @@ class DataWatcher:
         cell_df = pd.read_csv(os.path.join(checked_raw_path, 'LST CELL.csv'))
         enode_df = pd.read_csv(os.path.join(checked_raw_path, 'LST ENODEBFUNCTION.csv'))
         cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
-        cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
-            huawei_configuration.G4_CELL_IDENTITY].apply(str)
-        base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
-        # base_info_df['频带'] = base_info_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
-        # base_info_df = base_info_df.rename(columns={'频带': '频段'}, inplace=True)
+        base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI', 'NB-IoT小区指示']]
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
         base_info_df['厂家'] = self.manufacturer
-        # self.cell_identity = huaweiconfiguration.G4_CELL_IDENTITY
         return base_info_df
 
     def get_eri_5g_base_info(self, f_name):
-
         site_info = self.get_site_info()
         common_table = self.get_5g_common()
         checked_raw_path = os.path.join(self.get_checked_raw_path(), 'kget', 'raw_result')
@@ -210,18 +214,10 @@ class DataWatcher:
     def get_zte_5g_base_info(self):
         site_info = self.get_site_info()
         common_table = self.get_5g_common()
-        # cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
-        #                       usecols=['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], encoding='gbk')
-        cell_df = huaweiutils.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
-                                       ['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], dtype=str)
-
-        base_info_df = cell_df.rename(columns={'用户标识': 'NRDU小区名称'})
-        # base_info_df = base_info_df.rename(columns={'工作频段': '频段'})
-        base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
-        base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
+        base_info_df = common_table.merge(site_info, how='left', on=['CGI'])
+        base_info_df['频段'] = base_info_df['工作频段'].map(
+            {"NR-D": "2.6G", "NR-700": "700M", "NR-C": "4.9G"})
         base_info_df['厂家'] = self.manufacturer
-        # self.cell_identity = zte_configuration.G5_CELL_IDENTITY
-
         return base_info_df
 
     def get_huawei_5g_base_info(self, f_name):
@@ -229,10 +225,8 @@ class DataWatcher:
             获取基本信息列
         """
         site_info = self.get_site_info()
-
         common_table = self.get_5g_common()
         checked_raw_path = os.path.join(self.get_checked_raw_path(), f_name, 'raw_result')
-
         ducell_df = pd.read_csv(os.path.join(checked_raw_path, 'LST NRDUCELL.csv'), dtype=str)
         gnode_df = pd.read_csv(
             os.path.join(checked_raw_path, 'LST GNODEBFUNCTION.csv'), dtype=str)
@@ -246,13 +240,10 @@ class DataWatcher:
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
         base_info_df['厂家'] = self.manufacturer
-        # self.cell_identity = huaweiconfiguration.G5_CELL_IDENTITY
         return base_info_df
 
     def get_4g_common(self, band_list):
-        # common_table = pd.read_csv(self.g4_common_table,
-        #                            usecols=['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别'],
-        #                            encoding='gbk', dtype=str)
+
         common_table = self.get_4g_common_df()[['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别']]
         common_table['工作频段'] = band_list
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
@@ -282,3 +273,13 @@ class DataWatcher:
         # self.na_area_cgi = na_area_common_df['CGI'].unique().tolist()
         common_table['区域类别'].fillna(value='农村', inplace=True)
         return common_table
+
+    def get_base_cols(self):
+        if self.manufacturer is None:
+            raise Exception('没有设置厂商')
+        if self.manufacturer == '华为':
+            return huawei_configuration.g5_base_cols if self.system == '5G' else huawei_configuration.g4_base_cols
+        elif self.manufacturer == '爱立信':
+            return ericsson_configuration.g5_base_cols if self.system == '5G' else ericsson_configuration.g4_base_cols
+        elif self.manufacturer == '中兴':
+            return zte_configuration.g5_base_cols if self.system == '5G' else zte_configuration.g4_base_cols

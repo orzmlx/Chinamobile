@@ -28,8 +28,8 @@ class RadioButtonGp(QWidget):
             self.radioBtns[2].clicked.connect(lambda: self.watcher.setManufacturer('爱立信'))
         elif self.name == 'systems':
             self.watcher.setSystem(init_text)
-            self.radioBtns[0].clicked.connect(lambda: self.watcher.setSystem('4G'))
-            self.radioBtns[1].clicked.connect(lambda: self.watcher.setSystem('5G'))
+            self.radioBtns[0].clicked.connect(lambda: self.watcher.setSystem('5G'))
+            self.radioBtns[1].clicked.connect(lambda: self.watcher.setSystem('4G'))
 
 
     # def setManufacturer(self,manufacturer):

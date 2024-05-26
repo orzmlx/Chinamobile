@@ -7,9 +7,9 @@ from datetime import datetime
 from PyQt5.QtCore import QThread, pyqtSignal
 
 # from PySide6.QtCore import QThread, Signal
-from processor.huawei_processor import HuaweiAdapter
+from processor.huawei_processor import HuaweiProcessor
+from processor.process_util import ProcessUtils
 from processor.processor import Processor
-from processor.zte_processor import ZteAdapter
 from configuration import huawei_configuration
 from exception.read_raw_exception import ReadRawException
 from model.data_watcher import DataWatcher
@@ -26,125 +26,45 @@ class ParseRawThread(QThread):
     handle = -1
     valueChanged = pyqtSignal(int)
     finished = pyqtSignal(message)
+    total_file_number = pyqtSignal(int)
 
     def __init__(self,
                  work_path: str = None,
                  raw_path: str = None,
                  watcher: DataWatcher = None,
-                 processor: Processor = None,
                  system: str = '5G',
                  config_path: str = None,
                  *args, **kwargs):
         super(ParseRawThread, self).__init__(*args, **kwargs)
-        self.processor = processor
-        self.work_dir = work_path  #
+        self.work_dir = work_path
         self.raw_path = raw_path
         self.system = system
         self.dataWatcher = watcher
         self.config_path = config_path
         now = datetime.now()
         self.date = now.strftime('%Y%m%d')
-        self.processor = processor
 
     def run(self):
         try:
             if self.dataWatcher.work_dir is None or len(self.dataWatcher.work_dir) == 0:
-                self.finished.emit(message(-1, '没有设置工作路径'))
-                return
-            # if self.dataWatcher.manufacturer is None or len(self.dataWatcher.manufacturer) == 0:
-            #     self.finished.emit(message(1, "当前没有设置制式"))
-            #     return
-            # 解压所有的文件,然后提取所有的txt文件，复制到工作文件夹
-            raw_path = self.dataWatcher.raw_data_dir
-            work_dir = self.dataWatcher.work_dir
-            manufacturer = self.dataWatcher.manufacturer
-            system = self.dataWatcher.system
-            self.processor.before_parse_raw_data(self.dataWatcher)
-            raw_directory = os.path.join(self.dataWatcher.work_dir, self.dataWatcher.manufacturer, self.date,
-                                         self.dataWatcher.system)
-            # if not os.path.exists(raw_directory):
-            #     os.makedirs(raw_directory)
-            # os.chmod(raw_directory, 7)
-            raw_data_dir = os.path.join(raw_directory, 'raw_data')
-            # if raw_path is None or not os.path.exists(raw_path):
-            #     self.finished.emit(message(-1, "原始Log路径不存在"))
-            #     return
-            # huaweiutils.unzip_all_files(raw_path)
-            # if self.dataWatcher.manufacturer is None:
-            #     self.finished.emit(message(-1, "请先设置厂商"))
-            #     return
-            # else:
-            #     suffix = '.txt' if self.dataWatcher.manufacturer == '华为' else '.csv'
-            # raws = huaweiutils.find_file(raw_path, suffix)
-            # # dest = os.path.join(self.work_dir, self.manufacturer, self.date, self.system, 'raw_data')
-            # if not os.path.exists(raw_data_dir):
-            #     os.makedirs(raw_data_dir)
-            # for txt in raws:
-            #     shutil.copy2(str(txt), raw_data_dir)
-            if self.dataWatcher.manufacturer is None:
+                raise Exception("没有设置工作路径")
+            if self.dataWatcher.manufacturer is None or self.dataWatcher.system is None:
                 raise Exception("请先设置厂商")
-            suffix = '.txt' if self.dataWatcher.manufacturer == '华为' else '.csv'
-            items = huaweiutils.find_file(raw_data_dir, suffix)
+            if self.dataWatcher.huawei_command_path is None and self.dataWatcher.manufacturer == '华为':
+                raise Exception("没有导入华为命令")
+            # 解压所有的文件,然后提取所有的txt文件，复制到工作文件夹
+            processor = ProcessUtils.get_processor(watcher=self.dataWatcher)
+            raw_dir = processor.before_parse_raw_data(self.dataWatcher)
+            #向前端更新总的文件数量
+            raw_logs = huaweiutils.find_file(raw_dir, '.txt')
+            self.total_file_number.emit(len(raw_logs))
+            for index, log in enumerate(raw_logs):
 
-            if len(items) == 0:
-                self.finished.emit(message(-1, "没有可导入的原始文件"))
-                return
-            if self.dataWatcher.huawei_command_path is None and manufacturer == '华为':
-                self.finished.emit(message(-1, "没有导入华为命令"))
-                return
-            if manufacturer is None or system is None:
-                self.finished.emit(message(-1, "没有设置厂商名或者制式"))
-                return
-            if manufacturer == '华为':
-                index = 1
-                correct_dicts = []
-                for item in items:
-                    f_name = os.path.basename(str(item)).replace('.txt', '')
-                    outputPath = os.path.join(work_dir, manufacturer, self.date)
-                    if '$' in f_name:
-                        print("文件名:" + f_name + "是临时文件")
-                        continue
-                    reader = HuaweiRawDataFile(self.dataWatcher.huawei_command_path, outputPath, system)
-                    reader.setRawFile(item)
-                    reader.read_huawei_txt()
-                    reader.output_format_data()
-
-                    if len(reader.command_to_be_corrected) > 0:
-                        # 字典列表,每个文件出现列名不一致的情况
-                        correct_dicts.append(reader.command_to_be_corrected)
-                    else:
-                        self.valueChanged.emit(index)
-                        index = index + 1
-                # 删除raw_data文件夹中的txt文件
-                # shutil.rmtree(raw_data_dir)
-                if len(correct_dicts) > 0:
-                    self.correct_columns(correct_dicts)
-                    self.finished.emit(message(-2, "华为列名与配置不一致,自动修正后重新解析原始Log"))
-                    return
-            elif manufacturer == '中兴':
-                self.finished.emit(message(-1, "暂不支持中兴"))
-            elif manufacturer == '爱立信':
-                index = 1
-                outputPath = os.path.join(work_dir, manufacturer, self.date)
-                eri_config = self.dataWatcher.config_path
-                reader = EricssonDataReader(outputPath, eri_config, system)
-                reader.auto_check_ref()
-                for item in items:
-                    reader.setRawFile(item)
-                    f_name = os.path.basename(str(item)).replace('.txt', '')
-                    if '$' in f_name:
-                        print("文件名:" + f_name + "是临时文件")
-                        continue
-                    if eri_config is None:
-                        self.finished.emit(message(-1, "请导入配置文件"))
-                        return
-                    reader.output_format_data()
-                    self.valueChanged.emit(index)
-                    index = index + 1
+                processor.parse_raw_data(log, dataWatcher=self.dataWatcher)
+                self.valueChanged.emit(index + 1)
             self.finished.emit(message(2, "成功"))
         except Exception as e:
             logging.error(e)
-            traceback.print_exc()
             self.finished.emit(message(-1, str(e)))
 
     def correct_columns(self, correct_dicts):

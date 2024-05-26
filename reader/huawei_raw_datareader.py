@@ -564,23 +564,15 @@ class HuaweiRawDataFile(Reader):
         # 说明结果是多行
         else:
             unit_number = self.__read_multi_unit_message(f, line)
-        if unit_number > 0:
-            self.__check_exist_cols(unit_number)
+        # if unit_number > 0:
+        # self.__check_exist_cols(unit_number)
+        command_dict = self.command_content_dict[self.current_command]
 
-    def __check_exist_cols(self, add_number):
-        expect_cols = self.command_col_dict[self.current_command]
-        if len(expect_cols) != len(self.exist_cols):
-            # 缺少的列
-            different_cols = set(expect_cols).difference(set(self.exist_cols))
-            both_different_cols = set(expect_cols) ^ set(self.exist_cols)
-            if len(different_cols) != len(both_different_cols):
-                logging.info("列名待补充")
-            if len(different_cols) > 0:
-                command_dict = self.command_content_dict[self.current_command]
-                for col in different_cols:
-                    for i in range(add_number):
-                        self.__init_content_dict(col, huawei_configuration.EMPTY_VALUE, command_dict)
+        if 'WTCP算法开关' in command_dict and len(command_dict['网元']) != len(command_dict['WTCP算法开关']):
+            print()
         self.exist_cols = []
+
+
 
     def get_success_number(self, line):
         self.success_command_number = int(line.split(":")[1].replace("\n", ""))
@@ -651,20 +643,6 @@ class HuaweiRawDataFile(Reader):
             new_dict[key] = []
             if len(value) > 0:
                 new_dict[key].append(value)
-            # length = huaweiutils.is_lists_of_same_length(new_dict)
-            # if length > 1:
-            #     if len(value) > 0:
-            #         fill_empty_list = [''] * (length-1)
-            #         fill_empty_list.append(value)
-            #     else:
-            #         fill_empty_list = [''] * length
-            #     new_dict[key] = fill_empty_list
-            # elif length == 1 or length == 0:
-            #     new_dict[key] = []
-            #     if len(value) > 0:
-            #         new_dict[key].append(value)
-            # elif length == -1:
-            #     print()
 
     def __merge_same_command_data(self):
         """
@@ -724,16 +702,16 @@ class HuaweiRawDataFile(Reader):
         self.out_put_dict = out_put_dict
 
     def output_format_data(self):
-        self.read_huawei_txt()
+        # self.read_huawei_txt()
         """
             华为按命令行导出数据
         """
         raw_file_name: str = os.path.split(self.raw_data_inpath)[1].split('.')[0]
         self.__merge_same_command_data()
         # 如果有需要增加字段的,后面不需要跑，直接跳过重新来
-        if len(self.command_to_be_corrected) > 0:
-            logging.info("有不一致列名,后续自动修后重新启动")
-            return
+        # if len(self.command_to_be_corrected) > 0:
+        #     logging.info("有不一致列名,后续自动修后重新启动")
+        #     return
         for f, df in self.out_put_dict.items():
             huaweiutils.output_csv(df, f, os.path.join(self.out_path, raw_file_name, 'raw_result'), True)
             self.files_cols_dict[f] = df.columns.tolist()
@@ -784,6 +762,7 @@ class HuaweiRawDataFile(Reader):
                             .replace('毫瓦分贝', 'dBm').replace('分贝', 'dB') for s in cols]
                 cols.insert(0, '网元')
                 is_first_line = False
+
             else:
                 fact_number = fact_number + 1
                 row = line.split("  ")
@@ -796,12 +775,52 @@ class HuaweiRawDataFile(Reader):
                     new_row.append(r)
                 # 每一行都添加网元信息,作为Index,必须是最后一个
                 assert len(new_row) == len(cols), "列名长度和内容长度不一致,请检查数据"
-                for index, row in enumerate(new_row):
-                    col_name = cols[index]
-                    value = new_row[index]
-                    self.__init_content_dict(col_name, value, command_dict)
+                self.update_content(cols, new_row)
+
+
+                # for index, row in enumerate(new_row):
+                #     col_name = cols[index]
+                #     value = new_row[index]
+                #     self.__init_content_dict(col_name, value, command_dict)
             line = f.readline()
         return fact_number
+
+    def update_content(self, new_cols, new_row):
+        command_dict = self.command_content_dict[self.current_command]
+        expect_cols = self.command_col_dict[self.current_command]
+        # 说明当前的col是不够的,需要填充内容,expect_col中的列有多余，此时直接往后加
+        d1 = set(expect_cols).difference(set(new_cols))
+        # 出现了之前没有预料到列
+        d2 = set(new_cols).difference(set(expect_cols))
+        if len(d1) != 0:
+            new_row.extend(['NULL'] * len(d1))
+        if len(d2) != 0:
+            expect_cols.extend(d2)
+            for d in d2:
+                standard_len = len(self.command_content_dict[self.current_command]['网元'])
+                self.command_content_dict[self.current_command][d] = standard_len * ['NULL']
+        for index, row in enumerate(new_row):
+            col_name = expect_cols[index]
+            value = new_row[index]
+            self.__init_content_dict(col_name, value, command_dict)
+
+    def __check_exist_cols(self, add_number):
+
+        expect_cols = self.command_col_dict[self.current_command]
+        if len(expect_cols) < len(self.exist_cols):
+            pass
+        elif len(expect_cols) > len(self.exist_cols):
+            # 缺少的列
+            different_cols = set(expect_cols).difference(set(self.exist_cols))
+            both_different_cols = set(expect_cols) ^ set(self.exist_cols)
+            if len(different_cols) != len(both_different_cols):
+                logging.info("列名待补充:" + str(both_different_cols))
+            if len(different_cols) > 0:
+                command_dict = self.command_content_dict[self.current_command]
+                for col in different_cols:
+                    for i in range(add_number):
+                        self.__init_content_dict(col, huawei_configuration.EMPTY_VALUE, command_dict)
+        self.exist_cols = []
 
 
 if __name__ == "__main__":

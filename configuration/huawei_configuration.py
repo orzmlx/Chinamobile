@@ -8,8 +8,8 @@ COMMAND = "命令"
 MESSAGE = "报文"
 G5_CELL_IDENTITY = 'NR小区标识'
 G4_CELL_IDENTITY = '本地小区标识'
-g5_base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
-g4_base_cols = ['地市', '网元', '小区名称', '本地小区标识', 'CGI', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
+g5_base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
+g4_base_cols = ['地市', '网元', '小区名称', '本地小区标识', 'NB-IoT小区指示', 'CGI', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
 LST_NRCELLALGOSWITCH = ['网元', 'NR小区标识', 'NSA DC开关', '语音策略开关', ' 系统间业务移动性算法开关', ' 邻区自配置开关',
                         ' 异频切换算法开关', ' VoNR开关', ' ROHC头压缩开关', ' ROHC子协议开关', ' 终端节能开关',
                         ' INACTIVE策略开关', '测量策略开关', '负载均衡算法开关', ' 基于RFSP的算法开关', ' 视频直播开关',
@@ -27,8 +27,7 @@ LST_NRDUCELL = ['网元', 'NR DU小区标识', 'NR DU小区名称', '双工模�
                 'TA偏移量', '小区管理状态', 'SSB频域位置描述方式', 'SSB频域位置', 'SSB周期(毫秒)', 'SIB1周期(毫秒)',
                 'NR DU小区组网模式', '系统消息配置标识', '根序列逻辑索引', 'PRACH频域起始位置', '高速小区标识', '辅助小区指示',
                 'SMTC持续时间(毫秒)', 'SMTC周期(毫秒)', '附加频带', 'SSB子载波间隔(KHz)', '客户化带宽配置标识', '客户化下行带宽',
-                '客户化上行带宽', '上行闭塞RB个数偏置', '对端时隙配比', 'SSB时域位置', '小区禁止状态',
-                '部署位置', 'IAB节点标识', '场景策略', '系统消息配置策略标识']
+                '客户化上行带宽', '上行闭塞RB个数偏置', '对端时隙配比', 'SSB时域位置', '小区禁止状态', '部署位置', 'IAB节点标识', '场景策略', '系统消息配置策略标识']
 LST_NRCELLINTERFHOMEAGRP_INTERFREQHOMEASGROUPID_0 = ['网元', 'NR小区标识', '异频切换测量参数组标识', '异频测量事件时间迟滞(毫秒)',
                                                      '异频测量事件幅度迟滞(0.5dB)',
                                                      '异频A1A2时间迟滞(毫秒)', '异频A1A2幅度迟滞(0.5dB)', '基于频率优先级的异频切换A2RSRP门限(dBm)',
@@ -118,11 +117,9 @@ LST_NRCELLQCIBEARER_QCI_1 = ['网元', 'NR小区标识', '服务质量等级', '
                              '负载均衡的上行吞吐率门限(千比特/秒)', '负载均衡的下行缓存数据量(千比特)',
                              '负载均衡的上行BSR数据量(千比特)', '负载均衡的检查时长(秒)', 'NSA用户异频切换测量参数组标识',
                              '低速用户同频切换测量参数组标识', '低速用户异频切换测量参数组标识', 'RedCap用户DRX参数组标识',
-                             '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识', 'QCI算法参数组标识', '业务差异化算法开关',
-                             'WTCP算法开关', 'WTCP参数组标识'
+                             # '业务释放延迟定时器(毫秒)', 'gNodeB频点优先级组标识', 'QCI算法参数组标识', '业务差异化算法开关',
+                             # 'WTCP算法开关', 'WTCP参数组标识'
                              ]
-
-
 
 LST_NRCELLQCIBEARER_QCI_5 = LST_NRCELLQCIBEARER_QCI_1
 LST_NRCELLQCIBEARER_QCI_9 = LST_NRCELLQCIBEARER_QCI_1
@@ -274,7 +271,7 @@ LST_CELLALGOSWITCH = ['网元', '本地小区标识', '语音重定向开关', '
                       '高速用户异系统切换开关', '紧急呼叫半静态调度开关', '上行干扰协调调度RB占比(%)', '上行干扰协调调度VoLTE路损门限(dB)',
                       '定位特性开关', ' DTX识别算法开关', ' 频谱接入系统算法开关', '基于QCI的动态AMBR开关', '上行高阶CoMP开关',
                       ' 基于Uu口的V2X业务算法开关', ' 下行调度扩展开关', 'MPMU维测开关', ' 垂直劈裂算法开关', ' RRC重建数据转发开关',
-                      '小带宽优化开关', '空闲态eDRX开关', '上行干扰协调调度RB占比','TCP控制开关']
+                      '小带宽优化开关', '空闲态eDRX开关', '上行干扰协调调度RB占比', 'TCP控制开关']
 
 LST_CELLALGOEXTSWITCH = ['网元', '本地小区标识', 'NB-IoT小区级算法扩展开关', '天选算法开关', ' 测速开关', '上行覆盖增强开关', 'WTTx算法开关',
                          ' WTTx MU-MIMO开关', '切换允许开关', ' 波束天线扩展开关', ' 重载性能优化开关', '下行调度增强开关', 'LNR智能载波关断',
@@ -300,8 +297,9 @@ LST_CELLHOPARACFG = ['网元', '本地小区标识', '异频异系统盲切换 A
 LST_INTRAFREQHOGROUP_INTRAFREQHOGROUPID_0 = ['网元', '本地小区标识', '同频切换参数组ID', '同频切换幅度迟滞(0.5dB)', '同频切换偏置(0.5dB)',
                                              '同频切换时间迟滞', '高速用户同频切换时间迟滞(毫秒)', 'CE同频切换A2 RSRP触发门限(dBm)',
                                              'ModeA调整A1门限(dBm)', 'ModeA调整A2门限(dBm)', 'ModeB调整A2门限(dBm)',
-                                             'NC调整A1门限(dBm)',
-                                             'CE模式A同频切换A2 RSRQ触发门限(0.5dB)', 'eMTC用户切换A3时间迟滞(毫秒)', '同频切换时间迟滞(毫秒)']
+                                             'NC调整A1门限(dBm)', 'CE模式A同频切换A2 RSRQ触发门限(0.5dB)'
+                                             , 'eMTC用户切换A3时间迟滞(毫秒)', '同频切换时间迟滞(毫秒)'
+                                             ]
 
 LST_INTRAFREQHOGROUP_INTRAFREQHOGROUPID_2 = LST_INTRAFREQHOGROUP_INTRAFREQHOGROUPID_0
 
@@ -356,7 +354,7 @@ LST_CELLQCIPARA_QCI_1 = ['网元', '本地小区标识', '服务质量等级', '
                          'eMTC模式A覆盖等级0的DRX参数组ID', 'eMTC模式B覆盖等级2的DRX参数组ID', 'NSA DC QCI参数组ID',
                          '最大载波数', '基于业务的重选目标下行频点', '系统频点优先级组ID', 'NSA DC系统频点优先级组ID',
                          'NR SCG频点优先级组ID', '拥塞门限', '切换业务准入门限', '下行IBLER目标值初始值', 'SINR校正算法的IBLER目标值'
-                         ,'异系统CDMA20001XRTT切换参数组ID']
+    , '异系统CDMA20001XRTT切换参数组ID']
 LST_CELLQCIPARA_QCI_9 = LST_CELLQCIPARA_QCI_1
 
 G5_COMMAND_COLS_LIST = [LST_NRDUCELL, LST_GNODEBFUNCTION, LST_NRCELLALGOSWITCH,
@@ -539,3 +537,35 @@ FILE_CITY_DICT = \
      "sx21": "绍兴",
      "nb2": "宁波",
      "nb135": "宁波"}
+
+
+def mapHuawei4GFrqPtToBand(x, band_dict):
+    if 'nan' == str(x):
+        return '其他频段'
+    for key, item in band_dict.items():
+        if str(x) in item:  # 证明该频段是4G频段
+            return key
+    return '其他频段'
+
+
+def is_4g_freq(all_freqs, g4_freq_band_dict):
+    for f in all_freqs:
+        for key, item in g4_freq_band_dict.items():
+            if str(f) in item:  # 证明该频段是4G频段
+                return True
+    return False
+
+
+def map_huawei_freq_pt(df, system, frequency_param, g4_freq_band_dict):
+    if frequency_param == '频带' and system == '5G':
+        df = df[df[frequency_param] != 'n1']
+        df[frequency_param] = df[frequency_param].map(
+            {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
+    elif system == '4G':
+        all_freq = df[frequency_param].unique().tolist()
+        if is_4g_freq(all_freq, g4_freq_band_dict):
+            # df[frequency_param] = 'LTE'
+            df['频点'] = df[frequency_param]
+            df[frequency_param] = df[frequency_param].apply(mapHuawei4GFrqPtToBand,
+                                                            args=(g4_freq_band_dict,))
+    return df

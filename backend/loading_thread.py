@@ -1,15 +1,9 @@
 # -*- coding:utf-8 -*-
-import ctypes
-
 import pandas as pd
 from PyQt5.QtCore import QThread, pyqtSignal
-
-# from PySide6.QtCore import QThread, Signal
-
 from model.data_watcher import DataWatcher
 from model.signal_message import message
 from processor.processor import Processor
-
 StyleSheet = '''
 PushButtonLine {
     color: white;
@@ -24,6 +18,8 @@ class LoadingThread(QThread):
     handle = -1
     valueChanged = pyqtSignal(int)
     finished = pyqtSignal(message)
+    total_file_number = pyqtSignal(int)
+
 
     def __init__(self, path: str = None,
                  watcher: DataWatcher = None,

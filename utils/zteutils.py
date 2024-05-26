@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import importlib
+import math
 import os
 import pathlib
 import re
@@ -88,18 +89,25 @@ def split_column(x, pattern, operator, index):
     #     return match_res.group()
 
 
-def action_columns_merge(df, action_tuples_list, new_column_name, index):
+def action_columns_merge(df, action_tuples_list,
+                         new_column_name,
+                         index):
     constant = None
-    df[new_column_name] = ""
+    df['temp_result'] = ""
     math_way = False
     math_operator = None
+    first_multiple = None
+    second_multiple = None
 
     for action_tuple in action_tuples_list:
         col_name = action_tuple[0].strip() if action_tuple[0] is not None else None
-        if 'add' == col_name or 'subtract' == col_name:
+        if col_name.find('add') >= 0 or col_name.find('subtract') >= 0:
+            multiples = re.findall(r'\d+', col_name)
+            first_multiple = float(multiples[0])
+            second_multiple = float(multiples[1])
             math_way = True
-            math_operator = col_name
-            df[new_column_name] = 0
+            math_operator = ''.join(re.findall('[a-zA-Z]', col_name))
+            df['temp_result'] = 0
             continue
         action_range = action_tuple[1].strip() if action_tuple[1] is not None else None
         operator = action_tuple[2].strip() if action_tuple[2] is not None else None
@@ -111,9 +119,6 @@ def action_columns_merge(df, action_tuples_list, new_column_name, index):
             if constant is not None:
                 df[col_name + "#"] = constant + df[col_name + "#"]
                 constant = None
-            # cols.append(col_name + "#")
-            # # 规整列的顺序,确保新的列在最后一个
-            # df = df[cols]
         elif operator == ':' and action_range == '整体':
             df[col_name + "#"] = df[col_name].apply(str)
             if constant is not None:
@@ -131,25 +136,45 @@ def action_columns_merge(df, action_tuples_list, new_column_name, index):
         try:
             left_operator_col = action_tuples_list[0][0]
             right_operator_col = action_tuples_list[2][0]
-            df[left_operator_col + "#"].fillna(value=0, inplace=True)
-            df[right_operator_col + "#"].fillna(value=0, inplace=True)
-            df[left_operator_col + "#"] = df[left_operator_col + "#"].apply(float)
-            df[right_operator_col + "#"] = df[right_operator_col + "#"].apply(float)
-            df[new_column_name] = df[left_operator_col + "#"] + df[
-                right_operator_col + "#"] if math_operator == 'add' else \
-                df[left_operator_col + "#"] - df[right_operator_col + "#"]
+            # df[left_operator_col + "#"] = df[left_operator_col + "#"].apply(float)
+            # df[right_operator_col + "#"] = df[right_operator_col + "#"].apply(float)
+            # df[left_operator_col + "#"].fillna(value=0, inplace=True)
+            # df[right_operator_col + "#"].fillna(value=0, inplace=True)
+            df['temp_result'] = df[[left_operator_col + "#", right_operator_col + "#"]] \
+                .apply(col_add, args=(first_multiple, second_multiple), axis=1)
+            # df['temp_result'] = df[left_operator_col + "#"] * first_multiple + df[
+            #     right_operator_col + "#"] * second_multiple if math_operator == 'add' else \
+            #     df[left_operator_col + "#"] * first_multiple - df[right_operator_col + "#"] * second_multiple
             df.drop([left_operator_col + "#"], axis=1, inplace=True)
             df.drop([right_operator_col + "#"], axis=1, inplace=True)
-        except:
-            logging.info("列之间算术计算错误")
+        except Exception as e:
+            print(e)
+            raise Exception("列之间算术计算错误")
     else:
         for c in cols:
             if c.find('#') >= 0:
-                df[new_column_name] = df[new_column_name] + df[c]
+                df['temp_result'] = df['temp_result'] + df[c]
                 df.drop([c], axis=1, inplace=True)
         if constant is not None:
-            df[new_column_name] = df[new_column_name] + constant
+            df['temp_result'] = df['temp_result'] + constant
+    if new_column_name in df.columns.tolist():
+        df[new_column_name] = df['temp_result']
+        df.drop(['temp_result'], axis=1, inplace=True)
+    else:
+        df.rename(columns={'temp_result': new_column_name}, inplace=True)
     return df
+
+
+def col_add(x, first_multiple, second_multiple):
+    if 'nan' == str(x[0]) or 'nan' == str(x[1]):
+        return math.nan
+    else:
+        return float(x[0]) * first_multiple + float(x[1]) * second_multiple
+
+
+
+def fillna_by_type():
+    pass
 
 
 def action_filter(df, action_tuples, index):

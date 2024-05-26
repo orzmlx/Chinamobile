@@ -55,7 +55,7 @@ def read_raw_data(path, system, date, manufacturer):
         if manufacturer == HUAWEI:
             reader = HuaweiRawDataFile(command_file_path, outputPath, system)
             reader.setRawFile(item)
-            # reader.read_huawei_txt()
+            reader.read_huawei_txt()
             reader.output_format_data()
         elif manufacturer == ZTE:
             zte_config = os.path.join(path, manufacturer, '工参案例V13.xlsx')
@@ -129,6 +129,7 @@ def combine_evaluation(dir0, result_path, suffix, cell_class_dict):
             all_result = res if all_result.empty else pd.concat([all_result, res], axis=0)
     # all_cell_check_result_path = os.path.join(dir, check_result_name)
     all_result.to_csv(result_path, index=False, encoding='utf_8_sig')
+    logging.info("================完成！================")
     # huaweiutils.create_header(all_result, result_path, cell_class_dict, base_cols)
 
 

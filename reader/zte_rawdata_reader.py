@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 
+from model.data_watcher import DataWatcher
 from reader.reader import Reader
 from utils import zteutils, huaweiutils
 from exception.read_raw_exception import ReadRawException
@@ -18,14 +19,13 @@ logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:
 
 
 class ZteRawDataReader(Reader):
-    def __init__(self, raw_file, zte_raw_data_path, zte_config_file_path, system):
+    def __init__(self, zte_raw_data_path, outpath, zte_config_file_path, dataWatcher: DataWatcher):
         self.zte_config_file_path = zte_config_file_path
         self.zte_raw_data_path = zte_raw_data_path
-        self.system = system
-        self.raw_file = str(raw_file)
-        self.manufacturer = '中兴'
+        self.system = dataWatcher.system
+        self.manufacturer = dataWatcher.manufacturer
         # raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
-        self.temp_path = os.path.join(zte_raw_data_path, system, raw_file.name.replace('.xlsx', ''), "temp")
+        self.temp_path = outpath
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)
 
@@ -218,7 +218,6 @@ class ZteRawDataReader(Reader):
                                                          "columns": demand_cols,
                                                          'ignore_errors': True,
                                                          "batch_size": 500})
-
                 csv_df = csv_df.to_pandas()
                 if sheet_index >= 2:
                     logging.info("sheet:【" + sheet_name + "】:>>>存在超过100万行分表情况!!!<<<")
@@ -309,11 +308,6 @@ class ZteRawDataReader(Reader):
                 elif right_file == '4G频点关系':
                     right_file_df = pd.read_excel(self.zte_config_file_path, engine='openpyxl', sheet_name='4G频点关系',
                                                   dtype=str)
-                    # band_col = '中心载频'
-                    # band_bins = self.get_band_bin(right_file_df, band_col)
-                    # left_file_df[band_col] = left_file_df[band_col].apply(float)
-                    # left_file_df[band_col] = pd.cut(x=left_file_df[band_col], bins=band_bins)
-                    # left_file_df[band_col] = left_file_df[band_col].apply(str)
                 else:
                     right_file = os.path.join(self.temp_path, right_file + '.csv')
                     right_file_df = pd.read_csv(right_file, dtype='str')

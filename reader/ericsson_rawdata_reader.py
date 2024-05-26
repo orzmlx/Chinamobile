@@ -2,42 +2,31 @@
 import logging
 from pandas.errors import EmptyDataError
 from exception.read_raw_exception import ReadRawException
+from model.data_watcher import DataWatcher
 from reader.zte_rawdata_reader import ZteRawDataReader
 import os
 from utils import huaweiutils
 import pandas as pd
 
 
-
 class EricssonDataReader(ZteRawDataReader):
 
-    def __init__(self, eri_raw_data_path, eri_config_file_path, system):
+    def __init__(self, eri_raw_data_path, output_path, eri_config_file_path, dataWatcher: DataWatcher):
         self.eri_config_file_path = eri_config_file_path
         self.eri_raw_data_path = eri_raw_data_path
-        self.system = system
+        self.system = dataWatcher.system
+        self.manufacturer = dataWatcher.manufacturer
         self.raw_file = None
         self.temp_path = None
         self.on_dict = {}
-        # self.raw_file_dir = raw_file
-        # raw_files = huaweiutils.find_file(raw_file, '.csv')
-        # pattern = r'_\d+'
-        # for f in raw_files:
-        #     prefix = os.path.split(f)[0]
-        #     origin_name = os.path.basename(f)
-        #     new_name = os.path.join(prefix, re.sub(pattern, '', origin_name))
-        #     os.rename(f, new_name)
+        self.out_path = output_path
+        if not os.path.exists(self.out_path):
+            os.makedirs(self.out_path)
         # 将匹配到的部分替换为空字符串
-        self.manufacturer = '爱立信'
+
         # raw_output_path = os.path.join(zte_raw_data_path, system, f_name)
 
     def setRawFile(self, filePath):
-        # raw_files = huaweiutils.find_file(filePath, '.csv')
-        # pattern = r'_\d+'
-        # for f in raw_files:
-        #     prefix = os.path.split(f)[0]
-        #     origin_name = os.path.basename(f)
-        #     new_name = os.path.join(prefix, re.sub(pattern, '', origin_name))
-        #     os.rename(f, new_name)
         self.raw_file = filePath
         self.temp_path = os.path.join(self.eri_raw_data_path, self.system, 'raw_data')
         if not os.path.exists(self.temp_path):
@@ -142,23 +131,25 @@ class EricssonDataReader(ZteRawDataReader):
     def clean_data(self, eri_config_file_path, eri_raw_data_path, system):
         eri_config_df = pd.read_excel(eri_config_file_path, sheet_name='爱立信数据清洗')
         f_name = os.path.basename(self.raw_file).replace('.csv', '')
-        pickle_name = str(self.raw_file).replace(".csv", "")
+        config_name = str(self.raw_file).replace(".csv", "")
+        config_df = eri_config_df[eri_config_df['CSV名'] == os.path.basename(config_name)]
         sheet_df = pd.DataFrame()
-        if eri_config_df.empty:
+        if config_df.empty:
+            logging.info("配置文件没有配置:" + config_name + '的数据清理方法,该文件不需要数据清洗')
             return
         try:
-            sheet_df = pd.read_csv(self.raw_file)
+            sheet_df = pd.read_csv(self.raw_file, skiprows=[1]) if self.manufacturer == '中兴' else pd.read_csv(
+                self.raw_file)
+            sheet_df = sheet_df.loc[:, ~sheet_df.columns.str.contains('Unnamed')]
         except Exception as e:
-            logging.info('pickle文件名:' + pickle_name + '没有在' + os.path.dirname(self.raw_file) + '下找到')
+            logging.info('pickle文件名:' + config_name + '没有在' + os.path.dirname(self.raw_file) + '下找到')
             logging.error(e)
         if sheet_df.empty:
             logging.info(f_name + "没有数据")
             return
         f_name_with_digital = self.__remove_digtal(f_name)
-        out_path = os.path.join(self.eri_raw_data_path, system, 'kget', 'raw_result')
-        if not os.path.exists(out_path):
-            os.makedirs(out_path)
-        self.process_data_by_sheet(sheet_df, eri_config_df, f_name_with_digital, out_path, ';')
+        # out_path = os.path.join(self.eri_raw_data_path, system, 'kget', 'raw_result')
+        self.process_data_by_sheet(sheet_df, eri_config_df, f_name_with_digital, self.out_path, ';')
 
     def output_format_data(self):
         # self.__auto_check_ref()
@@ -166,4 +157,3 @@ class EricssonDataReader(ZteRawDataReader):
         # zte_param_gather = pd.read_excel(self.zte_config_file_path, engine='openpyxl', sheet_name='数据汇聚')
         # zte_param_gather = zte_param_gather[zte_param_gather['厂家'] == self.manufacturer]
         # self.gather_files(zte_param_gather)
-
