@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-
+import math
 from model.data_watcher import DataWatcher
 from reader.reader import Reader
 from utils import zteutils, huaweiutils
@@ -9,7 +9,6 @@ from utils.timer import Timer
 import logging
 import sys
 from tqdm import tqdm
-import numpy as np
 
 os.environ["MODIN_ENGINE"] = "dask"
 import polars as pl
@@ -339,7 +338,7 @@ class ZteRawDataReader(Reader):
         return sorted(range_bins)
 
     def map_4g_band(self, left_file_df, right_file_df):
-        left_file_df['频段'] = np.nan
+        left_file_df['频段'] = math.nan
         index = 0
         for band_identity, center_band in zip(left_file_df['频段指示'], left_file_df['中心载频']):
             center_band = float(center_band)

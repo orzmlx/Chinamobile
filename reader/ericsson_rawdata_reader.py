@@ -129,6 +129,7 @@ class EricssonDataReader(ZteRawDataReader):
         return res
 
     def clean_data(self, eri_config_file_path, eri_raw_data_path, system):
+        logging.info('==============开始清理文件:' + os.path.dirname(eri_raw_data_path) + '==============')
         eri_config_df = pd.read_excel(eri_config_file_path, sheet_name='爱立信数据清洗')
         f_name = os.path.basename(self.raw_file).replace('.csv', '')
         config_name = str(self.raw_file).replace(".csv", "")

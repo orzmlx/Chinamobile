@@ -1,11 +1,12 @@
 # -*- coding:utf-8 -*-
+import logging
+
+from PyQt5.QtGui import QFont
 
 try:
-    from PyQt5.QtWidgets import QErrorMessage
+    from PyQt5.QtWidgets import QErrorMessage, QPlainTextEdit
 except ImportError:
     from PySide6.QtWidgets import QErrorMessage
-
-# from PySide6.QtWidgets import QErrorMessage
 
 from model.data_watcher import DataWatcher
 from model.signal_message import message
@@ -15,6 +16,23 @@ from ui.file_dialog_group import FileDialogGroup
 from ui.load_csv_group import LoadCsvGroup
 from ui.radiobtn_gp import RadioButtonGp
 
+
+class LoggingHandler(logging.Handler):
+    def __init__(self, plain_text_edit:QPlainTextEdit):
+        super().__init__()
+        font = QFont()
+        font.setPointSize(8)  #
+        self.widget = plain_text_edit
+        self.widget.setFont(font)
+
+
+    def emit(self, record):
+        """日志处理函数，格式化日志数据后，写入到QTextBrower控件中"""
+        msg = self.format(record)
+        self.widget.appendPlainText(msg)
+
+    # def getLoggerText(self):
+    #     return self.loggerText
 
 class EnhancedStartUp(Ui_mainWindow):
 
@@ -43,7 +61,14 @@ class EnhancedStartUp(Ui_mainWindow):
 
     def setupUi(self, MainWindow):
         super().setupUi(MainWindow)
+
         self.watcher = None
+        log_widget = super().getLoggerText()
+        handler = LoggingHandler(log_widget)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logging.getLogger().addHandler(handler)
+        logging.getLogger().setLevel(logging.INFO)
+        logging.info('开始启动[@中兴@爱立信@华为]参数核查工具')
         self.check_err_msg = QErrorMessage.qtHandler()
         self.check_err_msg.setWindowTitle("错误提示")
         object_names = [self.load_5g_common_prgbar.objectName(), self.load_4g_common_prgbar.objectName(),

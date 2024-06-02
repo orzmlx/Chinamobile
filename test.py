@@ -1,12 +1,10 @@
 # coding:utf-8
 import difflib
-import pandas as pd
-import numpy as np
-import threading
-import time
-import sys
-from threading import Thread
 import os
+import sys
+import time
+
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -66,12 +64,12 @@ def compare_strings(str1, str2):
 def test2(string):
     splits = string.split("  ")
     splits = list(filter(lambda x: x.strip() != "", splits))
-
+    splits = [i.replace(" ", '') for i in splits]
     print(splits)
     print(len(splits))
 
 
-def filter():
+def filter_device():
     try:
         df = pd.read_csv(
             'C:\\Users\\No.1\\Documents\\WeChat Files\\wxid_5zkc7x50zh3822\\FileStorage\\File\\2024-04\\5G驻留比终端统计表(天)(1).csv')
@@ -97,7 +95,8 @@ if __name__ == "__main__":
     # str1 = "LST NRCELLHOEUTRANMEAGRPINTERRHOTOEUTRANMEASGRPID=0"
     # str2 = "LST NRCELLHOEUTRANMEAGRP:INTERRHOTOEUTRANMEASGRPID=0;"
     # # test1("E-UTRAN切换开关:开&E-UTRAN重定向开关:开&语音业务盲模式开关:开&基于覆盖的E-UTRAN最强邻区重定向开关:关&VoNR基于覆盖的切换优先开关:关&重建流程中EPS Fallback变更开关:关")
-    # test2('NR DU小区标识  SIB1净荷精简策略   最低接收电平(2dBm)  最低接收信号质量(dB)  SIB可选信元指示   小区为运营商保留  RA-SDT数据量门限(Byte)  RA-SDT RSRP门限(dBm)  UE最大发射功率(dBm)')
+    test2(
+        'NR DU小区标识  NSA TDM功控触发SINR幅度迟滞(0.1dB)  NSA TDM功控触发SINR门限(0.1dB)  SRS TA测量开关                                 NSA 上行回落到LTE SINR迟滞(0.1dB)  NSA 上行回落到LTE SINR门限(0.1dB)  Hyper Cell内TRP间切换的RSRP差值(0.5dB)  NSA上行路径选择SINR高门限(0.1dB)  NSA上行路径选择SINR低门限(0.1dB)  NSA分流用户上行路径选择SINR门限(0.1dB)  NSA上行路径选择SINR幅度迟滞(0.1dB)  NSA上行路径选择SINR时间迟滞(100毫秒)  NSA上行路径变更至LTE速率比  NSA上行路径变更至NR速率比  NSA上行小包返回NR后惩罚时长(秒)  NSA 上行回落到LTE SINR时间迟滞(100毫秒)  NSA上行回落到LTE SINR优化开关                                    UL ROHC的SINR门限(0.1dB)  UL ROHC的SINR幅度迟滞(0.1dB)  DMM TRP选择RSRP差值门限(dB)  上行SRS测量值使用开关  SRS干扰门限(dB)  NR迁移到E-UTRAN的上行SINR低门限(0.1dB)  E-UTRAN迁移到NR的SINR高门限(0.1dB)  SRS TA异常保护门限(Ts)  SRS均衡前信干噪比低门限(0.2dB)  SRS测量优化策略         SRS RSRP异常门限(dB)  DMRS TA的SINR判决门限(dB)  SRS和DMRS TA差值门限(Ts)  SRS测量扩展开关                 SRS测量优化开关                                                               SRS干扰下TA测量优化开关  上行语音ROHC退出SINR门限(0.1dB)')
     # res =compare_strings("LST NRCELLHOEUTRANMEAGRPINTERRHOTOEUTRANMEASGRPID=0", "LST NRCELLHOEUTRANMEAGRPINTERRHOTOEUTRANMEASGRPID=1")
     #  # dff1 = [diff_str for diff_str in str1 if diff_str not in str2]
     #  # print(dff1)
@@ -118,4 +117,4 @@ if __name__ == "__main__":
     # progress_thread.start()
     # read_thread.join()
     # progress_thread.join()
-    filter()
+    # filter()

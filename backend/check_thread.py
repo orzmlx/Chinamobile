@@ -11,6 +11,8 @@ from PyQt5.QtCore import QThread, pyqtSignal
 # from PySide6.QtCore import QThread, Signal
 import copy
 
+from python_calamine.pandas import pandas_monkeypatch
+
 from configuration import huawei_configuration, ericsson_configuration, zte_configuration
 from model import validator
 from processor.huawei_processor import HuaweiProcessor
@@ -41,8 +43,6 @@ class CheckThread(QThread):
         # self.check_4g_test_preparation()
         self.check_5g_test_preparation()
 
-
-
     def evaluate_eri(self):
         base_cols = self.watcher.get_base_cols()
         raw_files_dir = os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date,
@@ -51,7 +51,7 @@ class CheckThread(QThread):
         # 对于爱立信数据，相当于只有一个网管数据
         evaluate = Evaluation(raw_files_dir, self.watcher, used_commands=[])
         copy_base_cols = copy.deepcopy(base_cols)
-        cell_class_dict, freq_class_dict = evaluate.generate_report('cell', copy_base_cols)
+        cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
         # self.valueChanged.emit(index + 1)
         return cell_class_dict, freq_class_dict
 
@@ -84,21 +84,22 @@ class CheckThread(QThread):
                 return
             evaluate = Evaluation(raw_file_dir, self.watcher, used_commands=used_command)
             copy_base_cols = copy.deepcopy(base_cols)
-            cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
+            cell_class_dict, freq_class_dict = evaluate.generate_report('cell', copy_base_cols)
             self.valueChanged.emit(index + 1)
 
         return cell_class_dict, freq_class_dict
 
     def check_5g_test_preparation(self):
         self.watcher.setConfigPath('C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\ericsson\\参数核查规则0429.xlsx')
-        self.watcher.setManufacturer('中兴')
+        self.watcher.setManufacturer('华为')
         self.watcher.setSystem('5G')
         self.watcher.setWorkDir('C:\\Users\\No.1\\Desktop\\界面测试')
         self.watcher.set_files_number(1)
         # self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为5G参数20240326')
-        self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\数据')
-        self.watcher.setDate('20240515')
-        self.watcher.set_huawei_command_path('C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt')
+        self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为\\数据')
+        self.watcher.setDate('20240531')
+        self.watcher.set_huawei_command_path(
+            'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt')
 
     def check_4g_test_preparation(self):
         self.watcher.setConfigPath('C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\ericsson\\参数核查规则0429.xlsx')
@@ -106,6 +107,7 @@ class CheckThread(QThread):
         self.watcher.setSystem('4G')
         self.watcher.setWorkDir('C:\\Users\\No.1\\Desktop\\界面测试')
         self.watcher.set_files_number(1)
+        self.watcher.setDate('20240515')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\数据\\4G')
 
     def run(self) -> None:
@@ -117,9 +119,20 @@ class CheckThread(QThread):
             all_cell_check_result_path = os.path.join(target_directory, check_result_name)
             report_path = os.path.join(target_directory, self.watcher.manufacturer, self.watcher.date, '互操作参数核查结果.xlsx')
             processor = ProcessUtils.get_processor(self.watcher)
-            cell_header_class_dict, freq_header_class_dict = processor.evaluate(dataWatcher=self.watcher)
-            combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name,
-                               cell_header_class_dict)
+            # raw_files = os.listdir(
+            #     os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date, self.watcher.system,
+            #                  'raw_data'))
+            raw_files = self.watcher.get_raw_result_files()
+            pandas_monkeypatch()
+            cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置", dtype=str, engine='calamine')
+            freq_config_df = pd.read_excel(self.watcher.config_path, sheet_name="频点级别核查配置", dtype=str, engine='calamine')
+            for index, f in enumerate(raw_files):
+                cell_header_class_dict, freq_header_class_dict = processor.evaluate(watcher=self.watcher, file=f,
+                                                                                    cell_config_df=cell_config_df,
+                                                                                    freq_config_df=freq_config_df)
+
+                self.valueChanged.emit(index + 1)
+            combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name)
             self.finished.emit(message(2, '成功'))
         except Exception as e:
             traceback.print_exc()

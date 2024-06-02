@@ -1,0 +1,15 @@
+import logging
+from PyQt5.QtWidgets import QTextBrowser, QPlainTextEdit
+
+# logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
+
+
+class QTextEditLogger(logging.Handler):
+    def __int__(self, text_edit: QPlainTextEdit):
+        super().__init__()
+        self.text_edit = text_edit
+
+    def emit(self, record):
+        """日志处理函数，格式化日志数据后，写入到QTextBrower控件中"""
+        msg = self.format(record)
+        self.text_edit.appendPlainText(msg)

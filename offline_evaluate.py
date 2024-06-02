@@ -118,7 +118,7 @@ def create_header(path, class_dict, base_cols):
     wb.save(path)
 
 
-def combine_evaluation(dir0, result_path, suffix, cell_class_dict):
+def combine_evaluation(dir0, result_path, suffix):
     logging.info("================合并核查结果================")
     items = pathlib.Path(dir0).rglob('*')
     all_result = pd.DataFrame()

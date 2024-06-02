@@ -44,7 +44,7 @@ class param_selector:
         self.standard_alone_df = pd.DataFrame()
         self.cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
         g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
-        self.g4_freq_band_dict, band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
+        self.g4_freq_band_dict, band_list = huaweiutils.generate_4g_frequency_band_dict()
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带

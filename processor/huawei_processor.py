@@ -37,7 +37,7 @@ class HuaweiProcessor(Processor, ABC):
         reader.output_format_data()
         return reader
 
-    def before_parse_raw_data(self, dataWatcher: DataWatcher) -> str:
+    def before_parse_raw_data(self, dataWatcher: DataWatcher) -> []:
         """
             返回所有的原始文件的路径
         :param dataWatcher:
@@ -63,34 +63,36 @@ class HuaweiProcessor(Processor, ABC):
         for txt in raws:
             shutil.copy2(str(txt), raw_data_dir)
             raw_log_paths.append(os.path.join(raw_data_dir, txt.name))
-        return raw_data_dir
+        raw_logs = huaweiutils.find_file(raw_data_dir, '.txt')
+        return raw_logs
 
-    def evaluate(self, watcher: DataWatcher):
-        raw_files = os.listdir(
-            os.path.join(watcher.work_dir, watcher.manufacturer, watcher.date, watcher.system, 'raw_data'))
+    def evaluate(self, watcher: DataWatcher, file, cell_config_df, freq_config_df):
+        # raw_files = os.listdir(
+        #     os.path.join(watcher.work_dir, watcher.manufacturer, watcher.date, watcher.system, 'raw_data'))
         used_command = []
         cell_class_dict = {}
         freq_class_dict = {}
         # 对于华为数据,每个原始数据都是一个网管数据，包含全套参数
-        for index, f in enumerate(raw_files):
-            base_cols = watcher.get_base_cols()
-            f_name = os.path.split(f)[1].split('.')[0]
-            logging.info('==============开始处理文件:' + f_name + '==============')
-            raw_file_dir = os.path.join(watcher.work_dir, watcher.manufacturer, watcher.date,
-                                        watcher.system, f_name)
-            if len(used_command) == 0:
-                raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
-                for f in raw_fs:
-                    try:
-                        df = pd.read_csv(f, nrows=10, encoding='gb2312')
-                    except Exception as e:
-                        df = pd.read_csv(f, nrows=10, encoding='utf8')
-                    if not df.empty:
-                        command = os.path.split(f)[1].split('.')[0]
-                        used_command.append(command)
-            if not watcher.is_ready_for_check():
-                raise Exception("请检查输入数据是否齐全")
-            evaluate = Evaluation(raw_file_dir, watcher, used_commands=used_command)
-            copy_base_cols = copy.deepcopy(base_cols)
-            cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
-        return cell_class_dict, freq_class_dict
+        # for index, f in enumerate(raw_files):
+        base_cols = watcher.get_base_cols()
+        f_name = os.path.split(file)[1].split('.')[0]
+        logging.info('==============开始处理文件:' + f_name + '==============')
+        raw_file_dir = os.path.join(watcher.work_dir, watcher.manufacturer, watcher.date,
+                                    watcher.system, f_name)
+        if len(used_command) == 0:
+            raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
+            for f in raw_fs:
+                try:
+                    df = pd.read_csv(f, nrows=10, encoding='gb2312')
+                except Exception as e:
+                    df = pd.read_csv(f, nrows=10, encoding='utf8')
+                if not df.empty:
+                    command = os.path.split(f)[1].split('.')[0]
+                    used_command.append(command)
+        if not watcher.is_ready_for_check():
+            raise Exception("请检查输入数据是否齐全")
+        evaluate = Evaluation(raw_file_dir, watcher, used_commands=used_command,
+                              cell_config_df=cell_config_df, freq_config_df=freq_config_df)
+        copy_base_cols = copy.deepcopy(base_cols)
+        return evaluate.generate_report('cell', copy_base_cols)
+        # return cell_class_dict, freq_class_dict

@@ -143,6 +143,7 @@ def unzip_all_files(path, dest_path=None, zipped_file=[]):
     :param zipped_file:
     :return:
     """
+    logging.info('==============开始解压路径' + str(path) + '下文件==============')
     if path == '' or path is None:
         return
     os.chmod(path, 7)
@@ -207,6 +208,21 @@ def is_lists_of_same_length(dict_obj):
 
 def find_file(directory, file_extension):
     files = []
+    if isinstance(directory, list):
+        for d in directory:
+            res = _find_file(d, file_extension)
+            files.extend(res)
+        return files
+    elif isinstance(directory, str) or isinstance(directory, pathlib.Path):
+        return _find_file(directory, file_extension)
+    else:
+        raise Exception(directory + '数据类型错误，无法遍历下面的文件')
+
+
+def _find_file(directory, file_extension):
+    files = []
+    if os.path.isfile(directory):
+        return []
     for item in pathlib.Path(directory).rglob('*'):
         if str(item).endswith(file_extension):
             files.append(item)
@@ -249,8 +265,7 @@ def only_has_digtal_diff(str1, str2):
 def add_4g_cgi(cell_df, enode_df):
     cell_df = cell_df[cell_df['NB-IoT小区指示'] != '是']
     cell_df = pd.merge(cell_df, enode_df[['网元', 'eNodeB标识']], on='网元')
-    cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
-        huawei_configuration.G4_CELL_IDENTITY].apply(str)
+    cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df['小区标识'].apply(str)
     return cell_df
 
 
@@ -427,7 +442,7 @@ def generate_4g_frequency_band_dict(df):
     # df.dropna(axis=0, inplace=True, how='any')
     band_list = []
     g4_freq_band_dict = {}
-    for band, offset, SSB in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
+    for band, offset in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
         band = str(band)
         if pd.isna(band):
             continue
@@ -437,11 +452,10 @@ def generate_4g_frequency_band_dict(df):
             # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
             if str(offset).find('FDD') < 0:
                 band = remove_digit(band, [])
+            if str(offset).find('-') >= 0:
+                band = band.replace('-', '')
         band_list.append(band)
-        value_set = g4_freq_band_dict.get(band, set())
-        value_set.add(str(SSB))
-        g4_freq_band_dict[band] = value_set
-    return zte_configuration.band_dict, band_list
+    return zte_configuration.g4_band_dict, band_list
 
 
 def read_csv(file_name, usecols=None, dtype=None, manufacturer=None) -> DataFrame:
@@ -449,7 +463,7 @@ def read_csv(file_name, usecols=None, dtype=None, manufacturer=None) -> DataFram
         res_df = pd.read_csv(file_name, usecols=usecols, dtype=dtype) if dtype is not None else pd.read_csv(file_name,
                                                                                                             usecols=usecols)
     except Exception as e:
-        logging.info(e)
+        logging.info('读取文件' + file_name + '报错,读取的列名:' + str(usecols) + '报错信息:' + str(e))
         logging.info("改用gbk编码方式重新去取csv文件")
         res_df = pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') \
             if dtype is not None else pd.read_csv(file_name, usecols=usecols, encoding='gbk')
@@ -483,11 +497,19 @@ def merge_dfs(lst, on, cell_identity):
         init_df = init_df.merge(lst[i], how='left', on=copy_on)
     return init_df
 
+def is_float(str):
+    try:
+        float(str)
+        return True
+    except ValueError:
+        return False
 
 def single_value_judge(x, standard):
     try:
         for c in replace_char:
             x = str(x).replace(c, "")
+        if is_float(standard):
+            standard = str(int(float(standard)))
         return str(x) == standard
     except Exception as e:
         logging.error(e)

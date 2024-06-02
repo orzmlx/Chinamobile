@@ -1,17 +1,10 @@
 # -*- coding:utf-8 -*-
 
-import copy
-import itertools
-
-import numpy as np
-import logging
-
 from pandas import DataFrame
 
-from configuration import zte_configuration, ericsson_configuration, common_configuration
-from reader.huawei_raw_datareader import *
 from model.data_watcher import DataWatcher
-
+from reader.huawei_raw_datareader import *
+import math
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
 
@@ -48,20 +41,20 @@ class Evaluation:
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.band_list = []
         self.g4_freq_band_dict = {}
-        if self.system == '4G':
-            g4_common_df = watcher.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-            self.g4_freq_band_dict, self.band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
+        # if self.system == '4G':
+        g4_common_df = watcher.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
+        self.g4_freq_band_dict, self.band_list = huaweiutils.generate_4g_frequency_band_dict()
         # prepare_res = watcher.g4_prepare() if self.system == '4G' else {}, []
         # self.g4_freq_band_dict = prepare_res[0]
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
-        self.all_co_location = [np.nan]  # 所有的共址.类型
-        self.base_info_df = watcher.get_base_info(self.band_list, f_name)
+        self.all_co_location = [math.nan]  # 所有的共址.类型
+        self.base_info_df = watcher.get_base_info( f_name)
         if self.manufacturer == '华为':
             self._inference_city(self.base_info_df)
         # self.base_info_df = self.get_base_info(band_list)
-        self.end_band = 'FDD-900|FDD-1800|F|A|D|E|4.9G|2.6G|700M'
+        self.end_band = 'FDD900|FDD1800|F|A|D|E|4.9G|2.6G|700M'
         # self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
         self.all_area_classes = huaweiutils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
         self.all_cover_classes = huaweiutils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
@@ -225,27 +218,6 @@ class Evaluation:
          在添加Judgement前先将数据中的4G频点变成FDD1800/FDD900/A/E/F对应
          并修改列名使其与配置中的列名相同
         """
-
-        # cols = g.columns.tolist()
-        # if '频点标识' in cols:
-        #     frequencies = g['频点标识'].unique().tolist()
-        #     if len(frequencies) > 0:
-        #         frequency_param = frequencies[0]
-        #         # 单独处理,将频带等于n1的去掉
-        #         if frequency_param == '频带':
-        #             df = df[df[frequency_param] != 'n1']
-        #             df[frequency_param] = df[frequency_param].map(
-        #                 {"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
-        #         all_freq = df[frequency_param].unique().tolist()
-        #         if self.is_4g_freq(all_freq):
-        #             # df[frequency_param] = 'LTE'
-        #             df['频点'] = df[frequency_param]
-        #             df[frequency_param] = df[frequency_param].apply(huawei_configuration.mapHuawei4GFrqPtToBand,
-        #                                                             args=(self.g4_freq_band_dict,))
-        #             # 去掉对端非移动频点的行
-        #             # df = df[df[frequency_param] != '其他频段']
-        #         df.rename(columns={frequency_param: '对端频带'}, inplace=True)
-        # self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
         df = self.mapToFreqPtToBand(g, df, command)
         on = [self.key_col]
         if self.cell_identity in df.columns.tolist():
@@ -319,7 +291,7 @@ class Evaluation:
         if premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
             df[param] = df[param].apply(int) * float(cal_param)
-            df.loc[df[param] > 9000, param] = np.nan
+            df.loc[df[param] > 9000, param] = math.nan
 
         # 如果前置参数在小区级别参数中,这种一定是频点级别merge小区级别
         # elif not self.cell_df.empty and premise_param in self.cell_df.columns.tolist():
@@ -663,7 +635,7 @@ class Evaluation:
                 new_row = copy.deepcopy(row)
                 for idx, e in enumerate(list(r)):
                     if e == 'nan':
-                        new_row[cols[idx]] = np.nan
+                        new_row[cols[idx]] = math.nan
                     else:
                         new_row[cols[idx]] = e
                 add_rows.append(new_row)
@@ -735,7 +707,7 @@ class Evaluation:
             # cell_df = cell_df[~cell_df['覆盖场景'].isin(self.cover_filter_list)]
             if len(na_index) > 0:
                 select_col_index = cell_df.columns.get_loc('区域类别')
-                cell_df.iloc[na_index, select_col_index] = np.nan
+                cell_df.iloc[na_index, select_col_index] = math.nan
             self.cell_df = cell_df
             out = os.path.join(self.file_path, 'check_result', 'cell')
             if not os.path.exists(out):
@@ -762,7 +734,7 @@ class Evaluation:
                     sorted_cols.insert(index + 1, '频点')
                 d = d[sorted_cols]
                 # 将区域类型为空的之前填补成农村区域的站点还原
-                d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
+                d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = math.nan
                 out = os.path.join(self.file_path, 'check_result', 'freq')
                 if not os.path.exists(out):
                     os.makedirs(out)
@@ -781,7 +753,7 @@ class Evaluation:
         return first_class_dict, freq_class_dict
 
     def order_content_cols(self, config, content_cols):
-        clzz = np.array(config['类别'].unique().tolist())
+        clzz = config['类别'].unique().tolist()
         clzz = [x for x in clzz if not x == 'nan']
         order_content = []
         first_class_dict = {}
@@ -818,10 +790,6 @@ class Evaluation:
 
 import copy
 import itertools
-
-import numpy as np
-import logging
-
 from pandas import DataFrame
 
 from configuration import zte_configuration, ericsson_configuration, common_configuration
@@ -846,12 +814,14 @@ class Evaluation:
             一个是文件名对应的列名字典
             一个是文件名中的key的字典
         """
+
         self.cities = cities
         self.countries = countries
         self.na_area_cgi = []
         self.used_commands = used_commands
         self.system = watcher.system
         self.manufacturer = watcher.manufacturer
+        self.key_col = self.get_key_col()
         self.site_info = watcher.get_site_info()[['CGI', '共址类型']]
         self.site_info.drop_duplicates(subset=['CGI'], keep='last', inplace=True)
         self.cell_identity = self.get_cell_identity()
@@ -864,20 +834,21 @@ class Evaluation:
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.band_list = []
         self.g4_freq_band_dict = {}
-        if self.system == '4G':
-            g4_common_df = watcher.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-            self.g4_freq_band_dict, self.band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
+        # if self.system == '4G':
+        # g4_common_df = watcher.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
+        # self.g4_freq_band_dict, self.band_list = huaweiutils.generate_4g_frequency_band_dict()
+        self.g4_freq_band_dict = zte_configuration.g4_band_dict
         # prepare_res = watcher.g4_prepare() if self.system == '4G' else {}, []
         # self.g4_freq_band_dict = prepare_res[0]
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
-        self.all_co_location = [np.nan]  # 所有的共址.类型
-        self.base_info_df = watcher.get_base_info(self.band_list, f_name)
+        self.all_co_location = [math.nan]  # 所有的共址.类型
+        self.base_info_df = watcher.get_base_info( f_name)
         if self.manufacturer == '华为':
             self._inference_city(self.base_info_df)
         # self.base_info_df = self.get_base_info(band_list)
-        self.end_band = 'FDD-900|FDD-1800|F|A|D|E|4.9G|2.6G|700M'
+        self.end_band = 'FDD900|FDD1800|F|A|D|E|4.9G|2.6G|700M'
         # self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
         self.all_area_classes = huaweiutils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
         self.all_cover_classes = huaweiutils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
@@ -910,7 +881,6 @@ class Evaluation:
         self.pre_params = []
         self.cover_filter_list = ['高铁']
         self.pre_param_dict = {}
-        self.key_col = self.get_key_col()
 
     def _inference_city(self, df):
         na_city_df = df[df['地市'].isna()]
@@ -919,12 +889,11 @@ class Evaluation:
         for index, row in na_city_df.iterrows():
             net_element = row[self.key_col]
             find = False
-            if self.manufacturer == '华为':
-                for key in city_file_keys:
-                    if os.path.basename(self.file_path).find(key) >= 0:
-                        df.at[index, '地市'] = huawei_configuration.FILE_CITY_DICT[key]
-                        find = True
-                        break
+            for key in city_file_keys:
+                if os.path.basename(self.file_path).find(key) >= 0:
+                    df.at[index, '地市'] = huawei_configuration.FILE_CITY_DICT[key]
+                    find = True
+                    break
             if not find:
                 for c in self.cities:
                     if net_element.find(c) >= 0:
@@ -982,7 +951,7 @@ class Evaluation:
             row['原始参数名称'] + "_" + row['参数名称'] + "_" + row['二级表头']可以唯一确定一个参数
         """
         qci = str(row['QCI'])
-        unique_name = row['原始参数名称'] + "|" + row['参数名称'] + "|" + row['二级表头']
+        unique_name = str(row['原始参数名称']) + "|" + str(row['参数名称']) + "|" + str(row['二级表头'])
         if qci != 'nan':
             original_name = row['原始参数名称'] + "|" + qci
 
@@ -1013,6 +982,7 @@ class Evaluation:
             return find_params
         first_row = df.iloc[0]
         for param in switch_params:
+            param = param.split('|')[0] if param.find('|') >= 0 else param
             find = False
             for c in cols:
                 cell = first_row[c]
@@ -1104,11 +1074,12 @@ class Evaluation:
         premise_param = str(param_rule['伴随参数'].iloc[0])
         premise_command = str(param_rule['伴随参数命令'].iloc[0])
         cal_param = str(param_rule['计算方法'].iloc[0])
-        if 'nan' == premise_param and 'nan' == premise_command:
+        if 'nan' == premise_param and 'nan' == premise_command and 'nan' == cal_param:
             return
         # 如果伴随参数为空，但是计算方式里面需要伴随参数，那么设置有问题
         if premise_param == 'nan' and cal_param.find(',') >= 0:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
+        #这里计算需要其他参数加入计算的参数
         if premise_command in self.pre_param_dict.keys():
             premise_command_df = self.pre_param_dict[premise_command]
             if premise_param in premise_command_df.columns.tolist():
@@ -1120,22 +1091,22 @@ class Evaluation:
                 cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=on)
             else:
                 raise Exception("缓存中找不到计算参数:" + premise_command)
-            cal_df[param0].fillna(value=0, inplace=True)
-            cal_df[param0] = cal_df[param0].apply(int)
+            cal_df[param].fillna(value=0, inplace=True)
+            cal_df[param] = cal_df[param].apply(int)
             cal_df[premise_param].fillna(value=0, inplace=True)
             cal_df[premise_param] = cal_df[premise_param].apply(int)
             if cal_param.find(',') >= 0:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
                 multuple1 = int(splits[1])
-                cal_df[param0] = cal_df[param0] * multiple0 + cal_df[premise_param] * multuple1
+                cal_df[param] = cal_df[param] * multiple0 + cal_df[premise_param] * multuple1
             else:
-                cal_df[param0] = cal_df[param0] * int(cal_param)
-            df[param] = cal_df[param0]
+                cal_df[param] = cal_df[param] * int(cal_param)
+            df[param] = cal_df[param]
         if premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
             df[param] = df[param].apply(int) * float(cal_param)
-            df.loc[df[param] > 9000, param] = np.nan
+            df.loc[df[param] > 9000, param] = math.nan
 
         # 如果前置参数在小区级别参数中,这种一定是频点级别merge小区级别
         # elif not self.cell_df.empty and premise_param in self.cell_df.columns.tolist():
@@ -1200,7 +1171,7 @@ class Evaluation:
     def evaluate_cell_params(self, config_df):
         # all_param = list(config_df[['原始参数名称', '主命令', 'QCI']].apply(tuple).values)
         # all_param = list(set(tuple(t) for t in all_param))
-        checked_config = self.check_params(config_df, False)
+        checked_config = self.check_params(config_df)
         command_identities = config_df['参数组标识'].tolist()
         command_identities = list(filter(lambda x: not 'nan' == x, command_identities))
         command_grouped = checked_config.groupby(['主命令', 'QCI'])
@@ -1254,7 +1225,7 @@ class Evaluation:
             if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands and self.manufacturer == '华为':
                 # or qci == '1' or qci == '5':
                 continue
-            self.processing_param_value(merge_qci_result, origin_param, command)
+            self.processing_param_value(merge_qci_result, p, command)
             merge_qci_result = self.judge_compliance(merge_qci_result, p, standard)
         return merge_qci_result
 
@@ -1274,23 +1245,20 @@ class Evaluation:
             cols = r[0].columns.tolist()
             qci = r[1]
             if not 'nan' == qci and self.manufacturer == '华为':
-                # 同样下面的逻辑只使用与华为
-                if qci == 1 or qci == 5:
-                    suffix = '语音'
-                elif qci == 9:
-                    suffix = '数据'
-                else:
-                    raise Exception("华为数据未知的QCI值:" + qci)
-                # 为了防止不同QCI的相同参数产生错误
-                for c in cols:
-                    if c != self.key_col and c != self.cell_identity and c.find('参数组') < 0:
-                        r[0].rename(columns={c: c + "_" + suffix + str(qci)}, inplace=True)
+                # read_res_qci = r[0][r[0]['QCI算法'] == qci]
+                read_res_qci = r[0]
+                qci = str(int(float(qci)))
+                # read_res_qci['服务质量等级'] = qci
+                qci_df['服务质量等级'] = qci_df['服务质量等级'].apply(str)
                 res = qci_df[qci_df['服务质量等级'] == qci]
+                res['服务质量等级'] = qci
+                if res.empty:
+                    raise Exception('华为QCI合并过程中,QCI=' + qci + '过滤结果为空')
                 on = list(set(cols) & set(res.columns.tolist()))
                 left_on = copy.deepcopy(on)
                 if self.cell_identity not in on:
                     left_on.append(self.cell_identity)
-                qci_res = res[left_on].merge(r[0], how='left', on=on)
+                qci_res = res[left_on].merge(read_res_qci, how='left', on=on)
                 qci_res_cols = qci_res.columns.tolist()
                 last_cols = list(set(qci_res_cols) - set(qci_params))
                 qci_res = qci_res[last_cols]
@@ -1321,7 +1289,7 @@ class Evaluation:
                 # non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
                 # 华为这里因为base_info_df这里已经过滤了一遍CGI,所以base_info_df在左表，但是中兴没有过滤
                 non_qci_res = pd.merge(non_qci_res, r[0], how='left', on=on)
-                cols.remove('CGI')
+                cols.remove('CGI') if 'CGI' in cols else cols
                 non_qci_res.dropna(axis=0, subset=cols, how='all', inplace=True)
         merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=[self.key_col], cell_identity=self.cell_identity)
         res = non_qci_res.merge(merge_qci_df, how='left',
@@ -1369,7 +1337,7 @@ class Evaluation:
             switch_cols.extend(base_cols)
             df = pd.read_csv(file_name, usecols=switch_cols, dtype=str)
             switch_df = self.read_switch_data(df, base_df[base_cols], switch_dict)
-            switch_df.drop_duplicates(how='all', inplace=True, keep='first')
+            switch_df.drop_duplicates(inplace=True, keep='first')
             # if self.manufacturer == '爱立信':
             # self.rename_eri_param(switch_df, switch_cols, file_name)
         # 读取非开关参数
@@ -1482,7 +1450,7 @@ class Evaluation:
                 new_row = copy.deepcopy(row)
                 for idx, e in enumerate(list(r)):
                     if e == 'nan':
-                        new_row[cols[idx]] = np.nan
+                        new_row[cols[idx]] = math.nan
                     else:
                         new_row[cols[idx]] = e
                 add_rows.append(new_row)
@@ -1554,7 +1522,7 @@ class Evaluation:
             # cell_df = cell_df[~cell_df['覆盖场景'].isin(self.cover_filter_list)]
             if len(na_index) > 0:
                 select_col_index = cell_df.columns.get_loc('区域类别')
-                cell_df.iloc[na_index, select_col_index] = np.nan
+                cell_df.iloc[na_index, select_col_index] = math.nan
             self.cell_df = cell_df
             out = os.path.join(self.file_path, 'check_result', 'cell')
             if not os.path.exists(out):
@@ -1577,30 +1545,41 @@ class Evaluation:
                 d = df[0]
                 sorted_cols, freq_class_dict = self.sort_result(d.columns.tolist(), self.freq_config_df, base_cols)
                 if '频点' in d.columns.tolist():
+                    d.rename(columns={'频点': '对端频点'}, inplace=True)
                     index = sorted_cols.index('对端频带')
-                    sorted_cols.insert(index + 1, '频点')
+                    sorted_cols.insert(index + 1, '对端频点')
                 d = d[sorted_cols]
+
                 # 将区域类型为空的之前填补成农村区域的站点还原
-                d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = np.nan
+                d[d['CGI'].isin(self.na_area_cgi)]['CGI'] = math.nan
                 out = os.path.join(self.file_path, 'check_result', 'freq')
                 if not os.path.exists(out):
                     os.makedirs(out)
                 d.dropna(subset=['地市'], how='any', inplace=True)
-                d.drop_duplicates(keep="first", inplace=True)
+                # d.drop_duplicates(keep="first", inplace=True)
+                self.drop_duplicates_by_type(d, check_type)
                 d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
                          index=False, encoding='utf_8_sig')
         return freq_class_dict
+
+    def drop_duplicates_by_type(self, df, check_type):
+        if check_type == 'freq':
+            df.drop_duplicates(subset=['CGI', '频段', '对端频带'], keep="first", inplace=True)
+        else:
+            df.drop_duplicates(subset=['CGI', '频段'], keep="first", inplace=True)
 
     def generate_report(self, check_type, base_cols):
         """
             输入的推荐值和需要核查的参数
         """
         first_class_dict = self.generate_cell_report(check_type, base_cols)
+        logging.info('==============小区级别参数检查完成' + '==============')
         freq_class_dict = self.generate_freq_report(check_type, base_cols)
+        logging.info('==============频点级别参数检查完成' + '==============')
         return first_class_dict, freq_class_dict
 
     def order_content_cols(self, config, content_cols):
-        clzz = np.array(config['类别'].unique().tolist())
+        clzz = config['类别'].unique().tolist()
         clzz = [x for x in clzz if not x == 'nan']
         order_content = []
         first_class_dict = {}

@@ -5,6 +5,7 @@ import pandas as pd
 from configuration import huawei_configuration, ericsson_configuration, zte_configuration
 from utils import huaweiutils
 from model import validator
+import math
 
 
 class DataWatcher:
@@ -71,7 +72,9 @@ class DataWatcher:
 
     def get_4g_common_df(self):
         # return self.data_dict['load_4g_common_btn']
-        return pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
+        df = pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
+        df['工作频段'] = df[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band,axis=1)
+        return df
 
     def get_5g_common_df(self):
         # return self.data_dict['load_5g_common_btn']
@@ -142,47 +145,52 @@ class DataWatcher:
     def g4_prepare(self):
         # g4_common_table = self.get_4g_common_df()
         g4_common_df = self.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-        g4_freq_band_dict, g4_band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
+        g4_freq_band_dict, g4_band_list = huaweiutils.generate_4g_frequency_band_dict()
         return g4_freq_band_dict, g4_band_list
 
-    def get_base_info(self, band_list, f_name):
+    def get_base_info(self, f_name):
         if self.manufacturer == '华为':
             if self.system == '4G':
-                self.g4_base_info_df = self.get_huawei_4g_base_info(f_name, band_list)
-                self.all_band = huaweiutils.list_to_str(band_list)
+                self.g4_base_info_df = self.get_huawei_4g_base_info(f_name)
+                # self.all_band = huaweiutils.list_to_str(band_list)
+                # self.all_band = ''
             else:
                 self.g5_base_info_df = self.get_huawei_5g_base_info(f_name)
-                self.all_band = '4.9G|2.6G|700M|nan'
+                # self.all_band = '4.9G|2.6G|700M|nan'
         elif self.manufacturer == '中兴':
             if self.system == '4G':
                 self.g4_base_info_df = self.get_zte_4g_base_info()
-                self.all_band = huaweiutils.list_to_str(band_list)
+                # self.all_band = huaweiutils.list_to_str(band_list)
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
-                self.all_band = '4.9G|2.6G|700M|nan'
+                # self.all_band = '4.9G|2.6G|700M|nan'
         elif self.manufacturer == '爱立信':
             if self.system == '5G':
                 self.g5_base_info_df = self.get_eri_5g_base_info(f_name)
-                self.all_band = '4.9G|2.6G|700M|nan'
+                # self.all_band = '4.9G|2.6G|700M|nan'
             else:
-                self.g4_base_info_df = self.get_eri_4g_base_info(band_list)
-                self.all_band = huaweiutils.list_to_str(band_list)
+                self.g4_base_info_df = self.get_eri_4g_base_info()
+                # self.all_band = huaweiutils.list_to_str(band_list)
         base_inf_df = self.g4_base_info_df if self.system == '4G' else self.g5_base_info_df
 
         return base_inf_df
 
-    def get_eri_4g_base_info(self, band_list):
+    def get_eri_4g_base_info(self):
         pass
 
     def get_zte_4g_base_info(self):
-        return self.get_zte_5g_base_info()
+        site_info = self.get_site_info()
+        common_table = self.get_4g_common()
+        base_info_df = common_table.merge(site_info, how='left', on=['CGI'])
+        base_info_df['厂家'] = self.manufacturer
+        return base_info_df
 
-    def get_huawei_4g_base_info(self, f_name, band_list):
+    def get_huawei_4g_base_info(self, f_name):
         """
             获取基本信息列
         """
         site_info = self.get_site_info()
-        common_table = self.get_4g_common(band_list)
+        common_table = self.get_4g_common()
         checked_raw_path = os.path.join(self.get_checked_raw_path(), f_name, 'raw_result')
         cell_df = pd.read_csv(os.path.join(checked_raw_path, 'LST CELL.csv'))
         enode_df = pd.read_csv(os.path.join(checked_raw_path, 'LST ENODEBFUNCTION.csv'))
@@ -242,10 +250,27 @@ class DataWatcher:
         base_info_df['厂家'] = self.manufacturer
         return base_info_df
 
-    def get_4g_common(self, band_list):
+    @staticmethod
+    def get_acc_band(row):
+        band = row['工作频段']
+        offset = row['频率偏置']
+        band = str(band)
+        if pd.isna(band):
+            return math.nan
+        band = band.replace('频段', '')
+        if band.find('FDD') >= 0:
+            band = str(offset)
+            # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
+            if str(offset).find('FDD') < 0:
+                band = huaweiutils.remove_digit(band, [])
+            if str(offset).find('-') >= 0:
+                band = band.replace('-', '')
+        return band
+
+    def get_4g_common(self):
 
         common_table = self.get_4g_common_df()[['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别']]
-        common_table['工作频段'] = band_list
+        # common_table['工作频段'] = common_table[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band)
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
                                      '小区区域类别': '区域类别', '工作频段': '频段'},
                             inplace=True)
@@ -283,3 +308,26 @@ class DataWatcher:
             return ericsson_configuration.g5_base_cols if self.system == '5G' else ericsson_configuration.g4_base_cols
         elif self.manufacturer == '中兴':
             return zte_configuration.g5_base_cols if self.system == '5G' else zte_configuration.g4_base_cols
+
+    def get_raw_result_files(self):
+
+        if (self.manufacturer == '中兴' and self.system == '4G') or self.manufacturer == '爱立信':
+            return [os.path.join(self.work_dir, self.manufacturer, self.date, self.system, 'kget')]
+        elif self.manufacturer == '中兴' and self.system == '5G':
+            raw_dirs = []
+            raw_files = os.listdir(os.path.join(self.work_dir, self.manufacturer, self.date, self.system))
+            for f in raw_files:
+                raw_dir = os.path.join(self.work_dir, self.manufacturer, self.date, self.system, os.path.basename(f))
+                if not os.path.isdir(raw_dir):
+                    continue
+                raw_dirs.append(raw_dir)
+            return raw_dirs
+        else:
+            raw_dirs = []
+            raw_files = os.listdir(
+                os.path.join(self.work_dir, self.manufacturer, self.date, self.system, 'raw_data'))
+            for f in raw_files:
+                raw_dir = os.path.join(self.work_dir, self.manufacturer, self.date, self.system, os.path.basename(f))
+                raw_dir = raw_dir.replace('.txt', '')
+                raw_dirs.append(raw_dir)
+            return raw_dirs

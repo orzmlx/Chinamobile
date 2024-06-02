@@ -54,15 +54,15 @@ class ParseRawThread(QThread):
                 raise Exception("没有导入华为命令")
             # 解压所有的文件,然后提取所有的txt文件，复制到工作文件夹
             processor = ProcessUtils.get_processor(watcher=self.dataWatcher)
-            raw_dir = processor.before_parse_raw_data(self.dataWatcher)
-            #向前端更新总的文件数量
-            raw_logs = huaweiutils.find_file(raw_dir, '.txt')
+            raw_logs = processor.before_parse_raw_data(self.dataWatcher)
+            # 向前端更新总的文件数量
+
             self.total_file_number.emit(len(raw_logs))
             for index, log in enumerate(raw_logs):
-
                 processor.parse_raw_data(log, dataWatcher=self.dataWatcher)
                 self.valueChanged.emit(index + 1)
             self.finished.emit(message(2, "成功"))
+            logging.info('==============解析原始Log文件完成' + '==============')
         except Exception as e:
             logging.error(e)
             self.finished.emit(message(-1, str(e)))

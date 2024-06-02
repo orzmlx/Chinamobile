@@ -1,10 +1,10 @@
-import pandas as pd
-import openpyxl
-import numpy as np
-from openpyxl.styles import Font, Alignment, PatternFill
-from utils import huaweiutils
-import os
 import logging
+import os
+import openpyxl
+import pandas as pd
+from openpyxl.styles import Font, Alignment, PatternFill
+
+from utils import huaweiutils
 
 
 class reporter:
@@ -23,7 +23,7 @@ class reporter:
         # self.writer = pd.ExcelWriter(outpath, engine='xlsxwriter')  # 创建pandas.ExcelWriter实例，赋值给writer
         self.params = self.point_standard_df['参数名称'].unique().tolist()
         self.params.extend(self.multi_standard_df['参数名称'].unique().tolist())
-        self.params = list(np.array([x for x in self.params if not str(x) == 'nan']))
+        self.params = [x for x in self.params if not str(x) == 'nan']
         self.g5_statistic_dict = {}
         self.g4_statistic_dict = {}
         pt_params = self.point_standard_df[["类别", "参数名称", "原始参数名称"]]
@@ -35,7 +35,7 @@ class reporter:
 
     def create_result_header(self, sheet, start_col, row):
         # 先生成层级
-        clzz = np.array(self.params_df['类别'].unique().tolist())
+        clzz = self.params_df['类别'].unique().tolist()
         clzz = [x for x in clzz if not x == 'nan']
         # start_col = 4
         class_colors = ['48D1CC', '00FA9A', 'FFA500', '1E90FF', '800080']

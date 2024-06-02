@@ -14,9 +14,9 @@ class Processor:
         pass
 
     @abstractmethod
-    def parse_raw_data(self, dataWatcher: DataWatcher):
+    def parse_raw_data(self, item, dataWatcher: DataWatcher):
         pass
 
     @abstractmethod
-    def evaluate(self, dataWatcher: DataWatcher):
+    def evaluate(self, dataWatcher: DataWatcher, file, cell_config_df, freq_config_df):
         pass
