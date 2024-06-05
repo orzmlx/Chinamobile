@@ -1,23 +1,16 @@
 # -*- coding:utf-8 -*-
 import itertools
-import os
-import shutil
+import logging
 import traceback
 from datetime import datetime
+
 from PyQt5.QtCore import QThread, pyqtSignal
 
-# from PySide6.QtCore import QThread, Signal
-from processor.huawei_processor import HuaweiProcessor
-from processor.process_util import ProcessUtils
-from processor.processor import Processor
 from configuration import huawei_configuration
-from exception.read_raw_exception import ReadRawException
 from model.data_watcher import DataWatcher
 from model.signal_message import message
-from reader.ericsson_rawdata_reader import EricssonDataReader
-from reader.huawei_raw_datareader import HuaweiRawDataFile
+from processor.process_util import ProcessUtils
 from utils import huaweiutils
-import logging
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
@@ -56,7 +49,6 @@ class ParseRawThread(QThread):
             processor = ProcessUtils.get_processor(watcher=self.dataWatcher)
             raw_logs = processor.before_parse_raw_data(self.dataWatcher)
             # 向前端更新总的文件数量
-
             self.total_file_number.emit(len(raw_logs))
             for index, log in enumerate(raw_logs):
                 processor.parse_raw_data(log, dataWatcher=self.dataWatcher)
@@ -64,6 +56,7 @@ class ParseRawThread(QThread):
             self.finished.emit(message(2, "成功"))
             logging.info('==============解析原始Log文件完成' + '==============')
         except Exception as e:
+            traceback.print_exc()  # 打印错误栈
             logging.error(e)
             self.finished.emit(message(-1, str(e)))
 
@@ -91,10 +84,8 @@ class ParseRawThread(QThread):
                 base_value = base_dict[key]
                 # 如果不是空，那么去重合并字典
                 if base_value is not None:
-
                     base_value.extend(value)
                     base_dict[key] = list(set(base_value))
-
                 # 如果是空,那么加入到 base_dict
                 else:
                     base_dict[key] = value

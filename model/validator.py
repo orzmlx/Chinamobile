@@ -44,9 +44,9 @@ def is_raw_data_valid(path, manufacturer):
         return False
     if os.path.isdir(path):
         files = []
-        if manufacturer == 'huawei':
+        if manufacturer == '华为':
             files = huaweiutils.find_file(path, '.txt')
-        elif manufacturer == 'zte':
+        elif manufacturer == '中兴':
             files = huaweiutils.find_file(path, '.xlsx')
         if len(files) == 0:
             return False

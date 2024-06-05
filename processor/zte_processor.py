@@ -1,21 +1,20 @@
 # -*- coding:utf-8 -*-
-import pathlib
+import copy
+import logging
+import os
 import shutil
 from abc import ABC
 from pathlib import Path
-import logging
+
 import pandas as pd
-import copy
+from python_calamine.pandas import pandas_monkeypatch, get_sheet_names
 
 from configuration import zte_configuration
+from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation
 from processor.processor import Processor
-from model.data_watcher import DataWatcher
 from reader.ericsson_rawdata_reader import EricssonDataReader
 from utils import huaweiutils
-import os
-import openpyxl
-from python_calamine.pandas import pandas_monkeypatch, get_sheet_data, get_sheet_names
 
 
 class ZteProcessor(Processor, ABC):
@@ -34,6 +33,8 @@ class ZteProcessor(Processor, ABC):
                 for csv in all_raw_datas:
                     shutil.copy2(csv, dest_dir)
                     # csv = os.path.join(dest_dir, os.path.basename(csv))
+                    dest_file = os.path.join(dest_dir, os.path.basename(csv))
+                    zte_configuration.zte_extra_manage(dest_file)
                     res.append(dest_dir)
         return list(set(res))
 
@@ -60,7 +61,7 @@ class ZteProcessor(Processor, ABC):
             evaluate = Evaluation(file, watcher, used_commands=[], cell_config_df=cell_config_df,
                                   freq_config_df=freq_config_df)
             copy_base_cols = copy.deepcopy(base_cols)
-            cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
+            cell_class_dict, freq_class_dict = evaluate.generate_report('cell', copy_base_cols)
         except Exception as e:
             logging.error(e)
             # if str(e).find('No such file or directory') < 0:
@@ -81,7 +82,7 @@ class ZteProcessor(Processor, ABC):
         # items = huaweiutils.find_file(output_path, 'raw_result')
         # for item in items:
         csv_files = huaweiutils.find_file(item, '.csv')
-        #这里复用爱立信的流程
+        # 这里复用爱立信的流程
         reader = EricssonDataReader(str(item), str(item), zte_config, dataWatcher)
         for csv_f in csv_files:
             # 对于不同的数据,读取方法有少许差别,中兴数据第一行不读，但是后续输出需要保留
@@ -113,9 +114,12 @@ class ZteProcessor(Processor, ABC):
             raw_df = pd.read_excel(file, sheet_name=sheet, dtype=str, engine='calamine')
             # for index, row in raw_df.iterrows():
             # 去掉空格
-            header_series = raw_df.iloc[0] + '&' + raw_df.iloc[1] + '&' + raw_df.iloc[2] + '&' + raw_df.iloc[3]
+            header_series = raw_df.iloc[0].str.strip().replace("\n", "") + '&' \
+                            + raw_df.iloc[1].str.strip().replace("\n", "") + '&' \
+                            + raw_df.iloc[2].str.strip().replace("\n", "") + '&' \
+                            + raw_df.iloc[3].str.strip().replace("\n", "")
             header_list = list(header_series.values)
-            header_list = [i.replace(' ', '') for i in header_list]
+            header_list = [i.replace(' ', '').replace("\n", "").replace("\r", "") for i in header_list]
             raw_df.drop([0, 1, 2, 3], inplace=True, axis=0)
             raw_df.columns = header_list
             zte_configuration.depart_params(raw_df)

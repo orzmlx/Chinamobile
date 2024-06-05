@@ -2,8 +2,9 @@
 import math
 import logging
 import re
-
+import pandas as pd
 from pandas import DataFrame
+import os
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
@@ -13,11 +14,12 @@ g5_base_cols = ['地市', 'CGI', '工作频段', '频段', '厂家', '共址类�
 g4_base_cols = ['地市', 'CGI', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
 g4_band_dict = {
     'FDD1800': {'1300', '1250', '1350', '1301', '1425', '1400', '1375', '1275', '1475', '1450', '1506', '1825', '1650',
-                '1850', '1401', '1401'},
-    'FDD900': {'3591', '3589', '3641', '3590', '3615', '3637'},
-    'F': {'38400', '38544', '38350', '38496', '38375', '38352', '38325', '38550', '38499', '38351', '38500',
-          '38525', '38402', '38494', '38521', '38475', '38396'},
-    'E': {'39292', '38950', '39148', '39123', '39150', '39300', '38952', '39294', '39273', '39496', '39295', '38953',
+                '1850', '1401', '1401', '1399'},
+    'FDD900': {'3600', '3684', '3591', '3589', '3641', '3590', '3615', '3637'},
+    'F': {'38590', '38400', '38544', '38350', '38496', '38375', '38352', '38325', '38550', '38499', '38351', '38500',
+          '38525', '38402', '38494', '38521', '38475', '38396', '38450'},
+    'E': {'39324', '39298', '39296', '39292', '38950', '39148', '39123', '39150', '39300', '38952', '39294', '39273',
+          '39496', '39295', '38953', '39392',
           '39346', '39250', '39450', '38752', '39151', '38750', '39448', '39325', '39544', '39050'},
     'D': {'40936', '41332', '41134', '38098', '37900', '41340', '40940', '41336', '41140', '41138', '40938', '40342',
           '40540', '38100', '40140', '39940', '37902', '40340', '40937', '41334', '40738', '40738', '40684', '40711',
@@ -163,3 +165,38 @@ def zte_4g_composition():
             'Scell&EUtranCellFDD/EUtranCellTDD&ENBFunctionFDD/ENBFunctionTDD&LTEFDDID/TD-LTEID',
             'Scell&EUtranCellFDD/EUtranCellTDD&cellLocalId&小区标识')
     }
+
+
+def zte_extra_manage(path):
+    '''
+        返回处理过的参数，防止后续重复处理
+    '''
+    base_name = os.path.basename(path)
+    if base_name.find('NRtoNR_IntraFCoverMobility') >= 0:
+        logging.info('开始对' + path + '文件中的参数进行额外数据修正')
+        df = pd.read_csv(path, low_memory=False)
+        first = df.iloc[0]
+        df = df.iloc[1:]
+        df.apply(coverMobilityCtrl_interFRatA2Strategy, axis=1)
+        df.loc[0] = first
+        df = pd.concat([first, df], axis=1).reset_index(drop=True)
+        df.to_csv(path, index=False)
+        # extra_param = ['InterFHoA1A2_rsrpThresholdA1', 'InterFHoA1A2_rsrpThresholdA2', 'InterRatHoA1A2_rsrpThresholdA1',
+    #                'InterRatHoA1A2_rsrpThresholdA2']
+    # if param in extra_param:
+
+
+def if_judge(if_param, main_param, else_param, row):
+    if str(row[if_param]) == '0':
+        row[main_param] = row[else_param]
+
+
+def coverMobilityCtrl_interFRatA2Strategy(row):
+    if_judge('CoverMobilityCtrl_interFRatA2Strategy', 'InterFHoA1A2_rsrpThresholdA1', 'InterFRATHoA1A2_rsrpThresholdA1',
+             row)
+    if_judge('CoverMobilityCtrl_interFRatA2Strategy', 'InterFHoA1A2_rsrpThresholdA2', 'InterFRATHoA1A2_rsrpThresholdA2',
+             row)
+    if_judge('CoverMobilityCtrl_interFRatA2Strategy', 'InterRatHoA1A2_rsrpThresholdA1',
+             'InterFRATHoA1A2_rsrpThresholdA1', row)
+    if_judge('CoverMobilityCtrl_interFRatA2Strategy', 'InterRatHoA1A2_rsrpThresholdA2',
+             'InterFRATHoA1A2_rsrpThresholdA2', row)

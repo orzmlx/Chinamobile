@@ -1,10 +1,11 @@
 # -*- coding:utf-8 -*-
 
 from pandas import DataFrame
-
+import logging
 from model.data_watcher import DataWatcher
 from reader.huawei_raw_datareader import *
 import math
+
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
 
@@ -50,7 +51,7 @@ class Evaluation:
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
         self.all_co_location = [math.nan]  # 所有的共址.类型
-        self.base_info_df = watcher.get_base_info( f_name)
+        self.base_info_df = watcher.get_base_info(f_name)
         if self.manufacturer == '华为':
             self._inference_city(self.base_info_df)
         # self.base_info_df = self.get_base_info(band_list)
@@ -236,6 +237,8 @@ class Evaluation:
         return df_new
 
     def extra_handler(self, df, param):
+        if self.manufacturer == '中兴':
+            return zte_configuration.zte_extra_handler(df, param)
         """
             专门用来处'基于负载的异频RSRP触发门限(dBm)','基于业务的异频切换RSRP门限偏置(dB)'
             这个两个参数, 这两个参数是跨表,这两张表不属于同一种类型
@@ -245,18 +248,25 @@ class Evaluation:
                           on=['网元', self.cell_identity])
             df[param] = df[param] + df['基于负载的异频RSRP触发门限(dBm)']
             df.drop('基于负载的异频RSRP触发门限(dBm)', inplace=True, axis=1)
-            return True
-        return False
+            return ['基于业务的异频切换RSRP门限偏置(dB)']
+        return []
 
     def processing_param_value(self, df, param, command):
+        all_checked_param = []
         param0 = copy.deepcopy(param)
         if param0.find('|') > 0:
             param0 = param.split('|')[0]
+        if param0 in all_checked_param:
+            logging.info(param + "已经对数值进行过处理,不在需要重复处理")
+            return
         param_rule = self.cal_rule[(self.cal_rule['原始参数名称'] == param0) & (self.cal_rule['主命令'] == command)]
         if param_rule.empty:
             return
-        if self.extra_handler(df, param0):
-            return
+        # 需要特殊处理的参数，例如中兴的ifA=0 elseB=C规则
+        # checked_params = self.extra_handler(df, param0)
+        # if len(checked_params) > 0:
+        #     return
+        # all_checked_param.extend(checked_params)
         premise_param = str(param_rule['伴随参数'].iloc[0])
         premise_command = str(param_rule['伴随参数命令'].iloc[0])
         cal_param = str(param_rule['计算方法'].iloc[0])
@@ -678,7 +688,6 @@ class Evaluation:
                         continue
                     if n.find(m) >= 0 and n.find('#') >= 0:
                         content_cols.append(n)
-
         return content_cols
 
     def sort_result(self, cols, config, base_cols):
@@ -844,7 +853,7 @@ class Evaluation:
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
         self.all_co_location = [math.nan]  # 所有的共址.类型
-        self.base_info_df = watcher.get_base_info( f_name)
+        self.base_info_df = watcher.get_base_info(f_name)
         if self.manufacturer == '华为':
             self._inference_city(self.base_info_df)
         # self.base_info_df = self.get_base_info(band_list)
@@ -1079,7 +1088,7 @@ class Evaluation:
         # 如果伴随参数为空，但是计算方式里面需要伴随参数，那么设置有问题
         if premise_param == 'nan' and cal_param.find(',') >= 0:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
-        #这里计算需要其他参数加入计算的参数
+        # 这里计算需要其他参数加入计算的参数
         if premise_command in self.pre_param_dict.keys():
             premise_command_df = self.pre_param_dict[premise_command]
             if premise_param in premise_command_df.columns.tolist():
@@ -1088,13 +1097,13 @@ class Evaluation:
                     # merge出现空置，一定是数据类型不对
                     premise_command_df[self.cell_identity] = premise_command_df[self.cell_identity].astype(str)
                     on.append(self.cell_identity)
-                cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=on)
+                cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=list(set(on)))
             else:
                 raise Exception("缓存中找不到计算参数:" + premise_command)
             cal_df[param].fillna(value=0, inplace=True)
-            cal_df[param] = cal_df[param].apply(int)
+            cal_df[param] = cal_df[param].apply(float)
             cal_df[premise_param].fillna(value=0, inplace=True)
-            cal_df[premise_param] = cal_df[premise_param].apply(int)
+            cal_df[premise_param] = cal_df[premise_param].apply(float)
             if cal_param.find(',') >= 0:
                 splits = cal_param.split(',')
                 multiple0 = int(splits[0])
@@ -1164,6 +1173,7 @@ class Evaluation:
                 on_cols.append(self.cell_identity)
             if self.key_col in pre_param_df_cols:
                 on_cols.append(self.key_col)
+            on_cols = list(set(on_cols))
             pre_param_df = pre_param_df[on_cols]
             self.pre_param_dict[pre_param_command] = pre_param_df
         return copy_config_df
@@ -1240,6 +1250,7 @@ class Evaluation:
         qci_params.remove(self.cell_identity)
         qci_res_list = []
         non_qci_res = self.base_info_df
+        checked_param = []
         for r in read_result_list:
             # 这里删除所有行都是nan的行,中兴数据以CGI连接，这里是全量
             cols = r[0].columns.tolist()
@@ -1281,7 +1292,6 @@ class Evaluation:
                     if len(refCols) > 0:
                         on = refCols
                         on.append(self.key_col)
-                        # r[0].dropna(axis=1, inplace=True, how='all')
                         # 两边都有cellName, 删除右表的cellName,以为mecontext列都是一致的,但是cellName会有错误
                         if self.cell_identity in r[
                             0].columns.tolist() and self.cell_identity in non_qci_res.columns.tolist():
@@ -1290,7 +1300,8 @@ class Evaluation:
                 # 华为这里因为base_info_df这里已经过滤了一遍CGI,所以base_info_df在左表，但是中兴没有过滤
                 non_qci_res = pd.merge(non_qci_res, r[0], how='left', on=on)
                 cols.remove('CGI') if 'CGI' in cols else cols
-                non_qci_res.dropna(axis=0, subset=cols, how='all', inplace=True)
+                checked_param.extend(cols)
+        non_qci_res.dropna(axis=0, subset=checked_param, how='all', inplace=True)
         merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=[self.key_col], cell_identity=self.cell_identity)
         res = non_qci_res.merge(merge_qci_df, how='left',
                                 on=[self.key_col, self.cell_identity]) if not merge_qci_df.empty else non_qci_res

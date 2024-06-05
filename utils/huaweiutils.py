@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-
+import math
 import copy
 import itertools
 import logging
@@ -398,7 +398,8 @@ def judge(df, param):
             judge_res.append(True)
             continue
         if recommand == 'nan':
-            judge_res.append(True)
+            #华为要求没有值不判断
+            judge_res.append(math.nan)
             continue
         if value.find(';') >= 0:
             values = value.split(';')
@@ -417,6 +418,8 @@ def judge(df, param):
 
 
 def get_judge(recommend, value):
+    if 'nan' == recommend:
+        return math.nan
     if recommend.find('[') >= 0 and recommend.find(']') >= 0:
         return range_judge(value, recommend)
     elif recommend.find(',') >= 0:
@@ -464,7 +467,7 @@ def read_csv(file_name, usecols=None, dtype=None, manufacturer=None) -> DataFram
                                                                                                             usecols=usecols)
     except Exception as e:
         logging.info('读取文件' + file_name + '报错,读取的列名:' + str(usecols) + '报错信息:' + str(e))
-        logging.info("改用gbk编码方式重新去取csv文件")
+        logging.info("读取文件失败,改用gbk编码方式重读csv文件")
         res_df = pd.read_csv(file_name, usecols=usecols, dtype=dtype, encoding='gbk') \
             if dtype is not None else pd.read_csv(file_name, usecols=usecols, encoding='gbk')
     # 中兴的header有的文件有两行，这里去掉一行
@@ -569,7 +572,6 @@ def add_judgement(x, original_name, c):
     elif judgement_value.find("[") >= 0 and judgement_value.find("]") >= 0:
         judgement_value.replace("[", "").replace("]", "")
     else:
-
         return True if int(float(judgement_value)) == int(
             float(original_value)) else False
 

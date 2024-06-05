@@ -37,6 +37,18 @@ def union_action(df, action_tuples_list, action_name, new_col_name, index):
         raise Exception("没有定义的操作名:" + action_name, "出错行号:" + str(index))
     return action_df
 
+# def run_once(fn):
+#     """
+#     确保一个方法只运行一次
+#     :param fn:
+#     :return:
+#     """
+#     def wrapper(*args, **kwargs):
+#         if not wrapper.has_run:
+#             wrapper.has_run = True
+#             return fn(*args, **kwargs)
+#     wrapper.has_run = False
+#     return wrapper
 
 def find_operators(str):
     result = []
@@ -55,6 +67,7 @@ def filter(df, operator, col_name, range):
         filter_df = df if range == '整体' else df[df[col_name].str.contains(range, flags=re.IGNORECASE)]
 
     elif operator == 'equal':
+        df[col_name] = df[col_name].astype(str)
         filter_df = df[df[col_name].str.lower() == range.lower()]
     else:
         raise Exception("未定义的操作符:" + operator)
@@ -74,7 +87,7 @@ def action_delete(df, action_tuples, index, axis=0):
         # 筛选出来的df,全部在原df中通过Index删除
         filter_df = filter(df, operator, col_name, range)
         index = filter_df.index.tolist()
-        df.drop(index=index, axis=axis, inplace=True)
+        df.drop(labels=[col_name], axis=axis, inplace=True)
     return df
 
 
@@ -166,12 +179,14 @@ def action_columns_merge(df, action_tuples_list,
 
 
 def col_add(x, first_multiple, second_multiple):
-    if 'nan' == str(x[0]) or 'nan' == str(x[1]):
-        return math.nan
-    else:
-        return float(x[0]) * first_multiple + float(x[1]) * second_multiple
-
-
+    try:
+        if 'nan' == str(x[0]) or 'nan' == str(x[1]):
+            return math.nan
+        else:
+            return float(x[0]) * first_multiple + float(x[1]) * second_multiple
+    except Exception as e:
+        logging.error(e)
+        raise Exception("列之间算术计算错误")
 
 def fillna_by_type():
     pass

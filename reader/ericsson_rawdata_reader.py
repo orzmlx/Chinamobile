@@ -132,13 +132,15 @@ class EricssonDataReader(ZteRawDataReader):
         logging.info('==============开始清理文件:' + os.path.dirname(eri_raw_data_path) + '==============')
         eri_config_df = pd.read_excel(eri_config_file_path, sheet_name='爱立信数据清洗')
         f_name = os.path.basename(self.raw_file).replace('.csv', '')
+        f_name_with_digital = self.__remove_digtal(f_name)
         config_name = str(self.raw_file).replace(".csv", "")
-        config_df = eri_config_df[eri_config_df['CSV名'] == os.path.basename(config_name)]
+        config_df = eri_config_df[eri_config_df['CSV名'].str.lower() == f_name_with_digital.strip().lower()]
         sheet_df = pd.DataFrame()
         if config_df.empty:
             logging.info("配置文件没有配置:" + config_name + '的数据清理方法,该文件不需要数据清洗')
             return
         try:
+            # sheet_df = pd.read_csv(self.raw_file)
             sheet_df = pd.read_csv(self.raw_file, skiprows=[1]) if self.manufacturer == '中兴' else pd.read_csv(
                 self.raw_file)
             sheet_df = sheet_df.loc[:, ~sheet_df.columns.str.contains('Unnamed')]
@@ -148,7 +150,7 @@ class EricssonDataReader(ZteRawDataReader):
         if sheet_df.empty:
             logging.info(f_name + "没有数据")
             return
-        f_name_with_digital = self.__remove_digtal(f_name)
+        # f_name_with_digital = self.__remove_digtal(f_name)
         # out_path = os.path.join(self.eri_raw_data_path, system, 'kget', 'raw_result')
         self.process_data_by_sheet(sheet_df, eri_config_df, f_name_with_digital, self.out_path, ';')
 

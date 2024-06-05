@@ -73,7 +73,7 @@ class DataWatcher:
     def get_4g_common_df(self):
         # return self.data_dict['load_4g_common_btn']
         df = pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
-        df['工作频段'] = df[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band,axis=1)
+        df['工作频段'] = df[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band, axis=1)
         return df
 
     def get_5g_common_df(self):
@@ -172,7 +172,6 @@ class DataWatcher:
                 self.g4_base_info_df = self.get_eri_4g_base_info()
                 # self.all_band = huaweiutils.list_to_str(band_list)
         base_inf_df = self.g4_base_info_df if self.system == '4G' else self.g5_base_info_df
-
         return base_inf_df
 
     def get_eri_4g_base_info(self):
@@ -195,7 +194,7 @@ class DataWatcher:
         cell_df = pd.read_csv(os.path.join(checked_raw_path, 'LST CELL.csv'))
         enode_df = pd.read_csv(os.path.join(checked_raw_path, 'LST ENODEBFUNCTION.csv'))
         cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
-        base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI', 'NB-IoT小区指示']]
+        base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI', 'NB-IoT小区指示', '下行频点']]
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
         base_info_df['厂家'] = self.manufacturer

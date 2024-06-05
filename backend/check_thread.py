@@ -43,17 +43,17 @@ class CheckThread(QThread):
         # self.check_4g_test_preparation()
         self.check_5g_test_preparation()
 
-    def evaluate_eri(self):
-        base_cols = self.watcher.get_base_cols()
-        raw_files_dir = os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date,
-                                     self.watcher.system, 'kget')
-        # raw_files = os.listdir(raw_files_dir)
-        # 对于爱立信数据，相当于只有一个网管数据
-        evaluate = Evaluation(raw_files_dir, self.watcher, used_commands=[])
-        copy_base_cols = copy.deepcopy(base_cols)
-        cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
-        # self.valueChanged.emit(index + 1)
-        return cell_class_dict, freq_class_dict
+    # def evaluate_eri(self):
+    #     base_cols = self.watcher.get_base_cols()
+    #     raw_files_dir = os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date,
+    #                                  self.watcher.system, 'kget')
+    #     # raw_files = os.listdir(raw_files_dir)
+    #     # 对于爱立信数据，相当于只有一个网管数据
+    #     evaluate = Evaluation(raw_files_dir, self.watcher, used_commands=[])
+    #     copy_base_cols = copy.deepcopy(base_cols)
+    #     cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
+    #     # self.valueChanged.emit(index + 1)
+    #     return cell_class_dict, freq_class_dict
 
     def evaluate(self):
         raw_files = os.listdir(
@@ -97,7 +97,7 @@ class CheckThread(QThread):
         self.watcher.set_files_number(1)
         # self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为5G参数20240326')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为\\数据')
-        self.watcher.setDate('20240531')
+        self.watcher.setDate('20240515')
         self.watcher.set_huawei_command_path(
             'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt')
 

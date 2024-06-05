@@ -1,16 +1,17 @@
 # -*- coding:utf-8 -*-
 import copy
+import logging
 import os
 import shutil
+from abc import ABC
+
 import pandas as pd
 
+from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation, Reader
 from processor.processor import Processor
-from model.data_watcher import DataWatcher
 from reader.huawei_raw_datareader import HuaweiRawDataFile
 from utils import huaweiutils
-from abc import ABC, abstractmethod
-import logging
 
 
 class HuaweiProcessor(Processor, ABC):
@@ -94,5 +95,5 @@ class HuaweiProcessor(Processor, ABC):
         evaluate = Evaluation(raw_file_dir, watcher, used_commands=used_command,
                               cell_config_df=cell_config_df, freq_config_df=freq_config_df)
         copy_base_cols = copy.deepcopy(base_cols)
-        return evaluate.generate_report('cell', copy_base_cols)
+        return evaluate.generate_report('all', copy_base_cols)
         # return cell_class_dict, freq_class_dict

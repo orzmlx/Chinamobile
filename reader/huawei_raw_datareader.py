@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import TextIO
-
+import copy
 from exception.read_raw_exception import ReadRawException
 from reader.reader import Reader
 from utils import huaweiutils
@@ -641,7 +641,9 @@ class HuaweiRawDataFile(Reader):
             else:
                 logging.error(line + ":无法解析")
             line = f.readline()
-        assert len(self.exist_value) == len(self.exist_cols), "列名长度和内容长度不一致,请检查数据"
+        if len(self.exist_value) != len(self.exist_cols):
+            raise Exception('读取华为原始数据出错,标题和数据不对应,数据:' + str(self.exist_value) + ',标题:' + str(self.exist_cols))
+        # assert len(self.exist_value) == len(self.exist_cols), "列名长度和内容长度不一致,请检查数据"
         self.makeup_and_update_content(self.exist_cols, self.exist_value)
         return 1
 
@@ -770,11 +772,12 @@ class HuaweiRawDataFile(Reader):
                 cols = line.replace("\n", "").split("  ")
                 cols = list(filter(lambda x: x.strip() != "", cols))
                 # 去掉里面列名中的空格
-                cols = [s.replace(' ', '').replace("(%)", "").replace("%", "")
-                            .replace('毫瓦分贝', 'dBm').replace('分贝', 'dB') for s in cols]
+                cols = [
+                    s.replace(' ', '').replace("(%)", "").replace("%", "").replace('毫瓦分贝', 'dBm').replace('分贝', 'dB')
+                    for s in cols]
                 cols.insert(0, '网元')
                 is_first_line = False
-
+                # self.exist_cols = cols
             else:
                 fact_number = fact_number + 1
                 row = line.split("  ")
@@ -786,8 +789,11 @@ class HuaweiRawDataFile(Reader):
                         continue
                     new_row.append(r)
                 # 每一行都添加网元信息,作为Index,必须是最后一个
-                assert len(new_row) == len(cols), "列名长度和内容长度不一致,请检查数据"
-                self.makeup_and_update_content(cols, new_row)
+
+                # assert len(new_row) == len(cols), "列名长度和内容长度不一致,请检查数据"
+                if len(new_row) != len(cols):
+                    raise Exception('读取华为原始数据出错,标题和数据不对应,数据:' + str(new_row) + '标题:' + str(cols))
+                self.makeup_and_update_content(copy.deepcopy(cols), new_row)
             line = f.readline()
         return fact_number
 
@@ -797,8 +803,14 @@ class HuaweiRawDataFile(Reader):
         d1 = set(expect_cols).difference(set(new_cols))
         # 出现了之前没有预料到列
         d2 = set(new_cols).difference(set(expect_cols))
+        # 对在expect中没有出现的列，要重整顺序，不能直接添加在最后面
         if len(d1) != 0:
-            new_row.extend(['NULL'] * len(d1))
+            # new_row = expect_cols
+            for index, c in enumerate(expect_cols):
+                if not c in d1:
+                    continue
+                new_cols.insert(index, c)
+                new_row.insert(index, 'NULL')
         if len(d2) != 0:
             expect_cols.extend(d2)
             for d in d2:
@@ -811,7 +823,7 @@ class HuaweiRawDataFile(Reader):
         expect_cols = self.make_up_content(new_cols, new_row)
         # assert len(expect_cols) == len(new_row), '列名长度和内容长度不一致,请检查数据'
         for index, row in enumerate(new_row):
-            col_name = expect_cols[index]
+            col_name = new_cols[index]
             value = new_row[index]
             self.__init_content_dict(col_name, value, command_dict)
 
