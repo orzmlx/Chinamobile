@@ -135,7 +135,7 @@ def create_header(df, path, class_dict, base_cols):
     wb.save(os.path.join(os.path.split(path)[0], '互操作小区级核查结果.csv'))
 
 
-def unzip_all_files(path, dest_path=None, zipped_file=[]):
+def unzip_all_files(path, dest_path=None, zipped_file=[],suffix='.zip'):
     """
      解压原始log文件到目标文件夹，防止解压文件中包含解压文件，进行递归解压，当解压文件数量没有提升
     :param path:
@@ -149,7 +149,7 @@ def unzip_all_files(path, dest_path=None, zipped_file=[]):
     os.chmod(path, 7)
     if dest_path is not None:
         os.chmod(dest_path, 7)
-    zip_files = find_file(path, '.zip')
+    zip_files = find_file(path, suffix)
     if 0 < len(zipped_file) == len(zip_files):
         return
     if len(zip_files) == 0:
@@ -158,8 +158,8 @@ def unzip_all_files(path, dest_path=None, zipped_file=[]):
         base_name = os.path.basename(file)
         if base_name in zipped_file:
             continue
-        dest_dir = str(file).replace('.zip', '') \
-            if dest_path is None else os.path.join(dest_path, base_name.replace('.zip', ''))
+        dest_dir = str(file).replace(suffix, '') \
+            if dest_path is None else os.path.join(dest_path, base_name.replace(suffix, ''))
 
         # patoolib.extract_archive(file,dest_dir)
         try:
@@ -577,6 +577,9 @@ def add_judgement(x, original_name, c):
 
 
 if __name__ == "__main__":
+    path = "C:\\Users\\No.1\\Desktop\\teleccom\\取数\\取数"
+    out_path =  "C:\\Users\\No.1\\Desktop\\teleccom\\取数"
+    unzip_all_files(path,dest_path=out_path,suffix='.tar.gz')
     # report_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\all_result.csv"
     # report_df = pd.read_csv(report_path)
     # report_df['频带'] = report_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
@@ -591,9 +594,9 @@ if __name__ == "__main__":
     # str2 = 'LST NRCELLQCIBEARER:QCI=5'
     # # print(only_has_digtal_diff(str1, str2))
     # print(remove_digit(str1, ['=']))
-    path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240426\\5G'
-
-    combine_file_by_name(path)
+    # path = 'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\20240426\\5G'
+    #
+    # combine_file_by_name(path)
     # path = 'C:\\Users\\No.1\\Desktop\\分表'
     # split_csv(path, 200000)
     # path = 'C:\\Users\\No.1\\Desktop\\zip_test'

@@ -124,13 +124,14 @@ class CheckThread(QThread):
             #                  'raw_data'))
             raw_files = self.watcher.get_raw_result_files()
             pandas_monkeypatch()
-            cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置", dtype=str, engine='calamine')
-            freq_config_df = pd.read_excel(self.watcher.config_path, sheet_name="频点级别核查配置", dtype=str, engine='calamine')
+            cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置", dtype=str,
+                                           engine='calamine')
+            freq_config_df = pd.read_excel(self.watcher.config_path, sheet_name="频点级别核查配置", dtype=str,
+                                           engine='calamine')
             for index, f in enumerate(raw_files):
-                cell_header_class_dict, freq_header_class_dict = processor.evaluate(watcher=self.watcher, file=f,
-                                                                                    cell_config_df=cell_config_df,
-                                                                                    freq_config_df=freq_config_df)
-
+                processor.evaluate(watcher=self.watcher, file=f,
+                                   cell_config_df=cell_config_df,
+                                   freq_config_df=freq_config_df)
                 self.valueChanged.emit(index + 1)
             combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name)
             self.finished.emit(message(2, '成功'))

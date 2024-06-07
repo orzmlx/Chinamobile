@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+from configuration.common_configuration import is_4g_freq, map4gFrqPtToBand
 
 EMPTY_VALUE = "NULL"
 END = "END"
@@ -547,26 +548,26 @@ FILE_CITY_DICT = \
      "nb135": "宁波"}
 
 
-def mapHuawei4GFrqPtToBand(x, band_dict):
-    if 'nan' == str(x):
-        return '其他频段'
-    for key, item in band_dict.items():
-        if str(x) in item:  # 证明该频段是4G频段
-            return key
-    return '其他频段'
-
-
-def is_4g_freq(all_freqs, g4_freq_band_dict):
-    # 由于4G存在很多没有定义过的频点，所以会判断多个频点
-    judge_number = 100 if len(all_freqs) >= 100 else len(all_freqs)
-    for index, f in enumerate(all_freqs):
-        for key, item in g4_freq_band_dict.items():
-            if not str(f) in item and index >= judge_number:  # 证明该频段是4G频段
-                return False
-            if str(f) in item:
-                return True
-        judge_number = judge_number + 1
-    return False
+# def mapHuawei4GFrqPtToBand(x, band_dict):
+#     if 'nan' == str(x):
+#         return '其他频段'
+#     for key, item in band_dict.items():
+#         if str(x) in item:  # 证明该频段是4G频段
+#             return key
+#     return '其他频段'
+#
+#
+# def is_4g_freq(all_freqs, g4_freq_band_dict):
+#     # 由于4G存在很多没有定义过的频点，所以会判断多个频点
+#     judge_number = 100 if len(all_freqs) >= 100 else len(all_freqs)
+#     for index, f in enumerate(all_freqs):
+#         for key, item in g4_freq_band_dict.items():
+#             if not str(f) in item and index >= judge_number:  # 证明该频段是4G频段
+#                 return False
+#             if str(f) in item:
+#                 return True
+#         judge_number = judge_number + 1
+#     return False
 
 
 def map_huawei_freq_pt(df, frequency_param, g4_freq_band_dict):
@@ -574,7 +575,7 @@ def map_huawei_freq_pt(df, frequency_param, g4_freq_band_dict):
     all_freq = df[frequency_param].unique().tolist()
     df['频点'] = df[frequency_param]
     if is_4g_freq(all_freq, g4_freq_band_dict):
-        df[frequency_param] = df[frequency_param].apply(mapHuawei4GFrqPtToBand,
+        df[frequency_param] = df[frequency_param].apply(map4gFrqPtToBand,
                                                         args=(g4_freq_band_dict,))
     else:
         # n1是指其他厂商的

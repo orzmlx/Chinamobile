@@ -8,6 +8,7 @@ from datetime import datetime
 from tkinter import filedialog, messagebox
 
 import pandas as pd
+from python_calamine.pandas import pandas_monkeypatch
 
 out_put_path = ""
 last_week_data = pd.DataFrame()
@@ -144,7 +145,8 @@ def parse():
         if input_path.find("pkl") >= 0:
             site_info = pd.read_pickle(input_path)
         elif select_path.get().find("xlsx") >= 0:
-            site_info = pd.read_excel(input_path, usecols=use_cols, sheet_name='物理站信息表', engine='openpyxl')
+            pandas_monkeypatch()
+            site_info = pd.read_excel(input_path, usecols=use_cols, sheet_name='物理站信息表', engine='calamine')
         elif input_path.find("csv") >= 0:
             try:
                 site_info = pd.read_csv(input_path)

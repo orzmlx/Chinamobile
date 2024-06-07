@@ -58,6 +58,9 @@ class EricssonDataReader(ZteRawDataReader):
         cell_cu_df.to_csv(os.path.join(raw_dir, cell_cu), index=False)
 
     def __remove_digtal(self, file_path):
+        '''
+            去掉文件名中以‘_’相连的数字
+        '''
         filter_res = []
         if file_path.find('_') >= 0:
             file_splits = file_path.split("_")
@@ -129,7 +132,7 @@ class EricssonDataReader(ZteRawDataReader):
         return res
 
     def clean_data(self, eri_config_file_path, eri_raw_data_path, system):
-        logging.info('==============开始清理文件:' + os.path.dirname(eri_raw_data_path) + '==============')
+        logging.info('==============开始清理文件:' + str(self.raw_file) + '==============')
         eri_config_df = pd.read_excel(eri_config_file_path, sheet_name='爱立信数据清洗')
         f_name = os.path.basename(self.raw_file).replace('.csv', '')
         f_name_with_digital = self.__remove_digtal(f_name)

@@ -95,5 +95,5 @@ class HuaweiProcessor(Processor, ABC):
         evaluate = Evaluation(raw_file_dir, watcher, used_commands=used_command,
                               cell_config_df=cell_config_df, freq_config_df=freq_config_df)
         copy_base_cols = copy.deepcopy(base_cols)
-        return evaluate.generate_report('all', copy_base_cols)
+        return evaluate.generate_report('cell', copy_base_cols)
         # return cell_class_dict, freq_class_dict

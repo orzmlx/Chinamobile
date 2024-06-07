@@ -294,7 +294,7 @@ class Ui_mainWindow(object):
 
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
-        mainWindow.setWindowTitle(_translate("mainWindow", "MainWindow"))
+        mainWindow.setWindowTitle(_translate("mainWindow", "@爱立信@华为@中兴互操作参数核查"))
         self.load_5g_common_btn.setText(_translate("mainWindow", "导入5G工参表"))
         self.load_raw_data_btn.setText(_translate("mainWindow", "解析网管原始数据"))
         self.load_5g_site_info_btn.setText(_translate("mainWindow", "导入5G物理站信息表"))
@@ -316,8 +316,8 @@ class Ui_mainWindow(object):
         self.check_btn.setText(_translate("mainWindow", "核   查"))
         self.g4_radio.setText(_translate("mainWindow", "4G"))
         self.g5_radio.setText(_translate("mainWindow", "5G"))
-        self.huawei_command_btn.setText(_translate("mainWindow", "华为命令"))
-        self.load_check_rule_btn.setText(_translate("mainWindow", "规则配置表"))
+        self.huawei_command_btn.setText(_translate("mainWindow", "华为命令集"))
+        self.load_check_rule_btn.setText(_translate("mainWindow", "规则引擎表"))
         self.set_work_dir_btn.setText(_translate("mainWindow", "工作目录"))
 
     def getLoggerText(self):

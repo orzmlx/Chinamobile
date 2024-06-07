@@ -5,8 +5,6 @@ try:
 except ImportError:
     from PySide6.QtWidgets import QLabel, QToolButton, QFileDialog
 
-
-
 # from PySide6.QtWidgets import QLabel, QToolButton, QFileDialog
 
 from model.data_watcher import DataWatcher

@@ -145,7 +145,7 @@ class DataWatcher:
     def g4_prepare(self):
         # g4_common_table = self.get_4g_common_df()
         g4_common_df = self.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-        g4_freq_band_dict, g4_band_list = huaweiutils.generate_4g_frequency_band_dict()
+        g4_freq_band_dict, g4_band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
         return g4_freq_band_dict, g4_band_list
 
     def get_base_info(self, f_name):
@@ -271,8 +271,7 @@ class DataWatcher:
         common_table = self.get_4g_common_df()[['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别']]
         # common_table['工作频段'] = common_table[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band)
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
-                                     '小区区域类别': '区域类别', '工作频段': '频段'},
-                            inplace=True)
+                                     '小区区域类别': '区域类别', '工作频段': '频段'}, inplace=True)
         common_table['区域类别'].fillna(value='农村', inplace=True)
         # common_table['区域类别'] = common_table['区域类别'].apply(lambda x: str(x).replace('三类(农村)', "三类"))
         common_table['区域类别'] = common_table['区域类别'].map({"一类": "一类", "二类": "二类", "三类(农村)": "三类", '四类(农村)': '农村'})
