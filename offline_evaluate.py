@@ -8,7 +8,7 @@ from reader.huawei_raw_datareader import HuaweiRawDataFile
 from reader.zte_rawdata_reader import ZteRawDataReader
 from reader.ericsson_rawdata_reader import EricssonDataReader
 import logging
-from utils import huaweiutils
+from utils import common_utils
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
@@ -143,7 +143,7 @@ def evaluate(filepath, system, manufacturer, date, base_cols):
         logging.info('==============开始处理文件:' + f_name + '==============')
         raw_file_dir = os.path.join(filepath, manufacturer, date, system, f_name.split('.')[0])
         if len(used_command) == 0:
-            raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
+            raw_fs = common_utils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
             for f in raw_fs:
                 try:
                     df = pd.read_csv(f, nrows=10, encoding='gb2312')
@@ -176,7 +176,7 @@ def combine_by_manufacturer(dir, suffix, config, result_path, header_class_dict)
                 res.rename(columns={c: new_name}, inplace=True)
                 all_result = res if all_result.empty else pd.concat([all_result, res], axis=0)
     all_result.to_csv(result_path, index=False, encoding='utf_8_sig')
-    huaweiutils.create_header(all_result, result_path, header_class_dict, base_cols)
+    common_utils.create_header(all_result, result_path, header_class_dict, base_cols)
 
 
 if __name__ == '__main__':

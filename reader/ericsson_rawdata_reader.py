@@ -5,7 +5,7 @@ from exception.read_raw_exception import ReadRawException
 from model.data_watcher import DataWatcher
 from reader.zte_rawdata_reader import ZteRawDataReader
 import os
-from utils import huaweiutils
+from utils import common_utils
 import pandas as pd
 
 
@@ -41,7 +41,7 @@ class EricssonDataReader(ZteRawDataReader):
             这样可以减少配置表中的配置项
         """
         raw_dir = os.path.join(self.eri_raw_data_path, self.system, 'raw_data')
-        all_raw_files = huaweiutils.find_file(raw_dir, '.csv')
+        all_raw_files = common_utils.find_file(raw_dir, '.csv')
         cell_cus = [f for f in all_raw_files if str(f).find('NRCellCU') >= 0]
         if len(cell_cus) >= 2:
             raise ReadRawException(manufacturer='爱立信', message='发现多个CellCU文件')

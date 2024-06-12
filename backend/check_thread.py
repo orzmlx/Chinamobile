@@ -19,7 +19,7 @@ from processor.huawei_processor import HuaweiProcessor
 from processor.process_util import ProcessUtils
 from processor.processor import Processor
 from processor.zte_processor import ZteProcessor
-from utils import huaweiutils
+from utils import common_utils
 from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation
 from model.signal_message import message
@@ -70,7 +70,7 @@ class CheckThread(QThread):
             raw_file_dir = os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date,
                                         self.watcher.system, f_name)
             if len(used_command) == 0:
-                raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
+                raw_fs = common_utils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
                 for f in raw_fs:
                     try:
                         df = pd.read_csv(f, nrows=10, encoding='gb2312')

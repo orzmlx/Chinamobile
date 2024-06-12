@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 import pandas as pd
 from configuration import huawei_configuration, ericsson_configuration, zte_configuration
-from utils import huaweiutils
+from utils import common_utils
 from model import validator
 import math
 
@@ -145,7 +145,7 @@ class DataWatcher:
     def g4_prepare(self):
         # g4_common_table = self.get_4g_common_df()
         g4_common_df = self.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-        g4_freq_band_dict, g4_band_list = huaweiutils.generate_4g_frequency_band_dict(g4_common_df)
+        g4_freq_band_dict, g4_band_list = common_utils.generate_4g_frequency_band_dict(g4_common_df)
         return g4_freq_band_dict, g4_band_list
 
     def get_base_info(self, f_name):
@@ -193,7 +193,7 @@ class DataWatcher:
         checked_raw_path = os.path.join(self.get_checked_raw_path(), f_name, 'raw_result')
         cell_df = pd.read_csv(os.path.join(checked_raw_path, 'LST CELL.csv'))
         enode_df = pd.read_csv(os.path.join(checked_raw_path, 'LST ENODEBFUNCTION.csv'))
-        cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
+        cell_df = common_utils.add_4g_cgi(cell_df, enode_df)
         base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI', 'NB-IoT小区指示', '下行频点']]
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
         base_info_df = base_info_df.merge(site_info, how='left', on=['CGI'])
@@ -237,7 +237,7 @@ class DataWatcher:
         ducell_df = pd.read_csv(os.path.join(checked_raw_path, 'LST NRDUCELL.csv'), dtype=str)
         gnode_df = pd.read_csv(
             os.path.join(checked_raw_path, 'LST GNODEBFUNCTION.csv'), dtype=str)
-        ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
+        ducell_df = common_utils.add_5g_cgi(ducell_df, gnode_df)
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
             huawei_configuration.G5_CELL_IDENTITY].apply(str)
         base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带']]
@@ -261,7 +261,7 @@ class DataWatcher:
             band = str(offset)
             # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
             if str(offset).find('FDD') < 0:
-                band = huaweiutils.remove_digit(band, [])
+                band = common_utils.remove_digit(band, [])
             if str(offset).find('-') >= 0:
                 band = band.replace('-', '')
         return band

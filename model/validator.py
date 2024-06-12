@@ -2,7 +2,7 @@
 
 import os
 
-from utils import huaweiutils
+from utils import common_utils
 
 
 
@@ -45,9 +45,9 @@ def is_raw_data_valid(path, manufacturer):
     if os.path.isdir(path):
         files = []
         if manufacturer == '华为':
-            files = huaweiutils.find_file(path, '.txt')
+            files = common_utils.find_file(path, '.txt')
         elif manufacturer == '中兴':
-            files = huaweiutils.find_file(path, '.xlsx')
+            files = common_utils.find_file(path, '.xlsx')
         if len(files) == 0:
             return False
         return True

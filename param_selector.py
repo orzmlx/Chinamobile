@@ -1,5 +1,5 @@
 from reader.huawei_raw_datareader import *
-from utils import huaweiutils
+from utils import common_utils
 import copy
 import numpy as np
 import itertools
@@ -44,7 +44,7 @@ class param_selector:
         self.standard_alone_df = pd.DataFrame()
         self.cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
         g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
-        self.g4_freq_band_dict, band_list = huaweiutils.generate_4g_frequency_band_dict()
+        self.g4_freq_band_dict, band_list = common_utils.generate_4g_frequency_band_dict()
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
@@ -52,9 +52,9 @@ class param_selector:
         self.base_info_df = self.get_base_info(band_list)
         self.end_band = 'FDD-900|FDD-1800|F|A|D|E|4.9G|2.6G|700M'
         # self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
-        self.all_area_classes = huaweiutils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
-        self.all_cover_classes = huaweiutils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
-        self.all_co_location = huaweiutils.list_to_str(self.base_info_df['共址类型'].unique().tolist())
+        self.all_area_classes = common_utils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
+        self.all_cover_classes = common_utils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
+        self.all_co_location = common_utils.list_to_str(self.base_info_df['共址类型'].unique().tolist())
         self.cell_config_df = pd.read_excel(self.standard_path, sheet_name="小区级别核查配置", true_values=["是"],
                                             false_values=["否"], dtype=str)
         self.freq_config_df = pd.read_excel(self.standard_path, sheet_name="频点级别核查配置", true_values=["是"],
@@ -80,14 +80,14 @@ class param_selector:
         if self.manufacturer == 'huawei':
             if self.system == '4G':
                 self.g4_base_info_df = self.get_huawei_4g_base_info(band_list)
-                self.all_band = huaweiutils.list_to_str(band_list)
+                self.all_band = common_utils.list_to_str(band_list)
             else:
                 self.g5_base_info_df = self.get_huawei_5g_base_info()
                 self.all_band = '4.9G|2.6G|700M|nan'
         elif self.manufacturer == 'zte':
             if self.system == '4G':
                 self.g4_base_info_df = self.get_zte_4g_base_info(band_list)
-                self.all_band = huaweiutils.list_to_str(band_list)
+                self.all_band = common_utils.list_to_str(band_list)
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
                 self.all_band = '4.9G|2.6G|700M|nan'
@@ -160,7 +160,7 @@ class param_selector:
         common_table = self.get_4g_common(band_list)
         cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST CELL.csv'))
         enode_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST ENODEBFUNCTION.csv'))
-        cell_df = huaweiutils.add_4g_cgi(cell_df, enode_df)
+        cell_df = common_utils.add_4g_cgi(cell_df, enode_df)
         cell_df['CGI'] = "460-00-" + cell_df["eNodeB标识"].apply(str) + "-" + cell_df[
             huawei_configuration.G4_CELL_IDENTITY].apply(str)
         base_info_df = cell_df[['网元', huawei_configuration.G4_CELL_IDENTITY, '小区名称', 'CGI']]
@@ -176,8 +176,8 @@ class param_selector:
         common_table = self.get_5g_common()
         # cell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
         #                       usecols=['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], encoding='gbk')
-        cell_df = huaweiutils.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
-                                       ['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], dtype=str)
+        cell_df = common_utils.read_csv(os.path.join(self.file_path, 'raw_result', '小区级.csv'),
+                                        ['网元', '用户标识', 'NR小区标识', 'CGI', '频段'], dtype=str)
 
         base_info_df = cell_df.rename(columns={'用户标识': 'NRDU小区名称'})
         base_info_df = base_info_df.merge(common_table, how='left', on=['CGI'])
@@ -195,7 +195,7 @@ class param_selector:
         ducell_df = pd.read_csv(os.path.join(self.file_path, 'raw_result', 'LST NRDUCELL.csv'), dtype=str)
         gnode_df = pd.read_csv(
             os.path.join(self.file_path, 'raw_result', 'LST GNODEBFUNCTION.csv'), dtype=str)
-        ducell_df = huaweiutils.add_5g_cgi(ducell_df, gnode_df)
+        ducell_df = common_utils.add_5g_cgi(ducell_df, gnode_df)
         ducell_df['CGI'] = "460-00-" + ducell_df["gNodeB标识"].apply(str) + "-" + ducell_df[
             huawei_configuration.G5_CELL_IDENTITY].apply(str)
         base_info_df = ducell_df[['网元', 'NR小区标识', 'NRDU小区名称', 'CGI', '频带']]
@@ -296,7 +296,7 @@ class param_selector:
                 if self.is_4g_freq(all_freq):
                     # df[frequency_param] = 'LTE'
                     df['频点'] = df[frequency_param]
-                    df[frequency_param] = df[frequency_param].apply(huaweiutils.mapToBand,
+                    df[frequency_param] = df[frequency_param].apply(common_utils.mapToBand,
                                                                     args=(self.g4_freq_band_dict,))
                     # 去掉对端非移动频点的行
                     # df = df[df[frequency_param] != '其他频段']
@@ -386,7 +386,7 @@ class param_selector:
             params = g['原始参数名称'].unique().tolist()
             # 华为参数需要去掉数字,中兴不需要
             if self.manufacturer == 'huawei':
-                command = huaweiutils.remove_digit(command, [",", ":"])
+                command = common_utils.remove_digit(command, [",", ":"])
             file_name = os.path.join(self.file_path, 'raw_result', command + '.csv')
             read_res, base_cols = self.read_data_by_command(file_name, params, g)
             if read_res.empty:
@@ -447,7 +447,7 @@ class param_selector:
             command = p[0]
             qci = p[1]
             params = g['原始参数名称'].unique().tolist()
-            command = huaweiutils.remove_digit(command, [",", ":"])
+            command = common_utils.remove_digit(command, [",", ":"])
             if not command in self.used_commands:
                 logging.info("该命令没有在此次参数核查中使用:" + command + 'QCI:' + str(qci))
                 continue
@@ -470,7 +470,7 @@ class param_selector:
                 continue
             param = p[0]
             command = p[1]
-            if not huaweiutils.remove_digit(command, [",", ":"]) in self.used_commands:
+            if not common_utils.remove_digit(command, [",", ":"]) in self.used_commands:
                 # or qci == '1' or qci == '5':
                 continue
             self.processing_param_value(merge_qci_result, param, command)
@@ -522,7 +522,7 @@ class param_selector:
                 non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
                 # except Exception as e:
                 #     logging.info(e)
-        merge_qci_df = huaweiutils.merge_dfs(qci_res_list, on=['网元'], cell_identity=self.cell_identity)
+        merge_qci_df = common_utils.merge_dfs(qci_res_list, on=['网元'], cell_identity=self.cell_identity)
         res = non_qci_res.merge(merge_qci_df, how='left',
                                 on=['网元', self.cell_identity]) if not merge_qci_df.empty else non_qci_res
         return res
@@ -551,7 +551,7 @@ class param_selector:
                 base_cols.append(frequency[0])
         # if self.manufacturer == 'zte':
         #     base_cols.append('CGI')
-        base_df = huaweiutils.read_csv(file_name, base_cols, str)
+        base_df = common_utils.read_csv(file_name, base_cols, str)
         # 如果没有开关参数，那么赋值为base_info
         switch_df = pd.DataFrame()
         # 查看主命令是否存在标识,主命令对应标识应该一样
@@ -571,7 +571,7 @@ class param_selector:
                     check_params[i] = check_params[i].split('_')[0]
             non_switch_col.extend(check_params)
             logging.debug("读取文件:【" + file_name + "】读取的列:【" + str(non_switch_col) + "】")
-            non_switch_df = huaweiutils.read_csv(file_name, non_switch_col, str)
+            non_switch_df = common_utils.read_csv(file_name, non_switch_col, str)
         if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
@@ -589,7 +589,7 @@ class param_selector:
         result_df = pd.DataFrame()
         for param, c in switch_params.items():
             df_c = df[[c]]
-            flatten_df = huaweiutils.flatten_features(df_c, c)[[param]]
+            flatten_df = common_utils.flatten_features(df_c, c)[[param]]
             if result_df.empty:
                 result_df = pd.concat([base_df, flatten_df], axis=1)
                 continue
@@ -623,7 +623,7 @@ class param_selector:
         df = df.merge(standard[deep_on], how='left',
                       on=standard_on)
         df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
-        df[param + "#合规"] = huaweiutils.judge(df, param)
+        df[param + "#合规"] = common_utils.judge(df, param)
         return df
 
     def fill_col_na(self, standard, cols):
@@ -672,7 +672,7 @@ class param_selector:
         df = pd.merge(df, standard[['区域类别', '覆盖类型', '频段', '推荐值', '共址类型']], how='left',
                       on=['频段', '覆盖类型', '区域类别', '共址类型'])
         df.rename(columns={"推荐值": param + "#推荐值"}, inplace=True)
-        df[param + "#合规"] = huaweiutils.judge(df, param)
+        df[param + "#合规"] = common_utils.judge(df, param)
         return df
 
     def is_4g_freq(self, all_freqs):

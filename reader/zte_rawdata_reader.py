@@ -3,7 +3,7 @@ import os
 import math
 from model.data_watcher import DataWatcher
 from reader.reader import Reader
-from utils import zteutils, huaweiutils
+from utils import zteutils, common_utils
 from exception.read_raw_exception import ReadRawException
 from utils.timer import Timer
 import logging
@@ -141,7 +141,7 @@ class ZteRawDataReader(Reader):
             merge_result.to_csv(os.path.join(gather_out_dir, new_file_name + '.csv'), index=False, encoding='utf_8_sig')
             merge_result.to_csv(gather_out_path, index=False, encoding='utf_8_sig')
         # 删除temp中的.csv文件
-        temp_csv_file = huaweiutils.find_file(self.temp_path, '.csv')
+        temp_csv_file = common_utils.find_file(self.temp_path, '.csv')
         for f in temp_csv_file:
             os.remove(f)
 

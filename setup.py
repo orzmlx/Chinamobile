@@ -1,6 +1,6 @@
 import os
 
-from utils import huaweiutils
+from utils import common_utils
 
 
 def get_demand_pys():
@@ -9,7 +9,7 @@ def get_demand_pys():
     dirs = os.listdir(current_path)
     for d in dirs:
         if os.path.isdir(d):
-            pys = huaweiutils.find_file(d, '.py')
+            pys = common_utils.find_file(d, '.py')
             pys_files.extend([os.path.join(current_path, str(py)) for py in pys])
     return pys_files
 

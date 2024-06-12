@@ -3,7 +3,7 @@ from typing import TextIO
 import copy
 from exception.read_raw_exception import ReadRawException
 from reader.reader import Reader
-from utils import huaweiutils
+from utils import common_utils
 import logging
 
 #
@@ -703,7 +703,7 @@ class HuaweiRawDataFile(Reader):
                     res = ''.join(set(out_name) ^ set(f))
                     if len(res) == 0:
                         continue
-                    if huaweiutils.only_has_digtal_diff(out_name, f) and len(out_name) == len(f):
+                    if common_utils.only_has_digtal_diff(out_name, f) and len(out_name) == len(f):
                         pre_df = pd.concat([pre_df, df], axis=0)
 
                         # f = huaweiutils.remove_digit(f,['='])
@@ -727,12 +727,12 @@ class HuaweiRawDataFile(Reader):
         #     logging.info("有不一致列名,后续自动修后重新启动")
         #     return
         for f, df in self.out_put_dict.items():
-            huaweiutils.output_csv(df, f, os.path.join(self.out_path, raw_file_name, 'raw_result'), True)
+            common_utils.output_csv(df, f, os.path.join(self.out_path, raw_file_name, 'raw_result'), True)
             self.files_cols_dict[f] = df.columns.tolist()
 
     def add_resource_frequency(self, file_name, df, standard_df, baseinfo):
         commands = standard_df['主命令'].unique().tolist()
-        file_name = huaweiutils.remove_digit(file_name, ['=', ':'])
+        file_name = common_utils.remove_digit(file_name, ['=', ':'])
         file_name = file_name.replace(".csv", "")
         if file_name in commands:
             df = df.merge(baseinfo, how='left', on=['网元', self.cell_identity])

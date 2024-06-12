@@ -14,18 +14,18 @@ from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation
 from processor.processor import Processor
 from reader.ericsson_rawdata_reader import EricssonDataReader
-from utils import huaweiutils
+from utils import common_utils
 
 
 class ZteProcessor(Processor, ABC):
 
     def before_parse_5g_raw_data(self, raw_directory, dirs):
         logging.info('==============开始预处理5G原始文件' + '==============')
-        huaweiutils.unzip_all_files(dirs)
+        common_utils.unzip_all_files(dirs)
         res = []
         for file_path in dirs.glob('**/*'):
             if not file_path.is_file() and file_path.name == 'csvfiles':
-                all_raw_datas = huaweiutils.find_file(file_path, '.csv')
+                all_raw_datas = common_utils.find_file(file_path, '.csv')
                 parent_name = file_path.parent.name
                 dest_dir = os.path.join(raw_directory, parent_name, 'raw_result')
                 if not os.path.exists(dest_dir):
@@ -81,7 +81,7 @@ class ZteProcessor(Processor, ABC):
         #                            dataWatcher.system)
         # items = huaweiutils.find_file(output_path, 'raw_result')
         # for item in items:
-        csv_files = huaweiutils.find_file(item, '.csv')
+        csv_files = common_utils.find_file(item, '.csv')
         # 这里复用爱立信的流程
         reader = EricssonDataReader(str(item), str(item), zte_config, dataWatcher)
         for csv_f in csv_files:
@@ -164,4 +164,4 @@ class ZteProcessor(Processor, ABC):
 if __name__ == "__main__":
     path = 'C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\数据'
     dest_dir = 'C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\20240515\\5G\\raw_data'
-    huaweiutils.unzip_all_files(path, dest_path=dest_dir, zipped_file=[])
+    common_utils.unzip_all_files(path, dest_path=dest_dir, zipped_file=[])

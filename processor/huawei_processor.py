@@ -11,7 +11,7 @@ from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation, Reader
 from processor.processor import Processor
 from reader.huawei_raw_datareader import HuaweiRawDataFile
-from utils import huaweiutils
+from utils import common_utils
 
 
 class HuaweiProcessor(Processor, ABC):
@@ -55,16 +55,16 @@ class HuaweiProcessor(Processor, ABC):
         if raw_path is None or not os.path.exists(raw_path):
             raise Exception("原始Log路径不存在")
         # 解压原始Log文件
-        huaweiutils.unzip_all_files(raw_path)
+        common_utils.unzip_all_files(raw_path)
         if dataWatcher.manufacturer is None:
             raise Exception("请先设置厂商")
-        raws = huaweiutils.find_file(raw_path, '.txt')
+        raws = common_utils.find_file(raw_path, '.txt')
         if not os.path.exists(raw_data_dir):
             os.makedirs(raw_data_dir)
         for txt in raws:
             shutil.copy2(str(txt), raw_data_dir)
             raw_log_paths.append(os.path.join(raw_data_dir, txt.name))
-        raw_logs = huaweiutils.find_file(raw_data_dir, '.txt')
+        raw_logs = common_utils.find_file(raw_data_dir, '.txt')
         return raw_logs
 
     def evaluate(self, watcher: DataWatcher, file, cell_config_df, freq_config_df):
@@ -81,7 +81,7 @@ class HuaweiProcessor(Processor, ABC):
         raw_file_dir = os.path.join(watcher.work_dir, watcher.manufacturer, watcher.date,
                                     watcher.system, f_name)
         if len(used_command) == 0:
-            raw_fs = huaweiutils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
+            raw_fs = common_utils.find_file(os.path.join(raw_file_dir, 'raw_result'), '.csv')
             for f in raw_fs:
                 try:
                     df = pd.read_csv(f, nrows=10, encoding='gb2312')

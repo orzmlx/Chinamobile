@@ -10,7 +10,7 @@ from configuration import huawei_configuration
 from model.data_watcher import DataWatcher
 from model.signal_message import message
 from processor.process_util import ProcessUtils
-from utils import huaweiutils
+from utils import common_utils
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
@@ -71,7 +71,7 @@ class ParseRawThread(QThread):
         # 在这里先对base_dict中这种命令进行合并
         base_pairs = list(itertools.combinations(base_dict.keys(), 2))
         for pr in base_pairs:
-            if huaweiutils.only_has_digtal_diff(pr[0], pr[1]) and len(pr[0]) == len(pr[1]):
+            if common_utils.only_has_digtal_diff(pr[0], pr[1]) and len(pr[0]) == len(pr[1]):
                 value0 = base_dict[pr[0]]
                 value1 = base_dict[pr[1]]
                 value0.extend(value1)

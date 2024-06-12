@@ -2,7 +2,7 @@
 
 from abc import ABC
 from model.data_watcher import DataWatcher
-from model.evaluate import Evaluation, huaweiutils
+from model.evaluate import Evaluation, common_utils
 from processor.processor import Processor
 import os
 import copy
@@ -44,7 +44,7 @@ class EricssonProcessor(Processor, ABC):
         return [dataWatcher.raw_data_dir]
 
     def parse_raw_data(self, item, dataWatcher: DataWatcher):
-        csv_files = huaweiutils.find_file(item, '.csv')
+        csv_files = common_utils.find_file(item, '.csv')
 
         path = dataWatcher.raw_data_dir
 

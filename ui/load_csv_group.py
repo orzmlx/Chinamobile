@@ -21,7 +21,7 @@ except ImportError:
 
 from backend.loading_thread import LoadingThread
 from backend.parse_raw_thread import ParseRawThread
-from utils import huaweiutils
+from utils import common_utils
 from model.data_watcher import DataWatcher
 from model.signal_message import message
 

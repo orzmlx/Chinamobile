@@ -4,7 +4,7 @@ import openpyxl
 import pandas as pd
 from openpyxl.styles import Font, Alignment, PatternFill
 
-from utils import huaweiutils
+from utils import common_utils
 
 
 class reporter:
@@ -188,7 +188,7 @@ class reporter:
         all_flist = []
         for m in self.manufacturers:
             find_path = os.path.join(self.outpath, m, self.date, system)
-            flist = huaweiutils.find_file(find_path, suffix)
+            flist = common_utils.find_file(find_path, suffix)
             all_flist.extend(flist)
         city_res_dict = {}
         if len(all_flist) == 0:
