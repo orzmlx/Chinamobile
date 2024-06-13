@@ -29,20 +29,7 @@ def read_raw_data(path, system, date, manufacturer):
     items = pathlib.Path(directory).rglob('*')
     command_file_path = g5_command_path if system == '5G' else g4_command_path
     outputPath = os.path.join(path, manufacturer, date)
-    # progress_bar = tqdm(total=len(list(items)), desc='解析【'+ manufacturer + "】原始数据...", unit='item')
-    # if manufacturer == HUAWEI:
-    #     reader = HuaweiRawDataFile(command_file_path, outputPath, system)
-    # elif manufacturer == ZTE:
-    #     zte_config = os.path.join(path, manufacturer, '工参案例V13.xlsx')
-    #     reader = ZteRawDataReader(outputPath, zte_config, system)
-    # elif manufacturer == ERICSSON:
-    #     eri_config = os.path.join(path, manufacturer, '参数核查规则0409.xlsx')
-    #     reader = EricssonDataReader(outputPath, eri_config, system)
-    #     reader.auto_check_ref()
-    # else:
-    #     raise Exception('未知厂商:' + manufacturer)
     for item in items:
-        has_file = True
         f_name = os.path.basename(str(item)).replace('.xlsx', '')
 
         if '$' in f_name:
@@ -59,9 +46,9 @@ def read_raw_data(path, system, date, manufacturer):
             reader.output_format_data()
         elif manufacturer == ZTE:
             zte_config = os.path.join(path, manufacturer, '工参案例V13.xlsx')
-
             reader = ZteRawDataReader(item, outputPath, zte_config, system)
             try:
+                reader.setRawFile(str)
                 reader.output_format_data()
             except ReadRawException as e:
                 logging.info('文件名:' + str(item) + "读取失败")

@@ -47,12 +47,7 @@ class Evaluation:
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.band_list = []
         self.g4_freq_band_dict = {}
-        # if self.system == '4G':
-        # g4_common_df = watcher.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-        # self.g4_freq_band_dict, self.band_list = huaweiutils.generate_4g_frequency_band_dict()
         self.g4_freq_band_dict = common_configuration.g4_band_dict
-        # prepare_res = watcher.g4_prepare() if self.system == '4G' else {}, []
-        # self.g4_freq_band_dict = prepare_res[0]
         self.all_area_classes = ""  # 所有可能小区类别
         self.all_cover_classes = ""  # 所有覆盖类型
         self.all_band = ""  # 所有的频带
@@ -60,23 +55,11 @@ class Evaluation:
         self.base_info_df = watcher.get_base_info(f_name)
         if self.manufacturer == '华为':
             self._inference_city(self.base_info_df)
-        # self.base_info_df = self.get_base_info(band_list)
         self.end_band = 'FDD900|FDD1800|F|A|D|E|4.9G|2.6G|700M'
         # self.base_info_df = self.g4_base_info_df if system == '4G' else self.g5_base_info_df
         self.all_area_classes = common_utils.list_to_str(self.base_info_df['区域类别'].unique().tolist())
         self.all_cover_classes = common_utils.list_to_str(self.base_info_df['覆盖类型'].unique().tolist())
         self.all_co_location = common_utils.list_to_str(self.base_info_df['共址类型'].unique().tolist())
-        # if self.standard_path.endswith('xlsx'):
-        #     logging.info("开始读取配置表")
-        #     self.cell_config_df = pd.read_excel(self.standard_path, sheet_name="小区级别核查配置", dtype=str) \
-        #         if cell_config_df is None else cell_config_df
-        #     self.freq_config_df = pd.read_excel(self.standard_path, sheet_name="频点级别核查配置", dtype=str) \
-        #         if freq_config_df is None else freq_config_df
-        # elif self.standard_path.endswith('csv'):
-        #     self.cell_config_df = pd.read_csv(self.standard_path, sheet_name="小区级别核查配置", true_values=["是"],
-        #                                         false_values=["否"], dtype=str)
-        #     self.freq_config_df = pd.read_csv(self.standard_path, sheet_name="频点级别核查配置", true_values=["是"],
-        #                                         false_values=["否"], dtype=str)
         self.freq_config_df = self.freq_config_df[
             (self.freq_config_df['制式'] == self.system) & (self.freq_config_df['厂家'] == self.manufacturer)]
         self.cell_config_df = self.cell_config_df[
@@ -245,8 +228,8 @@ class Evaluation:
         df_new = self.base_info_df.merge(df, how='left', on=on)
         # df.rename(columns={'频带': '频段'}, inplace=True)
         # df_new.dropna(inplace=True, )
-        if self.manufacturer == '华为':
-            self._inference_city(df_new)
+        # if self.manufacturer == '华为':
+        self._inference_city(df_new)
         return df_new
 
     def extra_handler(self, df, param):
@@ -306,7 +289,7 @@ class Evaluation:
             df[param] = cal_df[param]
         if premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
-            df[param] = df[param].apply(int) * float(cal_param)
+            df[param] = df[param].apply(float) * float(cal_param)
             df.loc[df[param] > 9000, param] = math.nan
 
         # 如果前置参数在小区级别参数中,这种一定是频点级别merge小区级别

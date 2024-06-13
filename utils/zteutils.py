@@ -96,10 +96,6 @@ def split_column(x, pattern, operator, index):
         return re.search(pattern, x).group() if operator == 'match' else re.findall(pattern, x)[0]
     except Exception as e:
         raise Exception('正则表达式:' + pattern + "没有匹配到任何字符串,出错行数:" + str(index))
-    # if match_res is None:
-    #     raise Exception('正则表达式:' + pattern + "没有匹配到任何字符串,出错行数:" + str(index))
-    # else:
-    #     return match_res.group()
 
 
 def action_columns_merge(df, action_tuples_list,
@@ -149,15 +145,8 @@ def action_columns_merge(df, action_tuples_list,
         try:
             left_operator_col = action_tuples_list[0][0]
             right_operator_col = action_tuples_list[2][0]
-            # df[left_operator_col + "#"] = df[left_operator_col + "#"].apply(float)
-            # df[right_operator_col + "#"] = df[right_operator_col + "#"].apply(float)
-            # df[left_operator_col + "#"].fillna(value=0, inplace=True)
-            # df[right_operator_col + "#"].fillna(value=0, inplace=True)
             df['temp_result'] = df[[left_operator_col + "#", right_operator_col + "#"]] \
                 .apply(col_add, args=(first_multiple, second_multiple), axis=1)
-            # df['temp_result'] = df[left_operator_col + "#"] * first_multiple + df[
-            #     right_operator_col + "#"] * second_multiple if math_operator == 'add' else \
-            #     df[left_operator_col + "#"] * first_multiple - df[right_operator_col + "#"] * second_multiple
             df.drop([left_operator_col + "#"], axis=1, inplace=True)
             df.drop([right_operator_col + "#"], axis=1, inplace=True)
         except Exception as e:
@@ -212,7 +201,6 @@ def get_csv_summary(path):
     for item in items:
         item = str(item)
         df = pd.read_csv(item, encoding='utf8')
-        # df = df.to_pandas()
         if df.empty:
             raise Exception(item + '中数据为空')
         f_name = os.path.split(item)[1].split(".")[0]
