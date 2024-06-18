@@ -91,6 +91,7 @@ class ZteProcessor(Processor, ABC):
         sheet_names = get_sheet_names(str(file))
         res_raw_files = []
         for sheet in sheet_names:
+            logging.info("开始处理表:" + sheet)
             if not sheet in commands:
                 continue
             raw_df = pd.read_excel(file, sheet_name=sheet, dtype=str, engine='calamine')

@@ -136,16 +136,39 @@ def depart_params(df: DataFrame):
         df.apply(_depart_params, axis=1, result_type='expand')
 
 
+def parse_node_id(node_id):
+    node_id_list = []
+    if node_id.find('-') >= 0:
+        node_splits = node_id.split('-')
+        for sp in node_splits:
+            if sp.find('_') >= 0:
+                sp_res = sp.split('_')
+                node_id_list.extend(sp_res)
+            else:
+                node_id_list.append(sp)
+        node_id_list.remove('460')
+        node_id_list.remove('00')
+        if len(node_id_list) == 1:
+            node_id = node_id_list[0]
+    return str(int(float(node_id)))
+
+
 def add_cgi(df, filename):
     composition_dict = zte_4g_composition()
     composition = composition_dict[filename]
     if composition is None:
         raise Exception(filename + "没有配置如何配置CGI列")
-    if not str(df[composition[0]].iloc[0]).startswith('46'):
-        df['CGI'] = '460-00' + '-' + df[composition[0]].astype(float).astype(int).astype(str) + \
-                    '-' + df[composition[1]].astype(float).astype(int).astype(str)
-    else:
-        df['CGI'] = df[composition[0]].str.replace('_', '-').astype(str) + '-' + df[composition[1]].astype(float).astype(int).astype(str)
+    df[composition[0]] = df[composition[0]].apply(parse_node_id)
+    # node_id = df[composition[0]].iloc[0]
+    # node_id = parse_node_id(node_id)
+    df['CGI'] = '460-00-' + df[composition[0]].astype(float).astype(int).astype(str) + '-' +\
+           df[composition[1]].astype(float).astype(int).astype(str)
+    # if not str(df[composition[0]].iloc[0]).startswith('46'):
+    #     df['CGI'] = '460-00' + '-' + df[composition[0]].astype(float).astype(int).astype(str) + \
+    #                 '-' + df[composition[1]].astype(float).astype(int).astype(str)
+    # else:
+    #     df['CGI'] = df[composition[0]].str.replace('_', '-').astype(str) + '-' + df[composition[1]].astype(
+    #         float).astype(int).astype(str)
 
 
 def zte_4g_composition():

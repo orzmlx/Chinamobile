@@ -11,7 +11,5 @@ class message:
         self.code = code
         self.signal_message = signal_message
         
-    def get_message( \
-
-    self):
+    def get_message(self):
         return self.signal_message

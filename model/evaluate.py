@@ -43,7 +43,8 @@ class Evaluation:
         self.params_files_cols_dict = {}
         self.standard_path = watcher.config_path
         self.standard_alone_df = pd.DataFrame()
-        self.cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
+        cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
+        self.cal_rule = cal_rule[(cal_rule['厂家'] == self.manufacturer) & (cal_rule['制式'] == self.system)]
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.band_list = []
         self.g4_freq_band_dict = {}
@@ -77,6 +78,7 @@ class Evaluation:
         self.pre_params = []
         self.cover_filter_list = ['高铁']
         self.pre_param_dict = {}
+        self.cache_cross_param_df_dict = {}
 
     def _inference_city(self, df):
         na_city_df = df[df['地市'].isna()]
@@ -159,7 +161,6 @@ class Evaluation:
         return [self.get_key_col()]
 
     def find_huawei_switch_cols(self, file_name, switch_params):
-
         find_params = {}
         try:
             df = pd.read_csv(file_name, nrows=1)
@@ -197,15 +198,15 @@ class Evaluation:
         frequencies = config_df['频点标识'].unique().tolist()
         if '频点标识' in cols and len(frequencies) > 0:
             frequency_param = frequencies[0]
-            df = self.freq_param_map(df,  frequency_param, common_configuration.g4_band_dict)
+            df = self.freq_param_map(df, frequency_param, common_configuration.g4_band_dict)
         return df
 
-    def freq_param_map(self, df,  frequency_param, g4_freq_band_dict) -> DataFrame:
+    def freq_param_map(self, df, frequency_param, g4_freq_band_dict) -> DataFrame:
         if self.manufacturer == '华为':
             df = huawei_configuration.map_huawei_freq_pt(df, frequency_param, g4_freq_band_dict)
         elif self.manufacturer == '中兴':
             df = zte_configuration.map_zte_freq_pt(df, self.system, frequency_param)
-        elif self. manufacturer == '爱立信':
+        elif self.manufacturer == '爱立信':
             df = ericsson_configuration.map_eri_freq_pt(df, frequency_param, g4_freq_band_dict)
         df.rename(columns={frequency_param: '对端频带'}, inplace=True)
         return df
@@ -222,12 +223,7 @@ class Evaluation:
             on = list(set(on))
             df[self.cell_identity] = df[self.cell_identity].apply(str)
             self.base_info_df[self.cell_identity] = self.base_info_df[self.cell_identity].apply(str)
-        # if self.manufacturer == 'zte':
-        #     on = ['CGI']
-        # df = df.merge(self.base_info_df, how='left', on=on)
         df_new = self.base_info_df.merge(df, how='left', on=on)
-        # df.rename(columns={'频带': '频段'}, inplace=True)
-        # df_new.dropna(inplace=True, )
         if self.manufacturer == '华为':
             self._inference_city(df_new)
         return df_new
@@ -263,39 +259,53 @@ class Evaluation:
         # 如果伴随参数为空，但是计算方式里面需要伴随参数，那么设置有问题
         if premise_param == 'nan' and cal_param.find(',') >= 0:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
-        # 这里计算需要其他参数加入计算的参数
-        if premise_command in self.pre_param_dict.keys():
-            premise_command_df = self.pre_param_dict[premise_command]
-            if premise_param in premise_command_df.columns.tolist():
-                on = [self.key_col]
-                if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df.columns.tolist():
-                    # merge出现空置，一定是数据类型不对
-                    premise_command_df[self.cell_identity] = premise_command_df[self.cell_identity].astype(str)
-                    on.append(self.cell_identity)
-                cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=list(set(on)))
-            else:
-                raise Exception("缓存中找不到计算参数:" + premise_command)
-            cal_df[param].fillna(value=0, inplace=True)
-            cal_df[param] = cal_df[param].apply(float)
-            cal_df[premise_param].fillna(value=0, inplace=True)
-            cal_df[premise_param] = cal_df[premise_param].apply(float)
-            if cal_param.find(',') >= 0:
-                splits = cal_param.split(',')
-                multiple0 = int(splits[0])
-                multuple1 = int(splits[1])
-                cal_df[param] = cal_df[param] * multiple0 + cal_df[premise_param] * multuple1
-            else:
-                cal_df[param] = cal_df[param] * int(cal_param)
-            df[param] = cal_df[param]
-        if premise_param == 'nan' and cal_param != 'nan':
+        # 这里计算需要其他参数加入计算的参数，如果此时是非夸表计算
+        if (premise_command, param0) in self.pre_param_dict.keys():
+            self.non_cross_table_calculation(df, param, premise_param, cal_param)
+        # 夸表计算
+        elif premise_command in self.cache_cross_param_df_dict.keys():
+            self.cross_table_calculation(df, param, cal_param, premise_command, premise_param)
+        elif premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
             df[param] = df[param].apply(float) * float(cal_param)
             df.loc[df[param] > 9000, param] = math.nan
 
-        # 如果前置参数在小区级别参数中,这种一定是频点级别merge小区级别
-        # elif not self.cell_df.empty and premise_param in self.cell_df.columns.tolist():
-        #     df0 = df.merge(self.cell_df[['网元', self.cell_identity, premise_param]], how='left',
-        #                    on=['网元', self.cell_identity])
+    def cross_table_calculation(self, df, param, cal_param, premise_command, premise_param):
+        premise_command_df = self.pre_param_dict[premise_command]
+        if premise_param in premise_command_df.columns.tolist():
+            on = [self.key_col]
+            if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df.columns.tolist():
+                # merge出现空置，一定是数据类型不对
+                premise_command_df[self.cell_identity] = premise_command_df[self.cell_identity].astype(str)
+                on.append(self.cell_identity)
+            cal_df = pd.merge(left=df, right=premise_command_df, how='left', on=list(set(on)))
+        else:
+            raise Exception("缓存中找不到计算参数:" + premise_command)
+        cal_df[param].fillna(value=0, inplace=True)
+        cal_df[param] = cal_df[param].apply(float)
+        cal_df[premise_param].fillna(value=0, inplace=True)
+        cal_df[premise_param] = cal_df[premise_param].apply(float)
+        if cal_param.find(',') >= 0:
+            splits = cal_param.split(',')
+            multiple0 = int(splits[0])
+            multuple1 = int(splits[1])
+            cal_df[param] = cal_df[param] * multiple0 + cal_df[premise_param] * multuple1
+        else:
+            cal_df[param] = cal_df[param] * int(cal_param)
+        df[param] = cal_df[param]
+
+    def non_cross_table_calculation(self, df, param, premise_param, cal_param):
+        df[param].fillna(value=0, inplace=True)
+        df[param] = df[param].apply(float)
+        df[premise_param].fillna(value=0, inplace=True)
+        df[premise_param] = df[premise_param].apply(float)
+        if cal_param.find(',') >= 0:
+            splits = cal_param.split(',')
+            multiple0 = int(splits[0])
+            multuple1 = int(splits[1])
+            df[param] = df[param] * multiple0 + df[premise_param] * multuple1
+        else:
+            df[param] = df[param] * int(cal_param)
 
     def evaluate_freq_params(self, config_df):
         if config_df.empty:
@@ -327,33 +337,46 @@ class Evaluation:
         # 只要主命令标识不为空，说明要读QCI进行过滤
         return read_result_list
 
+    def cache_pre_params(self, pre_param_command, pre_param_name):
+        pre_param_file = os.path.join(self.file_path, 'raw_result', pre_param_command.strip() + '.csv')
+        pre_param_df = pd.read_csv(pre_param_file)
+        on_cols = [pre_param_name]
+        pre_param_df_cols = pre_param_df.columns.tolist()
+        if self.cell_identity in pre_param_df_cols:
+            on_cols.append(self.cell_identity)
+        if self.key_col in pre_param_df_cols:
+            on_cols.append(self.key_col)
+        on_cols = list(set(on_cols))
+        pre_param_df = pre_param_df[on_cols]
+        self.cache_cross_param_df_dict[pre_param_command] = pre_param_df
+
     def check_params(self, config_df):
         copy_config_df = config_df.copy(deep=True)
         copy_config_df['主命令'] = copy_config_df['主命令'].str.strip().tolist()
         self.cal_rule['主命令'] = self.cal_rule['主命令'].str.strip().tolist()
         # 如果某些参数的计算前提是必须有其他参数存在，则需要检查前置参数是否存在
-        res_df = copy_config_df[['原始参数名称', '主命令']].merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
+        # res_df = copy_config_df[['原始参数名称', '主命令']].merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # 有多少的伴随参数，检查这些伴随参数是否在检查参数中,否则报错
-        primise_params_tuple = list(res_df[['伴随参数', '伴随参数命令']].apply(tuple).values)
+        primise_params_tuple = list(self.cal_rule[['伴随参数', '伴随参数命令', '原始参数名称', '主命令']].apply(tuple).values)
         for p in primise_params_tuple:
             """
                 将所有需要的计算的参数放入缓存
             """
-            pre_param_name = str(p[0])
-            pre_param_command = str(p[1])
-            if pre_param_name == 'nan' and pre_param_command == 'nan':
+            pre_param = str(p[0]).strip()
+            pre_param_command = str(p[1]).strip()
+            main_param = str(p[2]).strip()
+            main_command = str(p[3]).strip()
+            if pre_param == 'nan' and pre_param_command == 'nan':
                 continue
-            pre_param_file = os.path.join(self.file_path, 'raw_result', pre_param_command.strip() + '.csv')
-            pre_param_df = pd.read_csv(pre_param_file)
-            on_cols = [pre_param_name]
-            pre_param_df_cols = pre_param_df.columns.tolist()
-            if self.cell_identity in pre_param_df_cols:
-                on_cols.append(self.cell_identity)
-            if self.key_col in pre_param_df_cols:
-                on_cols.append(self.key_col)
-            on_cols = list(set(on_cols))
-            pre_param_df = pre_param_df[on_cols]
-            self.pre_param_dict[pre_param_command] = pre_param_df
+            if pre_param_command != main_command:
+                logging.info('跨表的参数计算,参数' + pre_param_command + '与参数:' + main_command + '不属于同一张表')
+                self.cache_pre_params(pre_param_command, pre_param)
+                continue
+            calculations_tuple = (pre_param_command, main_param)
+            if calculations_tuple in self.pre_param_dict.keys():
+                logging.info('发现参数计算配置表中出现重复定义,' + pre_param_command + ',' + main_param)
+                continue
+            self.pre_param_dict[(pre_param_command, main_param)] = pre_param
         return copy_config_df
 
     def evaluate_cell_params(self, config_df):
@@ -527,23 +550,7 @@ class Evaluation:
             switch_df.drop_duplicates(inplace=True, keep='first')
 
         # 读取非开关参数
-        non_switch_df = pd.DataFrame()
-        if len(check_params) > 0:
-            non_switch_col = copy.deepcopy(base_cols)
-            # 之前为了区分相同参数下的不同qci,参数后加上了_QCI,在这里去掉，否则无法查到原始数据
-            for i in range(len(check_params)):
-                if check_params[i].find('|') >= 0:
-                    o_check_param = check_params[i].split('|')[0]
-                    non_switch_col.append(o_check_param)
-            logging.debug("读取文件:【" + file_name + "】,读取的列:【" + str(non_switch_col) + "】")
-            # 读取开关参数和非开关参数均读取Ref,防止多次读取Ref列，用set过滤
-            if self.manufacturer == '爱立信':
-                refCols = list(filter(lambda x: x.endswith('ref'), base_df.columns.tolist()))
-                non_switch_col.extend(refCols)
-            non_switch_df = common_utils.read_csv(file_name, list(set(non_switch_col)), str, self.manufacturer)
-            non_switch_df.drop_duplicates(inplace=True, keep='first')
-            # if self.manufacturer == '爱立信':
-            #     self.rename_eri_param(non_switch_df, check_params, file_name)
+        non_switch_df = self.read_non_switch_param(file_name, base_df, check_params, base_cols)
         if not non_switch_df.empty and not switch_df.empty:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
@@ -560,6 +567,37 @@ class Evaluation:
         # 扩展完成之后删除
         result_df.drop(labels=remove_col, inplace=True, axis=1)
         return result_df
+
+    def get_param_for_calculation(self, file_name, param):
+        calculation_params = []
+        command = os.path.basename(file_name).replace('.csv', '')
+        if (command, param) not in self.pre_param_dict.keys():
+            return []
+        pre_param = self.pre_param_dict[(command, param)]
+        if pre_param is not None:
+            calculation_params.append(pre_param)
+        return calculation_params
+
+    def read_non_switch_param(self, file_name, base_df, check_params, base_cols):
+        non_switch_df = pd.DataFrame()
+        if len(check_params) > 0:
+            non_switch_col = copy.deepcopy(base_cols)
+            # 之前为了区分相同参数下的不同qci,参数后加上了_QCI,在这里去掉，否则无法查到原始数据
+            for i in range(len(check_params)):
+                if check_params[i].find('|') >= 0:
+                    o_check_param = check_params[i].split('|')[0]
+                    # 如果不是夸表的计算，那么直接在本表上面进行计算即可，在这里连带额外的计算参数一起取出来
+                    calculation_params = self.get_param_for_calculation(file_name, o_check_param)
+                    non_switch_col.append(o_check_param)
+                    non_switch_col.extend(calculation_params)
+            logging.debug("读取文件:【" + file_name + "】,读取的列:【" + str(non_switch_col) + "】")
+            # 读取开关参数和非开关参数均读取Ref,防止多次读取Ref列，用set过滤
+            if self.manufacturer == '爱立信':
+                refCols = list(filter(lambda x: x.endswith('ref'), base_df.columns.tolist()))
+                non_switch_col.extend(refCols)
+            non_switch_df = common_utils.read_csv(file_name, list(set(non_switch_col)), str, self.manufacturer)
+            non_switch_df.drop_duplicates(inplace=True, keep='first')
+        return non_switch_df
 
     def read_switch_data(self, df, base_df, switch_params):
         """

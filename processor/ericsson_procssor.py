@@ -59,9 +59,6 @@ class EricssonProcessor(Processor, ABC):
 
     def parse_raw_data(self, item, dataWatcher: DataWatcher):
         csv_files = common_utils.find_file(item, '.csv')
-
-        path = dataWatcher.raw_data_dir
-
         eri_config = dataWatcher.config_path
         out_path = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
                                 dataWatcher.system, 'kget', 'raw_result')
