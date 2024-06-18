@@ -12,10 +12,6 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import copy
 
 from python_calamine.pandas import pandas_monkeypatch
-
-from configuration import huawei_configuration, ericsson_configuration, zte_configuration
-from model import validator
-from processor.huawei_processor import HuaweiProcessor
 from processor.process_util import ProcessUtils
 from processor.processor import Processor
 from processor.zte_processor import ZteProcessor
@@ -42,18 +38,6 @@ class CheckThread(QThread):
         self.watcher = watcher
         # self.check_4g_test_preparation()
         self.check_5g_test_preparation()
-
-    # def evaluate_eri(self):
-    #     base_cols = self.watcher.get_base_cols()
-    #     raw_files_dir = os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date,
-    #                                  self.watcher.system, 'kget')
-    #     # raw_files = os.listdir(raw_files_dir)
-    #     # 对于爱立信数据，相当于只有一个网管数据
-    #     evaluate = Evaluation(raw_files_dir, self.watcher, used_commands=[])
-    #     copy_base_cols = copy.deepcopy(base_cols)
-    #     cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
-    #     # self.valueChanged.emit(index + 1)
-    #     return cell_class_dict, freq_class_dict
 
     def evaluate(self):
         raw_files = os.listdir(
@@ -90,10 +74,10 @@ class CheckThread(QThread):
         return cell_class_dict, freq_class_dict
 
     def check_5g_test_preparation(self):
-        self.watcher.setConfigPath('C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\ericsson\\参数核查规则0429.xlsx')
+        self.watcher.setConfigPath('C:\\Users\\orzmlx\\PycharmProjects\\chinamobile\\参数核查规则0429.xlsx')
         self.watcher.setManufacturer('华为')
         self.watcher.setSystem('5G')
-        self.watcher.setWorkDir('C:\\Users\\No.1\\Desktop\\界面测试')
+        self.watcher.setWorkDir('C:\\Users\\orzmlx\\Desktop\\chinamobile')
         self.watcher.set_files_number(1)
         # self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为5G参数20240326')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为\\数据')
@@ -102,10 +86,10 @@ class CheckThread(QThread):
             'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt')
 
     def check_4g_test_preparation(self):
-        self.watcher.setConfigPath('C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\ericsson\\参数核查规则0429.xlsx')
+        self.watcher.setConfigPath('C:\\Users\\orzmlx\\PycharmProjects\\chinamobile\\参数核查规则0429.xlsx')
         self.watcher.setManufacturer('中兴')
         self.watcher.setSystem('4G')
-        self.watcher.setWorkDir('C:\\Users\\No.1\\Desktop\\界面测试')
+        self.watcher.setWorkDir('C:\\Users\\orzmlx\\Desktop\\chinamobile')
         self.watcher.set_files_number(1)
         self.watcher.setDate('20240515')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\数据\\4G')
@@ -117,11 +101,8 @@ class CheckThread(QThread):
             target_directory = os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date,
                                             self.watcher.system)
             all_cell_check_result_path = os.path.join(target_directory, check_result_name)
-            report_path = os.path.join(target_directory, self.watcher.manufacturer, self.watcher.date, '互操作参数核查结果.xlsx')
+            # report_path = os.path.join(target_directory, self.watcher.manufacturer, self.watcher.date, '互操作参数核查结果.xlsx')
             processor = ProcessUtils.get_processor(self.watcher)
-            # raw_files = os.listdir(
-            #     os.path.join(self.watcher.work_dir, self.watcher.manufacturer, self.watcher.date, self.watcher.system,
-            #                  'raw_data'))
             raw_files = self.watcher.get_raw_result_files()
             pandas_monkeypatch()
             cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置", dtype=str,

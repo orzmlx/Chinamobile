@@ -197,15 +197,15 @@ class Evaluation:
         frequencies = config_df['频点标识'].unique().tolist()
         if '频点标识' in cols and len(frequencies) > 0:
             frequency_param = frequencies[0]
-            df = self.freq_param_map(df, self.manufacturer, frequency_param, common_configuration.g4_band_dict)
+            df = self.freq_param_map(df,  frequency_param, common_configuration.g4_band_dict)
         return df
 
-    def freq_param_map(self, df, manufacturer, frequency_param, g4_freq_band_dict) -> DataFrame:
-        if manufacturer == '华为':
+    def freq_param_map(self, df,  frequency_param, g4_freq_band_dict) -> DataFrame:
+        if self.manufacturer == '华为':
             df = huawei_configuration.map_huawei_freq_pt(df, frequency_param, g4_freq_band_dict)
-        elif manufacturer == '中兴':
-            df = zte_configuration.map_zte_freq_pt(df, frequency_param, g4_freq_band_dict)
-        elif manufacturer == '爱立信':
+        elif self.manufacturer == '中兴':
+            df = zte_configuration.map_zte_freq_pt(df, self.system, frequency_param)
+        elif self. manufacturer == '爱立信':
             df = ericsson_configuration.map_eri_freq_pt(df, frequency_param, g4_freq_band_dict)
         df.rename(columns={frequency_param: '对端频带'}, inplace=True)
         return df
@@ -228,8 +228,8 @@ class Evaluation:
         df_new = self.base_info_df.merge(df, how='left', on=on)
         # df.rename(columns={'频带': '频段'}, inplace=True)
         # df_new.dropna(inplace=True, )
-        # if self.manufacturer == '华为':
-        self._inference_city(df_new)
+        if self.manufacturer == '华为':
+            self._inference_city(df_new)
         return df_new
 
     def extra_handler(self, df, param):
@@ -268,7 +268,7 @@ class Evaluation:
             premise_command_df = self.pre_param_dict[premise_command]
             if premise_param in premise_command_df.columns.tolist():
                 on = [self.key_col]
-                if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df:
+                if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df.columns.tolist():
                     # merge出现空置，一定是数据类型不对
                     premise_command_df[self.cell_identity] = premise_command_df[self.cell_identity].astype(str)
                     on.append(self.cell_identity)
@@ -304,6 +304,7 @@ class Evaluation:
         command_grouped = checked_config.groupby(['主命令'])
         read_result_list = []
         for command, g in command_grouped:
+            logging.info('开始处理文件:' + command + '的参数')
             params = g['参数名称'].unique().tolist()
             # 华为参数需要去掉数字,中兴不需要
             if self.manufacturer == '华为':
@@ -401,7 +402,6 @@ class Evaluation:
             if p in self.pre_params:
                 logging.info(p + '是计算依赖参数,不需要输出')
                 continue
-            origin_param = p.split('|')[0]
             display_param = p.split('|')[1]
             sec_class = p.split('|')[2]
             standard = self.cell_config_df[self.cell_config_df['参数名称'] == p]
@@ -410,7 +410,6 @@ class Evaluation:
                 raise Exception("规则配置表错误,参数名:【" + display_param + '】,二级表头:【' + sec_class + '】出现重复或者没有找到相应配置')
             command = commands[0]
             if not common_utils.remove_digit(command, [",", ":"]) in self.used_commands and self.manufacturer == '华为':
-                # or qci == '1' or qci == '5':
                 continue
             self.processing_param_value(merge_qci_result, p, command)
             merge_qci_result = self.judge_compliance(merge_qci_result, p, standard)
@@ -526,8 +525,7 @@ class Evaluation:
             df = pd.read_csv(file_name, usecols=switch_cols, dtype=str)
             switch_df = self.read_switch_data(df, base_df[base_cols], switch_dict)
             switch_df.drop_duplicates(inplace=True, keep='first')
-            # if self.manufacturer == '爱立信':
-            # self.rename_eri_param(switch_df, switch_cols, file_name)
+
         # 读取非开关参数
         non_switch_df = pd.DataFrame()
         if len(check_params) > 0:
@@ -550,7 +548,6 @@ class Evaluation:
             result_df = pd.merge(switch_df, non_switch_df, how='left', on=base_cols)
         elif non_switch_df.empty and switch_df.empty:
             logging.warn("开关参数和非开关参数读取结果均为空,请检查参数名称或者原始数据结果是否包含该参数,当前检查参数【" + str(params) + "】")
-            # raise Exception("开关参数和非开关参数读取结果均为空,请检查参数名称或者原始数据结果是否包含该参数,当前检查参数【" + str(params) + "】")
             return pd.DataFrame()
         else:
             result_df = switch_df if not switch_df.empty else non_switch_df

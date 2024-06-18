@@ -63,22 +63,6 @@ def split_cgi(row, cgi, new_dict, system, band):
             new_dict['频段'].append(band)
 
 
-# def split_cgi(row, cgi, new_dict, system):
-#     if pd.isna(cgi):
-#         return
-#     else:
-#         cgis = str(cgi).split(";")
-#         for c in cgis:
-#             if len(c.strip()) == 0:
-#                 continue
-#             update_dict(row, new_dict)
-#             new_dict['CGI'].append(c.strip())
-#             new_dict['制式'].append(system)
-
-
-# def depart_cgi(row, g4_dict, g5_dict):
-#     for col in g5_cols:
-#         split_cgi(row, row[col], g4_dict, g5_dict)
 
 
 def handle_by_system(site_info, g4_dict, g5_dict,g2_dict):

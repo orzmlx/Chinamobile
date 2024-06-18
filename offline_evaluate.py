@@ -196,12 +196,4 @@ if __name__ == '__main__':
     target_directory = os.path.join(work_path, HUAWEI, date, system)
     all_cell_check_result_path = os.path.join(target_directory, check_result_name)
     report_path = os.path.join(target_directory, HUAWEI, date, '互操作参数核查结果.xlsx')
-    # cell_header_class_dict, freq_header_class_dict = evaluate(work_path, system, ERICSSON, date, base_cols)
-    # combine_evaluation(target_directory, all_cell_check_result_path, cell_check_result_name, cell_header_class_dict)
-# # freq_cell_suffix = ['LST NRCELLFREQRELATION_freq.csv', 'LST NRCELLEUTRANNFREQ_freq.csv']
-# for f in freq_cell_suffix:
-#     path = os.path.join(target_directory, f)
-#     combine_evaluation(target_directory, path, f)
-# cities = ['湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '衢州', '绍兴', '台州', '温州', '舟山', '汇总']
-# reporter = reporter(all_cell_check_result_path, path, standard_path, cities, date)
-# reporter.output_general_check_result()
+

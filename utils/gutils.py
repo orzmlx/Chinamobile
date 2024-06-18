@@ -1,5 +1,4 @@
 import math
-import time
 
 from haversine import haversine
 from shapely.geometry import Point, LineString
@@ -42,18 +41,6 @@ def point_2_vertical_line_distance(p1, p2, angle):
     return math.cos(angle * (math.pi / 180)) * d
 
 
-# def create_vector(angle,):
-#     deg2rad = math.pi / 180
-#
-#     dlon = (origin_lat - origin_lon) * deg2rad
-#     angle = angle * np.pi / 180  # 转换为弧度
-#     # distance = 1  # 点与原始点之间的距离
-#     x = origin_lat + (distance * np.cos(angle))
-#     y =  origin_lon+ (distance * np.sin(angle))
-#     coordinates = [(origin_lon, origin_lat), (x, y)]
-#     return LineString(coordinates)
-
-
 def get_start_angle(direction):
     direction = float(direction)
     if int(direction) >= 45:
@@ -83,21 +70,8 @@ def get_rad_by_direction(direction):
 
 
 def get_angle(center_latitude, center_longitude, target_latitude, target_longitude):
-    # deg2rad = math.pi / 180
-    #
-    # # dlat = (target_latitude - center_latitude) * deg2rad
-    #
-    # dlon = (target_longitude - center_longitude) * deg2rad
-    #
-    # y = math.sin(dlon) * math.cos(target_latitude * deg2rad)
-    #
-    # x = math.cos(center_latitude * deg2rad) * math.sin(target_latitude * deg2rad) - math.sin(
-    #     center_latitude * deg2rad) * math.cos(
-    #     target_latitude * deg2rad) * math.cos(dlon)
-    #
-    # angle = math.atan2(y, x) * 180 / math.pi
-
-    return math.atan2(math.sin((target_longitude - center_longitude) * (math.pi / 180)) * math.cos(target_latitude * (math.pi / 180)),
+    return math.atan2(
+        math.sin((target_longitude - center_longitude) * (math.pi / 180)) * math.cos(target_latitude * (math.pi / 180)),
         math.cos(center_latitude * (math.pi / 180)) * math.sin(target_latitude * (math.pi / 180)) - math.sin(
             center_latitude * (math.pi / 180)) * math.cos(
             target_latitude * (math.pi / 180)) * math.cos(
@@ -116,8 +90,6 @@ def is_point_in_sector(center_latitude, center_longitude, start_angle, end_angle
     return match
 
 
-def is_covered_by_sector(latitude, longitude, sector):
-    pass
 
 
 def get_sector_polygon(latitude, longitude, radius):
@@ -143,18 +115,9 @@ def get_sector_polygon(latitude, longitude, radius):
 
 
 def get_distance(lon1, lat1, lon2, lat2):
-    start_time = time.time()  # 记录开始时间
-    # 在这里写入要计时的代码段
 
-    # lon1, lat1 = 120.512547, 27.779988
-    #
-    # lon2, lat2 = 120.5067892, 27.78458067
+    return haversine((lat1, lon1), (lat2, lon2))
 
-    distance = haversine((lat1, lon1), (lat2, lon2))
-    end_time = time.time()  # 记录结束时间
-    execution_time = end_time - start_time  # 计算执行时间
-    # print("计算距离程序运行时间为：", execution_time)
-    return distance
 
 
 def calculate_bearing(start_longitude, start_latitude, end_longitude, end_latitude):
@@ -179,7 +142,6 @@ if __name__ == "__main__":
     #
     # cloud_point_lon = 120.589599613697
     # cloud_point_lat = 28.0860557594443
-
 
     node_lon = 120.550292
     node_lat = 28.096551

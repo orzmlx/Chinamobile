@@ -19,17 +19,6 @@ g4_band_dict = {
     'A': {'36251', '36275', '36250'}}
 
 
-# def freq_param_map(df, manufacturer, system, frequency_param, g4_freq_band_dict, command) -> DataFrame:
-#     if manufacturer == '华为':
-#         df = huawei_configuration.map_huawei_freq_pt(df, frequency_param, g4_freq_band_dict)
-#     elif manufacturer == '中兴':
-#         df = zte_configuration.map_zte_freq_pt(df, frequency_param, g4_freq_band_dict)
-#     elif manufacturer == '爱立信':
-#         df = ericsson_configuration.map_eri_freq_pt(df, system, frequency_param)
-#     df.rename(columns={frequency_param: '对端频带'}, inplace=True)
-#
-#     return df
-
 
 def map4gFrqPtToBand(x, band_dict):
     if 'nan' == str(x):

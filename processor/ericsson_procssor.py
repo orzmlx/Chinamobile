@@ -1,6 +1,9 @@
 # -*- coding:utf-8 -*-
-
+import shutil
 from abc import ABC
+from pathlib import Path
+
+from configuration import zte_configuration
 from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation, common_utils
 from processor.processor import Processor
@@ -39,8 +42,19 @@ class EricssonProcessor(Processor, ABC):
 
     def before_parse_raw_data(self, dataWatcher: DataWatcher):
 
-        # if dataWatcher.system == '5G':
-        #     before_parse_5g_raw_data(dataWatcher)
+        common_utils.unzip_all_files(dataWatcher.raw_data_dir, zipped_file=[], suffix='tar.gz')
+        res = []
+        for file_path in Path(dataWatcher.raw_data_dir).glob('**/*'):
+            if not file_path.is_file():
+                all_raw_datas = common_utils.find_file(file_path, '.csv')
+                dest_dir = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
+                                        dataWatcher.system, 'kget', 'raw_result')
+                if not os.path.exists(dest_dir):
+                    os.makedirs(dest_dir)
+                for csv in all_raw_datas:
+                    shutil.copy2(csv, dest_dir)
+                    dest_file = os.path.join(dest_dir, os.path.basename(csv))
+                    res.append(dest_dir)
         return [dataWatcher.raw_data_dir]
 
     def parse_raw_data(self, item, dataWatcher: DataWatcher):

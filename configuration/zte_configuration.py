@@ -12,6 +12,8 @@ G4_CELL_IDENTITY = None
 G5_CELL_IDENTITY = "CGI"
 g5_base_cols = ['地市', 'CGI', '工作频段', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
 g4_base_cols = ['地市', 'CGI', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
+
+
 # g4_band_dict = {
 #     'FDD1800': {'1300', '1250', '1350', '1301', '1425', '1400', '1375', '1275', '1475', '1450', '1506', '1825', '1650',
 #                 '1850', '1401', '1401', '1399'},
@@ -35,8 +37,6 @@ def judge_freq_relation_by_filename(filename, freq_param):
 
 
 def map_zte_freq_pt(df, system, frequency_param):
-    # if 'ServingFrequency' in df.columns.tolist():
-    #     df['ServingFrequency'] = df['ServingFrequency'].apply(zte_5g_map_band)
     if 'ServingFrequency' != frequency_param:
         # system = judge_freq_relation_by_filename(command, frequency_param)
         if system == '5G':
@@ -63,7 +63,7 @@ def zte_5g_map_band(x):
 def zte_4g_map_band(x):
     if 'nan' == str(x):
         return math.nan
-    x = float(x)
+    x = int(float(x))
     if 1809 < x <= 1830 or x == 3:
         return 'FDD1800'
     elif 1881 < x <= 1910 or x == 39:
@@ -81,7 +81,7 @@ def zte_4g_map_band(x):
 
 
 def _depart_voice_param(row):
-    value = row['calculation&基于覆盖语音切换&异频切换门限&系统内']
+    value = str(row['calculation&基于覆盖语音切换&异频切换门限&系统内'])
     pattern = r'^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$'
     if 'nan' == value:
         return math.nan, math.nan, math.nan, math.nan, math.nan
@@ -109,7 +109,7 @@ def _depart_ldn(row):
     ldn = ['Scell&CUEUtranCellFDDLTE/CUEUtranCellTDDLTE&ldn&LDN', 'Scell&CUEUtranCellFDDLTE&ldn&LDN']
     extract = None
     for i in ldn:
-        if i in row:
+        if i in row.index.tolist():
             value = row[i]
             pattern = 'ENBCUCPFunction=([^,]+)'
             extract = re.findall(pattern, value)[0]
@@ -141,9 +141,11 @@ def add_cgi(df, filename):
     composition = composition_dict[filename]
     if composition is None:
         raise Exception(filename + "没有配置如何配置CGI列")
-
-    df['CGI'] = '460-00' + '-' + df[composition[0]].astype(float).astype(int).astype(str) + \
-                '-' + df[composition[1]].astype(float).astype(int).astype(str)
+    if not str(df[composition[0]].iloc[0]).startswith('46'):
+        df['CGI'] = '460-00' + '-' + df[composition[0]].astype(float).astype(int).astype(str) + \
+                    '-' + df[composition[1]].astype(float).astype(int).astype(str)
+    else:
+        df['CGI'] = df[composition[0]].str.replace('_', '-').astype(str) + '-' + df[composition[1]].astype(float).astype(int).astype(str)
 
 
 def zte_4g_composition():

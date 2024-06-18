@@ -39,34 +39,16 @@ class ZteProcessor(Processor, ABC):
         return list(set(res))
 
     def evaluate(self, watcher, file, cell_config_df, freq_config_df):
-        # 罗列出所有的raw_result文件夹
-        # raw_files_dir = os.listdir(
-        #     os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date, dataWatcher.system))
-        # dirs = huaweiutils.find_file(os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
-        #                                           dataWatcher.system), 'raw_result')
-        # dirs = os.listdir(file)
-        cell_class_dict = {}
-        freq_class_dict = {}
-        # yyds
-        # pandas_monkeypatch()
-        # cell_config_df = pd.read_excel(dataWatcher.config_path, sheet_name="小区级别核查配置", dtype=str, engine='calamine')
-        # freq_config_df = pd.read_excel(dataWatcher.config_path, sheet_name="频点级别核查配置", dtype=str, engine='calamine')
-        # for index, f in enumerate(dirs):
+
         base_cols = watcher.get_base_cols()
-        # f_name = f.parent.name
         logging.info('==============开始处理文件:' + file + '==============')
         if not watcher.is_ready_for_check():
             raise Exception(-1, "请检查输入数据是否齐全")
-        try:
-            evaluate = Evaluation(file, watcher, used_commands=[], cell_config_df=cell_config_df,
-                                  freq_config_df=freq_config_df)
-            copy_base_cols = copy.deepcopy(base_cols)
-            cell_class_dict, freq_class_dict = evaluate.generate_report('cell', copy_base_cols)
-        except Exception as e:
-            logging.error(e)
-            # if str(e).find('No such file or directory') < 0:
-            raise Exception(e)
 
+        evaluate = Evaluation(file, watcher, used_commands=[], cell_config_df=cell_config_df,
+                              freq_config_df=freq_config_df)
+        copy_base_cols = copy.deepcopy(base_cols)
+        cell_class_dict, freq_class_dict = evaluate.generate_report('freq', copy_base_cols)
         return cell_class_dict, freq_class_dict
 
     def parse_raw_data(self, item, dataWatcher: DataWatcher) -> None:
@@ -119,7 +101,7 @@ class ZteProcessor(Processor, ABC):
                             + raw_df.iloc[2].str.strip().replace("\n", "") + '&' \
                             + raw_df.iloc[3].str.strip().replace("\n", "")
             header_list = list(header_series.values)
-            header_list = [i.replace(' ', '').replace("\n", "").replace("\r", "") for i in header_list]
+            header_list = [i.replace(' ', '').replace("\r", "").replace("\n", "") for i in header_list]
             raw_df.drop([0, 1, 2, 3], inplace=True, axis=0)
             raw_df.columns = header_list
             zte_configuration.depart_params(raw_df)
@@ -134,6 +116,8 @@ class ZteProcessor(Processor, ABC):
         copy_dest_dir = os.path.join(raw_directory, 'kget', 'raw_result')
         if not os.path.exists(copy_dest_dir):
             os.makedirs(copy_dest_dir)
+        #如果有zip文件需要解压
+        common_utils.unzip_all_files(dirs)
         raw_files = []
         for file_path in dirs.glob('**/*'):
             if file_path.name.endswith('.xlsx'):

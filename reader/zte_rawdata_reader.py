@@ -9,9 +9,11 @@ from utils.timer import Timer
 import logging
 import sys
 from tqdm import tqdm
+from python_calamine.pandas import pandas_monkeypatch
+pandas_monkeypatch()
 
 os.environ["MODIN_ENGINE"] = "dask"
-import polars as pl
+# import polars as pl
 
 # import modin.pandas as pd
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
@@ -210,14 +212,16 @@ class ZteRawDataReader(Reader):
                 # csv_df = md.read_excel(f,  engine='openpyxl',sheet_name=sheet_name,
                 #                        usecols=demand_cols, header=header_row - 1,
                 #                        dtype='str')
-                csv_df = pl.read_excel(f, sheet_name=sheet_name,
-                                       xlsx2csv_options={"skip_empty_lines": True},
-                                       read_csv_options={"has_header": True,
-                                                         "skip_rows": int(header_row) - 1,
-                                                         "columns": demand_cols,
-                                                         'ignore_errors': True,
-                                                         "batch_size": 500})
-                csv_df = csv_df.to_pandas()
+                # csv_df = pl.read_excel(f, sheet_name=sheet_name,
+                #                        xlsx2csv_options={"skip_empty_lines": True},
+                #                        read_csv_options={"has_header": True,
+                #                                          "skip_rows": int(header_row) - 1,
+                #                                          "columns": demand_cols,
+                #                                          'ignore_errors': True,
+                #                                          "batch_size": 500})
+                csv_df = pd.read_excel(f, sheet_name=sheet_name, engine='calamine',skiprows= int(header_row) - 1)
+
+                # csv_df = csv_df.to_pandas()
                 if sheet_index >= 2:
                     logging.info("sheet:【" + sheet_name + "】:>>>存在超过100万行分表情况!!!<<<")
             except Exception as e:

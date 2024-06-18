@@ -149,10 +149,37 @@ if __name__ == "__main__":
     work_dir = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\ye'
     index_file_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\45G互操作策略调整小区清单汇总-0607 - 剔除3月前(1).xlsx'
     g4_performance_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\ye\\4G性能指标'
-    g4_performance_cols = ['总流量(MB)(MB)']
+    # g4_performance_cols = ['总流量(MB)(MB)']
+    g4_performance_cols = ['总流量(MB)(MB)', '异频切换出执行请求次数(次)', '异频切换出成功次数(次)']
+
     g5_performance_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\ye\\5G性能指标'
-    g5_performance_cols = ['PDCP上行业务字节数(Mbyte)', 'PDCP下行业务字节数(Mbyte)', '小区UE上行速率小于1Mbps的样本数(个)',
-                           '小区UE上行速率低于1Mbps样本比例(%)', '小区UE下行速率小于5Mbps的样本数(个)', '小区UE下行速率低于5Mbps样本比例(%)']
+    # g5_performance_cols = ['PDCP上行业务字节数(Mbyte)', 'PDCP下行业务字节数(Mbyte)',
+    #                        '小区UE上行速率小于1Mbps的样本数(个)',
+    #                        # '小区UE上行速率小于1Mbps样本比例(%)',
+    #                        '小区UE下行速率小于5Mbps的样本数(个)',
+    #                        # '小区UE下行速率小于5Mbps样本比例(%)'
+    #                        ]
+    g5_performance_cols = [
+        'PDCP下行业务字节数(Mbyte)',
+        'PDCP上行业务字节数(Mbyte)',
+        '小区UE上行速率小于1Mbps的样本数(个)',
+        '小区UE上行速率1~2Mbps的样本数(个)',
+        '小区UE上行速率2~5Mbps的样本数(个)',
+        '小区UE上行速率5~10Mbps的样本数(个)',
+        '小区UE上行速率10~20Mbps的样本数(个)',
+        '小区UE上行速率20~50Mbps的样本数(个)',
+        '小区UE上行速率大于等于50Mbps的样本数(个)',
+        '小区UE下行速率小于5Mbps的样本数(个)',
+        '小区UE下行速率5~10Mbps的样本数(个)',
+        '小区UE下行速率10~30Mbps的样本数(个)',
+        '小区UE下行速率30~50Mbps的样本数(个)',
+        '小区UE下行速率50~100Mbps的样本数(个)',
+        '小区UE下行速率100~200Mbps的样本数(个)',
+        '小区UE下行速率200~500Mbps的样本数(个)',
+        '小区UE下行速率大于等于500Mbps的样本数(个)',
+        '异频切换出执行请求次数(次)',
+        '异频切换出成功次数(次)'
+    ]
     g5_high_load_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\取数\\5G高负荷'
     g5_high_load_cols = ['问题类型']
     g4_high_load_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\取数\\4G高负荷'
@@ -179,12 +206,12 @@ if __name__ == "__main__":
     g5_high_load_out_path = os.path.join(work_dir, '5G', '5G高负荷_summary.csv')
     g4_high_load_out_path = os.path.join(work_dir, '4G', '4G高负荷_summary.csv')
     g4_traffic_out_path = os.path.join(work_dir, '4G', '4G流量_summary.csv')
-    # parse_kpi(select_data_by_date_range, g5_base_df, g5_performance_files, g5_performance_cols, on, date_col, 3,
-    #           g5_performance_out_path, {})
+    parse_kpi(select_data_by_date_range, g5_base_df, g5_performance_files, g5_performance_cols, on, date_col, 3,
+              g5_performance_out_path, {})
     # merge_res( os.path.join(work_dir, '5G'),g5_base_df)
 
-    # parse_kpi(select_data_by_date_range, g4_base_df, g4_performance_files, g4_performance_cols, on_1, date_col_1, 3,
-    #           g4_performance_out_path, {})
+    parse_kpi(select_data_by_date_range, g4_base_df, g4_performance_files, g4_performance_cols, on_1, date_col_1, 3,
+              g4_performance_out_path, {})
     # g5_high_load_filter_map = {'问题类型': '高负荷小区'}
     # parse_kpi(select_data_by_date, g5_base_df, g5_high_load_files, g5_high_load_cols, on_1, date_col_1, 3,
     #           g5_high_load_out_path, g5_high_load_filter_map)
@@ -197,4 +224,4 @@ if __name__ == "__main__":
     #           g4_traffic_out_path, {})
 
     # merge_res(os.path.join(work_dir, '5G'), g5_base_df,'5G')
-    merge_res(os.path.join(work_dir, '4G'), g4_base_df,'4G')
+    # merge_res(os.path.join(work_dir, '4G'), g4_base_df, '4G')

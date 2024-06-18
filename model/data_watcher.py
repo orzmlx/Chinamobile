@@ -72,16 +72,16 @@ class DataWatcher:
 
     def get_4g_common_df(self):
         # return self.data_dict['load_4g_common_btn']
-        df = pd.read_csv('C:\\Users\\No.1\\Desktop\\teleccom\\LTE资源大表-0414.csv', encoding='gbk')
+        df = pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\LTE资源大表0613.csv', encoding='gbk')
         df['工作频段'] = df[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band, axis=1)
         return df
 
     def get_5g_common_df(self):
         # return self.data_dict['load_5g_common_btn']
-        return pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\5G资源大表-20240324.csv', encoding='gbk')
+        return pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\5G资源大表0613.csv', encoding='gbk')
 
     def get_4g_siteifo_df(self):
-        site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_4g.csv',
+        site_info = pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\物理站CGI_4g_20240605.csv',
                                 usecols=['CGI', '4G频段', '物理站编号'])
         # site_info = self.data_dict['load_4g_site_info_btn'][['CGI', '4G频段']]
         site_info.rename(columns={'4G频段': '共址类型'}, inplace=True)
@@ -90,7 +90,7 @@ class DataWatcher:
 
     def get_5g_siteifo_df(self):
         # site_info = self.data_dict['load_5g_site_info_btn'][['CGI', '5G频段']]
-        site_info = pd.read_csv('C:\\Users\\No.1\\Desktop\\界面测试\\物理站CGI_5g.csv',
+        site_info = pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\物理站CGI_5g_20240605.csv',
                                 encoding='utf8', usecols=['CGI', '5G频段', '物理站编号'])
         # self.site_info = pd.read_csv(g5_site_info, usecols=['CGI', '5G频段'])
         # self.site_info.rename(columns={'5G频段': '共址类型'}, inplace=True)

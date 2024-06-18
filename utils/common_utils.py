@@ -8,7 +8,7 @@ import pathlib
 import shutil
 from copy import deepcopy
 from difflib import SequenceMatcher
-
+import rarfile
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
@@ -21,6 +21,11 @@ from configuration import zte_configuration, huawei_configuration
 replace_char = ['秒', 'dB']
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
+
+
+def toggle_unurar_setting():
+
+    rarfile.HACK_SIZE_LIMIT = 1000 * 1024 * 1024
 
 
 def split_csv(path, chunksize):
@@ -135,7 +140,15 @@ def create_header(df, path, class_dict, base_cols):
     wb.save(os.path.join(os.path.split(path)[0], '互操作小区级核查结果.csv'))
 
 
-def unzip_all_files(path, dest_path=None, zipped_file=[],suffix='.zip'):
+def unrar(filename, destination):
+    toggle_unurar_setting()
+    with rarfile.RarFile(filename, 'r') as rf:
+        for file in rf.infolist():
+            logging.info("开始解压文件:" + file.filename)
+            rf.extract(file, destination)
+
+
+def unzip_all_files(path, dest_path=None, zipped_file=[], suffix='.zip'):
     """
      解压原始log文件到目标文件夹，防止解压文件中包含解压文件，进行递归解压，当解压文件数量没有提升
     :param path:
@@ -163,7 +176,11 @@ def unzip_all_files(path, dest_path=None, zipped_file=[],suffix='.zip'):
 
         # patoolib.extract_archive(file,dest_dir)
         try:
-            shutil.unpack_archive(file, extract_dir=dest_dir)
+            if suffix.endswith('rar'):
+                unrar(file, dest_dir)
+            else:
+                shutil.unpack_archive(file, extract_dir=dest_dir)
+
             # os.remove(file)
         except Exception as e:
             logging.info(e)
@@ -398,7 +415,7 @@ def judge(df, param):
             judge_res.append(True)
             continue
         if recommand == 'nan':
-            #华为要求没有值不判断
+            # 华为要求没有值不判断
             judge_res.append(math.nan)
             continue
         if value.find(';') >= 0:
@@ -500,6 +517,7 @@ def merge_dfs(lst, on, cell_identity):
         init_df = init_df.merge(lst[i], how='left', on=copy_on)
     return init_df
 
+
 def is_float(str):
     try:
         float(str)
@@ -507,13 +525,16 @@ def is_float(str):
     except ValueError:
         return False
 
+
 def single_value_judge(x, standard):
     try:
         for c in replace_char:
             x = str(x).replace(c, "")
         if is_float(standard):
             standard = str(int(float(standard)))
-        return str(x) == standard
+        if is_float(x):
+            x = str(int(float(standard)))
+        return x == standard
     except Exception as e:
         logging.error(e)
 
@@ -578,8 +599,8 @@ def add_judgement(x, original_name, c):
 
 if __name__ == "__main__":
     path = "C:\\Users\\No.1\\Desktop\\teleccom\\取数\\取数"
-    out_path =  "C:\\Users\\No.1\\Desktop\\teleccom\\取数"
-    unzip_all_files(path,dest_path=out_path,suffix='.tar.gz')
+    out_path = "C:\\Users\\No.1\\Desktop\\teleccom\\取数"
+    unzip_all_files(path, dest_path=out_path, suffix='.tar.gz')
     # report_path = "C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\result\\all_result.csv"
     # report_df = pd.read_csv(report_path)
     # report_df['频带'] = report_df['频带'].map({"n41": "2.6G", "n28": "700M", "n78": "4.9G", "n79": "4.9G"})
