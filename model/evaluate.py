@@ -245,6 +245,8 @@ class Evaluation:
         param0 = copy.deepcopy(param)
         if param0.find('|') > 0:
             param0 = param.split('|')[0]
+        if self.cal_rule.empty:
+            return
         param_rule = self.cal_rule[(self.cal_rule['原始参数名称'].str.strip() == param0.strip()) & (
                 self.cal_rule['主命令'].str.strip() == command.strip())]
         if param_rule.empty:
@@ -260,10 +262,10 @@ class Evaluation:
         if premise_param == 'nan' and cal_param.find(',') >= 0:
             raise Exception("计算方式设置错误,没有伴随参数,但是计算方式是:" + cal_param)
         # 这里计算需要其他参数加入计算的参数，如果此时是非夸表计算
-        if (premise_command, param0) in self.pre_param_dict.keys():
+        if (premise_command.strip(), param0.strip()) in self.pre_param_dict.keys():
             self.non_cross_table_calculation(df, param, premise_param, cal_param)
         # 夸表计算
-        elif premise_command in self.cache_cross_param_df_dict.keys():
+        elif premise_command.strip() in self.cache_cross_param_df_dict.keys():
             self.cross_table_calculation(df, param, cal_param, premise_command, premise_param)
         elif premise_param == 'nan' and cal_param != 'nan':
             df[param].fillna(value="99999", inplace=True)
@@ -354,6 +356,8 @@ class Evaluation:
         copy_config_df = config_df.copy(deep=True)
         copy_config_df['主命令'] = copy_config_df['主命令'].str.strip().tolist()
         self.cal_rule['主命令'] = self.cal_rule['主命令'].str.strip().tolist()
+        if self.cal_rule.empty:
+            return copy_config_df
         # 如果某些参数的计算前提是必须有其他参数存在，则需要检查前置参数是否存在
         # res_df = copy_config_df[['原始参数名称', '主命令']].merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
         # 有多少的伴随参数，检查这些伴随参数是否在检查参数中,否则报错

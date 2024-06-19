@@ -159,6 +159,10 @@ class ZteRawDataReader(Reader):
             new_file_name = row[5].strip() if str(row[5]) != 'nan' else row[5]
             process = row[2].strip() if str(row[2]) != 'nan' else row[2]
             new_col_name = row[4].strip() if str(row[4]) != 'nan' else row[4]
+            if 'nan' != str(new_file_name) and 'nan' == str(process) and 'nan' == str(action_name):
+                temp_file_path = os.path.join(raw_output_path, new_file_name + '.csv')
+                copy_df.to_csv(temp_file_path.strip(), index=False, encoding='utf_8_sig')
+                continue
             copy_df = self.process_action(copy_df, action_name, process, new_col_name, index, process_split_char)
             # if process is None and action_name is None and new_file_name is not None:
             #     temp_file_path = os.path.join(raw_output_path, new_file_name + '.csv')

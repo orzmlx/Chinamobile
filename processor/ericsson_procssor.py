@@ -2,8 +2,6 @@
 import shutil
 from abc import ABC
 from pathlib import Path
-
-from configuration import zte_configuration
 from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation, common_utils
 from processor.processor import Processor
@@ -23,7 +21,7 @@ class EricssonProcessor(Processor, ABC):
         evaluate = Evaluation(raw_files_dir, watcher, freq_config_df=freq_config_df,
                               cell_config_df=cell_config_df, used_commands=[])
         copy_base_cols = copy.deepcopy(base_cols)
-        cell_class_dict, freq_class_dict = evaluate.generate_report('freq', copy_base_cols)
+        cell_class_dict, freq_class_dict = evaluate.generate_report('cell', copy_base_cols)
         # self.valueChanged.emit(index + 1)
         return cell_class_dict, freq_class_dict
 
@@ -31,17 +29,16 @@ class EricssonProcessor(Processor, ABC):
         """
             NRCELLCU需要与NRCELLDU进行合并,获取最小接受电平
         """
-        nrcellcu_path = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
-                                     dataWatcher.system, 'kget', 'raw_result', 'nrcellcu.csv')
-        nrcelldu_path = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
-                                     dataWatcher.system, 'kget', 'raw_result', 'nrcelldu.csv')
+        raw_dir = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
+                                     dataWatcher.system, 'kget', 'raw_result')
+        nrcellcu_path = os.path.join(raw_dir, 'nrcellcu.csv')
+        nrcelldu_path = os.path.join(raw_dir, 'nrcelldu.csv')
         cudf = pd.read_csv(nrcellcu_path)
         dudf = pd.read_csv(nrcelldu_path, usecols=['cellName', 'qRxLevMin'])
         cudf = cudf.merge(dudf, how='left', on=['cellName'])
         cudf.to_csv(nrcellcu_path, index=False)
 
     def before_parse_raw_data(self, dataWatcher: DataWatcher):
-
         common_utils.unzip_all_files(dataWatcher.raw_data_dir, zipped_file=[], suffix='tar.gz')
         res = []
         for file_path in Path(dataWatcher.raw_data_dir).glob('**/*'):

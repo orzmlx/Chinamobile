@@ -2,10 +2,13 @@ import copy
 
 import pandas as pd
 import math
+
+from python_calamine.pandas import pandas_monkeypatch
+
 from utils import gutils
 from tqdm import tqdm
 import itertools
-
+import os
 
 class WeightChange:
     # csv文件解析异常,直接改后缀无法解决，将xlsx另存为包含,的csv文件
@@ -449,7 +452,7 @@ class WeightChange:
             for label, row in g.iterrows():
                 # for row in g.itertuples():
                 direction = row['方位角']
-                band = row['工作频段']
+                band = row['小区频段']
                 if direction == 0.001:
                     continue
                 if str(band) == 'nan':
@@ -560,24 +563,28 @@ if __name__ == "__main__":
     # print(list(itertools.product(*tuple)))
     # result = [x * y  for x, y in zip(list1, list2)]
     # print(result)
-    path = "C:\\Users\\No.1\\Desktop\\teleccom\\22问题小区清单.csv"
-    g5_site_info = 'C:\\Users\\No.1\\Desktop\\teleccom\\物理站CGI_5g.csv'
-    g5_common_info = 'C:\\Users\\No.1\\Documents\\WeChat Files\\wxid_5zkc7x50zh3822\\FileStorage\\File\\2024-04\\5G资源大表-20240417.csv'
-    # g5_site_info_df = pd.read_csv(g5_site_info, usecols=['物理站编号', 'CGI'])
-    # g5_common_df = pd.read_csv(g5_common_info, usecols=['方位角', 'CGI', '工作频段'], encoding='gbk')
-    # df = g5_site_info_df.merge(g5_common_df, on=['CGI'], how='left')
-    # weightchange.classify_site_number(df)
-    # real_distances = []
-    # bands = []
-    # cgis = []
-    # g5_lons = []
-    # g5_lats = []
-    # primary_lons = []
-    # primary_lats = []
-    # primary_cells = []
-    # angles = []
-    # directions = []
-    # path = 'C:\\Users\\No.1\\Desktop\\teleccom\\有4无5优化清单.csv'
+    pandas_monkeypatch()
+    # df = pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.csv')
+    # df = pd.read_excel('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.xlsx', sheet_name='小区清单',
+    #                    engine='calamine')
+    # path = "C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.xlsx"
+    g5_site_info = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\物理站CGI_5g.csv'
+    g5_common_info = 'CC:\\Users\\orzmlx\\Desktop\\chinamobile\\5G资源大表0613.csv'
+    g5_site_info_df = pd.read_csv(g5_site_info, usecols=['物理站编号', 'CGI'])
+    g5_common_df = pd.read_csv(g5_common_info, usecols=['方位角', 'CGI', '小区频段'], encoding='gbk')
+    df = g5_site_info_df.merge(g5_common_df, on=['CGI'], how='left')
+    weightchange.classify_site_number(df)
+    real_distances = []
+    bands = []
+    cgis = []
+    g5_lons = []
+    g5_lats = []
+    primary_lons = []
+    primary_lats = []
+    primary_cells = []
+    angles = []
+    directions = []
+    # path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\有4无5优化清单.csv'
     # weightchange.get_neighbor_opposite_cell(path)
     # result = pd.DataFrame(
     #     {'主小区': primary_cells, "主小区经度": primary_lons, "主小区纬度": primary_lats, "对打小区CGI": cgis,
@@ -585,22 +592,22 @@ if __name__ == "__main__":
     #      "经度": g5_lons, "纬度": g5_lats,
     #      "方位角": directions, "站点方位角": angles})
     # result.to_csv(os.path.join(os.path.split(path)[0], '优化结果1.csv'), index=False, encoding='utf_8_sig')
-    g5_common_df = pd.read_csv(g5_common_info, usecols=['地市', 'CGI', '工作频段', '经度', '纬度'], encoding='gbk')
-
-    cities = ['舟山', '衢州', '温州', '湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '绍兴', '台州']
-    all_res = pd.DataFrame()
-    for c in cities:
-        city_df = copy.deepcopy(g5_common_df[g5_common_df['地市'] == c])
-        common_df_2_6 = g5_common_df[(g5_common_df['工作频段'] == 'NR-D') & (g5_common_df['地市'] == c)]
-        common_df_700 = g5_common_df[(g5_common_df['工作频段'] == 'NR-700') & (g5_common_df['地市'] == c)]
-        tp1 = weightchange.label_dist(common_df_2_6, common_df_700)
-        df1 = pd.DataFrame(tp1, columns=["CGI", "周围700M", '700M_CGI'])
-        tp2 = weightchange.label_dist(common_df_700, common_df_2_6)
-        df2 = pd.DataFrame(tp2, columns=["CGI", "周围2.6G", '2.6g_CGI'])
-        city_df = city_df.merge(df1, how='left', on=['CGI'])
-        city_df = city_df.merge(df2, how='left', on=['CGI'])
-        if all_res.empty:
-            all_res = city_df
-        else:
-            all_res = pd.concat([all_res, city_df])
-    all_res.to_csv('C:\\Users\\No.1\\Desktop\\teleccom\\工参.csv', index=False, encoding='utf-8-sig')
+    # g5_common_df = pd.read_csv(g5_common_info, usecols=['地市', 'CGI', '工作频段', '经度', '纬度'], encoding='gbk')
+    #
+    # cities = ['舟山', '衢州', '温州', '湖州', '杭州', '金华', '嘉兴', '丽水', '宁波', '绍兴', '台州']
+    # all_res = pd.DataFrame()
+    # for c in cities:
+    #     city_df = copy.deepcopy(g5_common_df[g5_common_df['地市'] == c])
+    #     common_df_2_6 = g5_common_df[(g5_common_df['工作频段'] == 'NR-D') & (g5_common_df['地市'] == c)]
+    #     common_df_700 = g5_common_df[(g5_common_df['工作频段'] == 'NR-700') & (g5_common_df['地市'] == c)]
+    #     tp1 = weightchange.label_dist(common_df_2_6, common_df_700)
+    #     df1 = pd.DataFrame(tp1, columns=["CGI", "周围700M", '700M_CGI'])
+    #     tp2 = weightchange.label_dist(common_df_700, common_df_2_6)
+    #     df2 = pd.DataFrame(tp2, columns=["CGI", "周围2.6G", '2.6g_CGI'])
+    #     city_df = city_df.merge(df1, how='left', on=['CGI'])
+    #     city_df = city_df.merge(df2, how='left', on=['CGI'])
+    #     if all_res.empty:
+    #         all_res = city_df
+    #     else:
+    #         all_res = pd.concat([all_res, city_df])
+    # all_res.to_csv('C:\\Users\\No.1\\Desktop\\teleccom\\工参.csv', index=False, encoding='utf-8-sig')
