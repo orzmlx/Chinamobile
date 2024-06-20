@@ -34,8 +34,8 @@ class EricssonProcessor(Processor, ABC):
         nrcellcu_path = os.path.join(raw_dir, 'nrcellcu.csv')
         nrcelldu_path = os.path.join(raw_dir, 'nrcelldu.csv')
         cudf = pd.read_csv(nrcellcu_path)
-        dudf = pd.read_csv(nrcelldu_path, usecols=['cellName', 'qRxLevMin'])
-        cudf = cudf.merge(dudf, how='left', on=['cellName'])
+        dudf = pd.read_csv(nrcelldu_path, usecols=['CGI', 'qRxLevMin'])
+        cudf = cudf.merge(dudf, how='left', on=['CGI'])
         cudf.to_csv(nrcellcu_path, index=False)
 
     def before_parse_raw_data(self, dataWatcher: DataWatcher):

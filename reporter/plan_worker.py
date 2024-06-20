@@ -18,20 +18,25 @@ def get_direction_diff(dr1, dr2):
         return abs(dr2 - dr1)
 
 
-def get_g5_directions(df):
+def get_g5_directions(g):
     result = []
-    nrd_directions = df[df['小区频段'].str.contains('2.6G', na=False)]['方位角'].unique().tolist()
-    nr700_directions = df[df['小区频段'].str.contains('700M', na=False)]['方位角'].unique().tolist()
-    nrc_directions = df[df['小区频段'].str.contains('4.9G', na=False)]['方位角'].unique().tolist()
-    result.extend(nrd_directions)
-    result.extend(nr700_directions)
-    result.extend(nrc_directions)
+
+    g5_direction_df = g[g['小区频段'].isin(['2.6G', '700M', '4.9G'])]
+    g4_direction_df = g[~g['小区频段'].isin(['2.6G', '700M', '4.9G'])]
+    return g5_direction_df, g4_direction_df
+    #
+    # nrd_directions = g[g['小区频段'].str.contains('2.6G', na=False)]['方位角'].unique().tolist()
+    # nr700_directions = g[g['小区频段'].str.contains('700M', na=False)]['方位角'].unique().tolist()
+    # nrc_directions = g[g['小区频段'].str.contains('4.9G', na=False)]['方位角'].unique().tolist()
+    # result.extend(nrd_directions)
+    # result.extend(nr700_directions)
+    # result.extend(nrc_directions)
     # if len(g5_directions) == 0:
     #     g5_directions = df[df['频段'].str.contains('NR-700', na=False)]['方位角'].unique().tolist()
     #     if len(g5_directions) == 0:
     #         g5_directions = df[df['频段'].str.contains('NR-C', na=False)]['方位角'].unique().tolist()
-    result.sort()
-    return result
+    # result.sort()
+    # return result
 
 
 def output_tilt_plan(df, change_value):
@@ -266,6 +271,9 @@ def output_share_sector_number(df):
     index0 = 0
     prg = 0
     for s_number, g in grouped:
+        # directions = []
+        if s_number == 'HSX04178':
+            print()
         systems = g['制式'].unique().tolist()
         if len(systems) == 1 and systems[0] == '4G':
             for label, row in g.iterrows():
@@ -291,72 +299,94 @@ def output_share_sector_number(df):
             print("{:.2f}%".format(c_prg * 100))
             prg = c_prg
         # g5_directions = g[g['频段'].str.contains('NR', na=False)]['方位角'].unique().tolist()
-        g5_directions = get_g5_directions(g)
+        g5_direction_df, g4_direction_df = get_g5_directions(g)
         # for index, d in enumerate(g5_directions):
+        g5_sector_index = 0
         for label, row in g.iterrows():
-            # for row in g.itertuples():
-            direction = row['方位角']
+            if g.empty:
+                continue
+            if row['小区频段'] in ['2.6G', '700M', '4.9G']:
+                df.loc[label, '扇区编号'] = g5_sector_index + 1
+                g5_sector_index = g5_sector_index + 1
+        g5_direction_df, g4_direction_df = get_g5_directions(g)
+        g5_directions = g5_direction_df['方位角'].tolist()
+        new_g4_sector_index = 0
+        for label, row in g4_direction_df.iterrows():
+            if row['小区频段'] in ['2.6G', '700M', '4.9G']:
+                continue
+            g4_direction = row['方位角']
             band = row['小区频段']
-            if direction == 0.001:
+            if g4_direction == 0.001:
                 continue
             if str(band) == 'nan':
                 continue
+            able_to_allocate = False
             for index, d in enumerate(g5_directions):
-                # 因为所有都是顺序排列
-                if direction == d and (band.find('700') >= 0 or band.find('2.6') >= 0 or band.find('4.9') >= 0):
-                    df.at[label, '扇区编号'] = index + 1
-                    break
-                if g5_directions[len(g5_directions) - 1] < direction <= 360:
-                    up_d = g5_directions[len(g5_directions) - 1]
+                # g5_direction = g5_directions[index]
+                # 如果小于最小的一个5G角度，判断是sector1还是最大扇区，主要与最大角度和最小角度做判断
+                if index == 0:
                     down_d = g5_directions[0]
-                    up_diff = get_direction_diff(up_d, direction)
-                    down_diff = get_direction_diff(direction, down_d)
-                    if up_diff > down_diff:
-                        value = 1
-                        if down_diff > 60:
-                            value = value + 10
-                    else:
-                        value = len(g5_directions)
-                        # df.at[label, 'label'] = len(g5_directions)
-                        if up_diff > 60:
-                            value = value + 10
-                    df.at[label, '扇区编号'] = value
+                    up_d = g5_directions[len(g5_directions) - 1]
+                    sector_index, able_to_allocate = judge_sector(down_d, 1, up_d, len(g5_directions), g4_direction)
+                elif 0 < index < len(g5_directions) - 1:
+                    down_d = g5_directions[index]
+                    up_d = g5_directions[index + 1]
+                    sector_index, able_to_allocate = judge_sector(down_d, index, up_d, index + 1, g4_direction)
+                elif index == len(g5_directions) - 1:
+                    down_d = g5_directions[0]
+                    up_d = g5_directions[index]
+                    sector_index, able_to_allocate = judge_sector(down_d, 1, up_d, len(g5_directions), g4_direction)
+                else:
+                    raise Exception("未考虑情况")
+
+                if able_to_allocate:
+                    df.loc[label, '扇区编号'] = sector_index
                     break
-                if direction <= d:
-                    if index == 0:
-                        up_d = g5_directions[len(g5_directions) - 1]
-                    else:
-                        up_d = g5_directions[index - 1]
-                    down_d = d
-                    up_diff = get_direction_diff(up_d, direction)
-                    down_diff = get_direction_diff(direction, down_d)
-                    if up_diff > down_diff:
-                        if index == 0:
-                            value = 1
-                        else:
-                            value = index + 1
-                        if down_diff > 60:
-                            value = value + 10
-                        df.at[label, '扇区编号'] = value
-                    else:
-                        if index == 0:
-                            value = len(g5_directions)
-                        else:
-                            value = index
-                        if up_diff > 60:
-                            value = value + 10
-                        df.at[label, '扇区编号'] = value
-                    break
+            if not able_to_allocate:
+                df.loc[label, '扇区编号'] = new_g4_sector_index + 1
+                new_g4_sector_index = new_g4_sector_index + 1
     df.to_csv("C:\\Users\\orzmlx\\Desktop\\chinamobile\\小区共扇区编号.csv", index=False, encoding='utf_8_sig')
+
+
+def judge_sector(g5_down_direction, down_sector_index, g5_up_direction, up_sector_index,
+                 g4_direction):
+    """
+    返回扇区编号
+    :param g5_down_direction:
+    :param down_sector_index:
+    :param g5_directions:
+    :param g4_direction: 
+    :return: 
+    """
+    if g5_up_direction < g5_down_direction:
+        raise Exception("5G上下方位角错误")
+    down_diff = get_direction_diff(g4_direction, g5_down_direction)
+    up_diff = get_direction_diff(g5_up_direction, g4_direction)
+    if down_diff <= 60 and up_diff <= 60:
+        if down_diff == up_diff <= 60:
+            return down_sector_index, True
+        if down_diff <= up_diff:
+            return down_sector_index, True
+        else:
+            return up_sector_index, True
+    elif down_diff <= 60 <= up_diff:
+        return down_sector_index, True
+    elif down_diff >= 60 >= up_diff:
+        return up_sector_index, True
+    # 这里重新生成一个新扇区
+    elif down_diff > 60 and up_diff > 60:
+        return None, False
+    else:
+        raise Exception("未定义的4G和5G方位角关系")
 
 
 if __name__ == '__main__':
     pandas_monkeypatch()
-    # # df = pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.csv')
-    # df = pd.read_excel('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.xlsx', sheet_name='小区清单',
-    #                    engine='calamine')
-    # output_share_sector_number(df)
-    df = pd.read_excel('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3(1).xlsx',engine='calamine',sheet_name='小区清单')
-    output_height_plan(df)
-    output_direction_plan(df)
-    output_tilt_plan(df, 3)
+    # df = pd.read_csv('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.csv')
+    df = pd.read_excel('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3.xlsx', sheet_name='小区清单',
+                       engine='calamine')
+    output_share_sector_number(df)
+    # df = pd.read_excel('C:\\Users\\orzmlx\\Desktop\\chinamobile\\优化-物理点-新昌-V3(1).xlsx',engine='calamine',sheet_name='小区清单')
+    # output_height_plan(df)
+    # output_direction_plan(df)
+    # output_tilt_plan(df, 3)

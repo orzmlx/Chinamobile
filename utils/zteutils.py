@@ -133,9 +133,7 @@ def action_columns_merge(df, action_tuples_list,
             if constant is not None:
                 df[col_name + "#"] = constant + df[col_name + "#"]
                 constant = None
-            # 规整列的顺序,,确保新的列在最后一个
-            # cols.append(col_name + "#")
-            # df = df[cols]
+
         elif operator is None:  # 如果operator是None,那么该数据是常量，
             constant = constant + col_name if constant is not None else col_name
         else:

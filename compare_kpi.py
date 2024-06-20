@@ -126,16 +126,20 @@ def merge_res(path, base_df, system):
     # res = pd.DataFrame()
     base_columns = base_df.columns.tolist()
     summary_csvs = common_utils.find_file(path, 'summary.csv')
+    if 'CGI' in base_columns:
+        base_columns = ['小区CGI' if x == 'CGI' else x for x in base_columns]
     if len(summary_csvs) == 1:
         return
     for file in summary_csvs:
         f_df = pd.read_csv(file)
         f_df[base_date_index] = pd.to_datetime(f_df[base_date_index], format='%Y-%m-%d')
-        if '小区CGI' in f_df.columns.tolist():
-            f_df.rename(columns={'小区CGI': 'CGI'}, inplace=True)
+        if 'CGI' in f_df.columns.tolist():
+            f_df.rename(columns={'CGI': '小区CGI'}, inplace=True)
+        if 'CGI' in res.columns.tolist():
+            res.rename(columns={'CGI': '小区CGI'}, inplace=True)
         res = res.merge(f_df, how='left', on=base_columns)
         # res = f_df if res.empty else res.merge(f_df, how='left', on=base_columns)
-    out_path = os.path.join(path, system + '_summary.csv')
+    out_path = os.path.join(path, 'summary_' + system + '.csv')
     res.to_csv(out_path, index=False, encoding='utf_8_sig')
 
 
@@ -180,14 +184,14 @@ if __name__ == "__main__":
         '异频切换出执行请求次数(次)',
         '异频切换出成功次数(次)'
     ]
-    g5_high_load_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\取数\\5G高负荷'
+    g5_high_load_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\ye\\5G高负荷\\5G高负荷'
     g5_high_load_cols = ['问题类型']
-    g4_high_load_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\取数\\4G高负荷'
+    g4_high_load_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\ye\\4G高负荷'
     g4_high_load_cols = ['问题类型（省内）']
 
-    g4_traffic_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\取数\\4G流量'
-    g4_traffic_cols = ['上行流量(MB)(MB)', '下行流量(MB)(MB)', '总流量(MB)(MB)']
-    g4_traffic_files = common_utils.find_file(g4_traffic_path, '.csv')
+    # g4_traffic_path = 'C:\\Users\\orzmlx\\Desktop\\chinamobile\\取数\\4G流量'
+    # g4_traffic_cols = ['上行流量(MB)(MB)', '下行流量(MB)(MB)', '总流量(MB)(MB)']
+    # g4_traffic_files = common_utils.find_file(g4_traffic_path, '.csv')
     g5_high_load_files = common_utils.find_file(g5_high_load_path, '.csv')
     g4_high_load_files = common_utils.find_file(g4_high_load_path, '.csv')
 
@@ -205,17 +209,16 @@ if __name__ == "__main__":
     g4_performance_out_path = os.path.join(work_dir, '4G', '4G性能指标_summary.csv')
     g5_high_load_out_path = os.path.join(work_dir, '5G', '5G高负荷_summary.csv')
     g4_high_load_out_path = os.path.join(work_dir, '4G', '4G高负荷_summary.csv')
-    g4_traffic_out_path = os.path.join(work_dir, '4G', '4G流量_summary.csv')
-    parse_kpi(select_data_by_date_range, g5_base_df, g5_performance_files, g5_performance_cols, on, date_col, 3,
-              g5_performance_out_path, {})
-    # merge_res( os.path.join(work_dir, '5G'),g5_base_df)
-
-    parse_kpi(select_data_by_date_range, g4_base_df, g4_performance_files, g4_performance_cols, on_1, date_col_1, 3,
-              g4_performance_out_path, {})
+    # g4_traffic_out_path = os.path.join(work_dir, '4G', '4G流量_summary.csv')
+    # parse_kpi(select_data_by_date_range, g5_base_df, g5_performance_files, g5_performance_cols, on, date_col, 3,
+    #           g5_performance_out_path, {})
+    #
+    # parse_kpi(select_data_by_date_range, g4_base_df, g4_performance_files, g4_performance_cols, on_1, date_col_1, 3,
+    #           g4_performance_out_path, {})
     # g5_high_load_filter_map = {'问题类型': '高负荷小区'}
     # parse_kpi(select_data_by_date, g5_base_df, g5_high_load_files, g5_high_load_cols, on_1, date_col_1, 3,
     #           g5_high_load_out_path, g5_high_load_filter_map)
-
+    #
     # g4_high_load_filter_map = {'问题类型（省内）': '高负荷预警小区'}
     # parse_kpi(select_data_by_date, g4_base_df, g4_high_load_files, g4_high_load_cols, on_1, date_col_1, 3,
     #           g4_high_load_out_path, g4_high_load_filter_map)
@@ -223,5 +226,5 @@ if __name__ == "__main__":
     # parse_kpi(select_data_by_date_range, g4_base_df, g4_traffic_files, g4_traffic_cols, on_1, date_col_1, 3,
     #           g4_traffic_out_path, {})
 
-    # merge_res(os.path.join(work_dir, '5G'), g5_base_df,'5G')
-    # merge_res(os.path.join(work_dir, '4G'), g4_base_df, '4G')
+    merge_res(os.path.join(work_dir, '5G'), g5_base_df, '5G')
+    merge_res(os.path.join(work_dir, '4G'), g4_base_df, '4G')

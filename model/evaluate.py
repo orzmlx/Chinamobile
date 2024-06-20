@@ -44,6 +44,8 @@ class Evaluation:
         self.standard_path = watcher.config_path
         self.standard_alone_df = pd.DataFrame()
         cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
+        cal_rule[['原始参数名称', '主命令', '厂家', '制式']] = cal_rule[['原始参数名称', '主命令', '厂家', '制式']].\
+            applymap(lambda x: x.replace(' ', ''))
         self.cal_rule = cal_rule[(cal_rule['厂家'] == self.manufacturer) & (cal_rule['制式'] == self.system)]
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.band_list = []
@@ -133,7 +135,8 @@ class Evaluation:
         if config.empty:
             logging.info('===============配置表为空===============')
             return
-        merged_config = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令'])
+        config[['原始参数名称', '主命令', '厂家', '制式']] = config[['原始参数名称', '主命令', '厂家', '制式']].applymap(lambda x: x.replace(' ', ''))
+        merged_config = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令', '厂家', '制式'])
         # config0.sort_values(by=['伴随参数命令'], inplace=True)
         merged_config = merged_config[~merged_config['推荐值'].isna()]
         merged_config[['原始参数名称', '参数名称']] = merged_config.apply(lambda x: Evaluation.generate_unique_name(x),
@@ -167,10 +170,6 @@ class Evaluation:
         except:
             df = pd.read_csv(file_name, nrows=1, encoding='gbk')
         cols = df.columns.tolist()
-        # if self.cell_identity in cols:
-        #     base_cols.append(self.cell_identity)
-        # if '服务质量等级' in cols:
-        #     base_cols.append('服务质量等级')
         if len(switch_params) == 0:
             logging.info("不需要在" + file_name + "中寻找开关参数")
             return find_params
@@ -501,6 +500,7 @@ class Evaluation:
                             r[0].drop(columns=self.cell_identity, inplace=True)
                 # non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
                 # 华为这里因为base_info_df这里已经过滤了一遍CGI,所以base_info_df在左表，但是中兴没有过滤
+                # note: 爱立信这里，手动拼接的cellName和平台取出来的cellName不一样
                 non_qci_res = pd.merge(non_qci_res, r[0], how='left', on=on)
                 cols.remove('CGI') if 'CGI' in cols else cols
                 checked_param.extend(cols)

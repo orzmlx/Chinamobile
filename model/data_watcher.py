@@ -206,8 +206,8 @@ class DataWatcher:
         checked_raw_path = os.path.join(self.get_checked_raw_path(), 'kget', 'raw_result')
         cell_cu_df = pd.read_csv(os.path.join(checked_raw_path, 'NRCellCU.csv'))
         reserved_cols = list(filter(lambda x: x.endswith('ref'), cell_cu_df.columns.tolist()))
-        # 只保留Ref列,还有MO	MeContext	city	cellName
-        fixed_cols = ['MO', 'MeContext', 'cellName', 'CGI']
+        # 只保留Ref列,还有MO	MeContext	city
+        fixed_cols = ['MO', 'MeContext', 'CGI']
         fixed_cols.extend(reserved_cols)
         cell_cu_df = cell_cu_df[fixed_cols]
         # cell_cu_df.dropna(axis=1, how='all', inplace=True)
