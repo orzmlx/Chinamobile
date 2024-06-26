@@ -15,7 +15,7 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 from pandas import DataFrame
 from tqdm import tqdm
-
+import re
 from configuration import zte_configuration, huawei_configuration
 
 replace_char = ['秒', 'dB']
@@ -24,7 +24,6 @@ logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:
 
 
 def toggle_unurar_setting():
-
     rarfile.HACK_SIZE_LIMIT = 1000 * 1024 * 1024
 
 
@@ -292,6 +291,15 @@ def add_5g_cgi(ducell_df, gnodeb_df):
 
     # print(ducell_df.shape)
     return ducell_df
+
+
+def remove_date_number(date_string):
+    pattern = '_\d{14}'
+    res = re.findall(pattern, date_string)
+    if res is not None and len(res) > 0:
+        date_number = res[0]
+        return date_string.replace(date_number, '')
+    return date_string
 
 
 def remove_digit(str, add_characters):

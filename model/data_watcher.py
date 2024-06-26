@@ -152,36 +152,35 @@ class DataWatcher:
         if self.manufacturer == '华为':
             if self.system == '4G':
                 self.g4_base_info_df = self.get_huawei_4g_base_info(f_name)
-                # self.all_band = huaweiutils.list_to_str(band_list)
-                # self.all_band = ''
             else:
                 self.g5_base_info_df = self.get_huawei_5g_base_info(f_name)
-                # self.all_band = '4.9G|2.6G|700M|nan'
         elif self.manufacturer == '中兴':
             if self.system == '4G':
                 self.g4_base_info_df = self.get_zte_4g_base_info()
-                # self.all_band = huaweiutils.list_to_str(band_list)
             else:
                 self.g5_base_info_df = self.get_zte_5g_base_info()
-                # self.all_band = '4.9G|2.6G|700M|nan'
         elif self.manufacturer == '爱立信':
             if self.system == '5G':
                 self.g5_base_info_df = self.get_eri_5g_base_info(f_name)
-                # self.all_band = '4.9G|2.6G|700M|nan'
             else:
                 self.g4_base_info_df = self.get_eri_4g_base_info()
-                # self.all_band = huaweiutils.list_to_str(band_list)
         base_inf_df = self.g4_base_info_df if self.system == '4G' else self.g5_base_info_df
         return base_inf_df
 
     def get_eri_4g_base_info(self):
-        pass
+        site_info = self.get_site_info()
+        common_table = self.get_4g_common()
+        base_info_df = common_table.merge(site_info, how='left', on=['CGI'])
+        base_info_df = base_info_df[base_info_df['厂商名称'] == 'ERICSSON']
+        base_info_df.rename(columns=dict(厂商名称='厂家', OMC小区名称="cellName", 小区CGI='CGI'), inplace=True)
+        return base_info_df
 
     def get_zte_4g_base_info(self):
         site_info = self.get_site_info()
         common_table = self.get_4g_common()
         base_info_df = common_table.merge(site_info, how='left', on=['CGI'])
-        base_info_df['厂家'] = self.manufacturer
+        base_info_df = base_info_df[base_info_df['厂商名称'] == '中兴']
+        base_info_df.rename(columns={'厂商名称': '厂家'}, inplace=True)
         return base_info_df
 
     def get_huawei_4g_base_info(self, f_name):
@@ -268,7 +267,8 @@ class DataWatcher:
 
     def get_4g_common(self):
 
-        common_table = self.get_4g_common_df()[['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别']]
+        common_table = self.get_4g_common_df()[
+            ['基站覆盖类型（室内室外）', '覆盖场景', '小区CGI', '地市名称', '工作频段', '小区区域类别', '中心载频信道号', '厂商名称', 'OMC小区名称']]
         # common_table['工作频段'] = common_table[['工作频段', '频率偏置']].apply(DataWatcher.get_acc_band)
         common_table.rename(columns={'小区CGI': 'CGI', '基站覆盖类型（室内室外）': '覆盖类型', '地市名称': '地市',
                                      '小区区域类别': '区域类别', '工作频段': '频段'}, inplace=True)

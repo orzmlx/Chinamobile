@@ -112,7 +112,7 @@ class Evaluation:
         elif self.manufacturer == '华为':
             return '网元'
         elif self.manufacturer == '爱立信':
-            return 'MeContext'
+            return 'CGI'
 
     def get_cell_identity(self):
         if self.system == '4G' and self.manufacturer == '中兴':
@@ -501,7 +501,7 @@ class Evaluation:
                 # non_qci_res = non_qci_res.merge(r[0], how='left', on=on)
                 # 华为这里因为base_info_df这里已经过滤了一遍CGI,所以base_info_df在左表，但是中兴没有过滤
                 # note: 爱立信这里，手动拼接的cellName和平台取出来的cellName不一样
-                non_qci_res = pd.merge(non_qci_res, r[0], how='left', on=on)
+                non_qci_res = pd.merge(non_qci_res, r[0], how='left', on=list(set(on)))
                 cols.remove('CGI') if 'CGI' in cols else cols
                 checked_param.extend(cols)
         non_qci_res.dropna(axis=0, subset=checked_param, how='all', inplace=True)
@@ -799,11 +799,13 @@ class Evaluation:
         """
             输入的推荐值和需要核查的参数
         """
+
         first_class_dict = self.generate_cell_report(check_type, base_cols)
         logging.info('==============小区级别参数检查完成' + '==============')
         freq_class_dict = self.generate_freq_report(check_type, base_cols)
         logging.info('==============频点级别参数检查完成' + '==============')
         return first_class_dict, freq_class_dict
+
 
     def order_content_cols(self, config, content_cols):
         clzz = config['类别'].unique().tolist()

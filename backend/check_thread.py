@@ -105,9 +105,9 @@ class CheckThread(QThread):
             processor = ProcessUtils.get_processor(self.watcher)
             raw_files = self.watcher.get_raw_result_files()
             pandas_monkeypatch()
-            cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置", dtype=str,
+            cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置",
                                            engine='calamine')
-            freq_config_df = pd.read_excel(self.watcher.config_path, sheet_name="频点级别核查配置", dtype=str,
+            freq_config_df = pd.read_excel(self.watcher.config_path, sheet_name="频点级别核查配置",
                                            engine='calamine')
             for index, f in enumerate(raw_files):
                 processor.evaluate(watcher=self.watcher, file=f,

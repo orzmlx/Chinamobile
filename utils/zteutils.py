@@ -111,7 +111,7 @@ def action_columns_merge(df, action_tuples_list,
     for action_tuple in action_tuples_list:
         col_name = action_tuple[0].strip() if action_tuple[0] is not None else None
         if col_name.find('add') >= 0 or col_name.find('subtract') >= 0:
-            multiples = re.findall(r'\d+', col_name)
+            multiples = re.findall(r'-?[0-9]+\.[0-9]*|-?[0-9]+', col_name)
             first_multiple = float(multiples[0])
             second_multiple = float(multiples[1])
             math_way = True
