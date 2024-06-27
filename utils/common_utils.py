@@ -16,7 +16,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from pandas import DataFrame
 from tqdm import tqdm
 import re
-from configuration import zte_configuration, huawei_configuration
+# from configuration import zte_configuration
 
 replace_char = ['秒', 'dB']
 
@@ -252,9 +252,9 @@ def output_csv(df, file_name, out_path, is_format):
         file_name = remove_digit(file_name, ['=', ":"])
     file_out_path = os.path.join(out_path, file_name)
     if file_name in os.listdir(out_path):
-        df.to_csv(file_out_path, index=False)
+        df.to_csv(file_out_path, index=False, encoding='utf_8_sig')
     else:
-        df.to_csv(file_out_path, index=False)
+        df.to_csv(file_out_path, index=False, encoding='utf_8_sig')
 
 
 def only_has_digtal_diff(str1, str2):
@@ -314,6 +314,16 @@ def remove_digit(str, add_characters):
             continue
         result += c
     return result
+
+
+def convert_boolean(x):
+    x = str(x)
+    if x.lower() == 'TRUE'.lower():
+        return 'TRUE'
+    elif x.lower() == 'FALSE'.lower():
+        return 'FALSE'
+    else:
+        return x
 
 
 def remove_name(x):
@@ -466,24 +476,24 @@ def mapToBand(x, band_dict):
     return '其他频段'
 
 
-def generate_4g_frequency_band_dict(df):
-    # df.dropna(axis=0, inplace=True, how='any')
-    band_list = []
-    g4_freq_band_dict = {}
-    for band, offset in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
-        band = str(band)
-        if pd.isna(band):
-            continue
-        band = band.replace('频段', '')
-        if band.find('FDD') >= 0:
-            band = str(offset)
-            # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
-            if str(offset).find('FDD') < 0:
-                band = remove_digit(band, [])
-            if str(offset).find('-') >= 0:
-                band = band.replace('-', '')
-        band_list.append(band)
-    return zte_configuration.g4_band_dict, band_list
+# def generate_4g_frequency_band_dict(df):
+#     # df.dropna(axis=0, inplace=True, how='any')
+#     band_list = []
+#     g4_freq_band_dict = {}
+#     for band, offset in zip(df['工作频段'], df['频率偏置'], df['中心载频信道号']):
+#         band = str(band)
+#         if pd.isna(band):
+#             continue
+#         band = band.replace('频段', '')
+#         if band.find('FDD') >= 0:
+#             band = str(offset)
+#             # 如果不是FDD-1800或者FDD-900,那么直接去掉数字
+#             if str(offset).find('FDD') < 0:
+#                 band = remove_digit(band, [])
+#             if str(offset).find('-') >= 0:
+#                 band = band.replace('-', '')
+#         band_list.append(band)
+#     return zte_configuration.g4_band_dict, band_list
 
 
 def read_csv(file_name, usecols=None, dtype=None, manufacturer=None) -> DataFrame:
@@ -541,8 +551,8 @@ def single_value_judge(x, standard):
         if is_float(standard):
             standard = str(int(float(standard)))
         if is_float(x):
-            x = str(int(float(standard)))
-        return x == standard
+            x = str(int(float(x)))
+        return x.lower() == standard.lower()
     except Exception as e:
         logging.error(e)
 

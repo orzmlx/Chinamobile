@@ -1,25 +1,20 @@
 # -*- coding:utf-8 -*-
-import logging
-import os
-import traceback
-from datetime import datetime
-import sys
-import pandas as pd
-
-from PyQt5.QtCore import QThread, pyqtSignal
-
 # from PySide6.QtCore import QThread, Signal
 import copy
-
+import logging
+import os
+import sys
+import traceback
+import pandas as pd
+from PyQt5.QtCore import QThread, pyqtSignal
 from python_calamine.pandas import pandas_monkeypatch
-from processor.process_util import ProcessUtils
-from processor.processor import Processor
-from processor.zte_processor import ZteProcessor
-from utils import common_utils
 from model.data_watcher import DataWatcher
 from model.evaluate import Evaluation
 from model.signal_message import message
 from offline_evaluate import combine_evaluation
+from processor.process_util import ProcessUtils
+from processor.processor import Processor
+from utils import common_utils
 
 
 # g5_base_cols = ['地市', '网元', 'NRDU小区名称', 'NR小区标识', 'CGI', '频段', '工作频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别']
@@ -36,8 +31,8 @@ class CheckThread(QThread):
                  processor: Processor = None):
         super().__init__()
         self.watcher = watcher
-        # self.check_4g_test_preparation()
-        self.check_5g_test_preparation()
+        self.check_4g_test_preparation()
+        # self.check_5g_test_preparation()
 
     def evaluate(self):
         raw_files = os.listdir(
@@ -81,9 +76,9 @@ class CheckThread(QThread):
         self.watcher.set_files_number(1)
         # self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为5G参数20240326')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为\\数据')
-        self.watcher.setDate('20240515')
+        self.watcher.setDate('20240627')
         self.watcher.set_huawei_command_path(
-            'C:\\Users\\No.1\\Downloads\\pytorch\\pytorch\\huawei\\华为45G互操作固定通报参数20231225.txt')
+            'C:\\Users\\orzmlx\\Desktop\\chinamobile\\华为5G异频异系统切换重选语音数据-全量.txt')
 
     def check_4g_test_preparation(self):
         self.watcher.setConfigPath('C:\\Users\\orzmlx\\PycharmProjects\\chinamobile\\参数核查规则0429.xlsx')
@@ -91,9 +86,10 @@ class CheckThread(QThread):
         self.watcher.setSystem('4G')
         self.watcher.setWorkDir('C:\\Users\\orzmlx\\Desktop\\chinamobile')
         self.watcher.set_files_number(1)
-        self.watcher.setDate('20240515')
+        self.watcher.setDate('20240627')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\数据\\4G')
-
+        self.watcher.set_huawei_command_path(
+            'C:\\Users\\orzmlx\\Desktop\\chinamobile\\华为4G异频异系统切换重选语音数据-全量.txt')
     def run(self) -> None:
         try:
             check_result_name = "all_cell_check_result.csv"
@@ -106,7 +102,7 @@ class CheckThread(QThread):
             raw_files = self.watcher.get_raw_result_files()
             pandas_monkeypatch()
             cell_config_df = pd.read_excel(self.watcher.config_path, sheet_name="小区级别核查配置",
-                                           engine='calamine')
+                                           engine='calamine', converters={'推荐值': common_utils.convert_boolean})
             freq_config_df = pd.read_excel(self.watcher.config_path, sheet_name="频点级别核查配置",
                                            engine='calamine')
             for index, f in enumerate(raw_files):

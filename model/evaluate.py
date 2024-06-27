@@ -45,7 +45,7 @@ class Evaluation:
         self.standard_alone_df = pd.DataFrame()
         cal_rule = pd.read_excel(self.standard_path, sheet_name="参数计算方法", dtype=str)
         cal_rule[['原始参数名称', '主命令', '厂家', '制式']] = cal_rule[['原始参数名称', '主命令', '厂家', '制式']].\
-            applymap(lambda x: x.replace(' ', ''))
+            applymap(lambda x: x.strip())
         self.cal_rule = cal_rule[(cal_rule['厂家'] == self.manufacturer) & (cal_rule['制式'] == self.system)]
         # g4_common_df = pd.read_csv(g4_common_table, usecols=['中心载频信道号', '工作频段', '频率偏置'], encoding='gbk', dtype='str')
         self.band_list = []
@@ -112,7 +112,7 @@ class Evaluation:
         elif self.manufacturer == '华为':
             return '网元'
         elif self.manufacturer == '爱立信':
-            return 'CGI'
+            return 'MeContext' if self.system == '5G' else 'CGI'
 
     def get_cell_identity(self):
         if self.system == '4G' and self.manufacturer == '中兴':
@@ -135,7 +135,7 @@ class Evaluation:
         if config.empty:
             logging.info('===============配置表为空===============')
             return
-        config[['原始参数名称', '主命令', '厂家', '制式']] = config[['原始参数名称', '主命令', '厂家', '制式']].applymap(lambda x: x.replace(' ', ''))
+        config[['原始参数名称', '主命令', '厂家', '制式']] = config[['原始参数名称', '主命令', '厂家', '制式']].applymap(lambda x: x.strip())
         merged_config = config.merge(self.cal_rule, how='left', on=['原始参数名称', '主命令', '厂家', '制式'])
         # config0.sort_values(by=['伴随参数命令'], inplace=True)
         merged_config = merged_config[~merged_config['推荐值'].isna()]
@@ -204,7 +204,7 @@ class Evaluation:
         if self.manufacturer == '华为':
             df = huawei_configuration.map_huawei_freq_pt(df, frequency_param, g4_freq_band_dict)
         elif self.manufacturer == '中兴':
-            df = zte_configuration.map_zte_freq_pt(df, self.system, frequency_param)
+            df = zte_configuration.map_zte_freq_pt(df, g4_freq_band_dict, frequency_param)
         elif self.manufacturer == '爱立信':
             df = ericsson_configuration.map_eri_freq_pt(df, frequency_param, g4_freq_band_dict)
         df.rename(columns={frequency_param: '对端频带'}, inplace=True)
@@ -272,7 +272,8 @@ class Evaluation:
             df.loc[df[param] > 9000, param] = math.nan
 
     def cross_table_calculation(self, df, param, cal_param, premise_command, premise_param):
-        premise_command_df = self.pre_param_dict[premise_command]
+        # if self.manufacturer == 'h'
+        premise_command_df = self.cache_cross_param_df_dict[premise_command]
         if premise_param in premise_command_df.columns.tolist():
             on = [self.key_col]
             if self.cell_identity in df.columns.tolist() and self.cell_identity in premise_command_df.columns.tolist():
@@ -298,6 +299,13 @@ class Evaluation:
     def non_cross_table_calculation(self, df, param, premise_param, cal_param):
         df[param].fillna(value=0, inplace=True)
         df[param] = df[param].apply(float)
+        df_cols = df.columns.tolist()
+        #这里这个premise_param有可能不存，因为它也是需要核查的参数，后面带有|
+        if premise_param not in df_cols:
+            premise_params = [x for x in df_cols if x.find(premise_param) >= 0 and x.find('#') < 0]
+            if len(premise_params) != 1:
+                raise Exception("同一张表有多少相同参数存在或者完全不存在，导致参数计算失败，重复参数名称:" + premise_param)
+            premise_param = premise_params[0]
         df[premise_param].fillna(value=0, inplace=True)
         df[premise_param] = df[premise_param].apply(float)
         if cal_param.find(',') >= 0:
@@ -339,6 +347,8 @@ class Evaluation:
         return read_result_list
 
     def cache_pre_params(self, pre_param_command, pre_param_name):
+        if self.manufacturer == '华为':
+            pre_param_command = common_utils.remove_digit(pre_param_command, [",", ":"])
         pre_param_file = os.path.join(self.file_path, 'raw_result', pre_param_command.strip() + '.csv')
         pre_param_df = pd.read_csv(pre_param_file)
         on_cols = [pre_param_name]

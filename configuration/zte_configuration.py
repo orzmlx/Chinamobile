@@ -6,6 +6,9 @@ import pandas as pd
 from pandas import DataFrame
 import os
 
+from configuration.common_configuration import is_4g_freq, g4_band_dict
+from utils import common_utils
+
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 
 G4_CELL_IDENTITY = None
@@ -14,19 +17,8 @@ g5_base_cols = ['地市', 'CGI', '工作频段', '频段', '厂家', '共址类�
 g4_base_cols = ['地市', 'CGI', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
 
 
-# g4_band_dict = {
-#     'FDD1800': {'1300', '1250', '1350', '1301', '1425', '1400', '1375', '1275', '1475', '1450', '1506', '1825', '1650',
-#                 '1850', '1401', '1401', '1399'},
-#     'FDD900': {'3600', '3684', '3591', '3589', '3641', '3590', '3615', '3637'},
-#     'F': {'38590', '38400', '38544', '38350', '38496', '38375', '38352', '38325', '38550', '38499', '38351', '38500',
-#           '38525', '38402', '38494', '38521', '38475', '38396', '38450'},
-#     'E': {'39324', '39298', '39296', '39292', '38950', '39148', '39123', '39150', '39300', '38952', '39294', '39273',
-#           '39496', '39295', '38953', '39392',
-#           '39346', '39250', '39450', '38752', '39151', '38750', '39448', '39325', '39544', '39050'},
-#     'D': {'40936', '41332', '41134', '38098', '37900', '41340', '40940', '41336', '41140', '41138', '40938', '40342',
-#           '40540', '38100', '40140', '39940', '37902', '40340', '40937', '41334', '40738', '40738', '40684', '40711',
-#           '40861', '40866', '37950', '40144'},
-#     'A': {'36251', '36275', '36250'}}
+
+
 
 
 def judge_freq_relation_by_filename(filename, freq_param):
@@ -36,13 +28,23 @@ def judge_freq_relation_by_filename(filename, freq_param):
         return '5G' if freq_param == 'ServingFrequency' else '4G'
 
 
-def map_zte_freq_pt(df, system, frequency_param):
+def map_zte_freq_pt(df, g4_freq_band_dict, frequency_param):
     if 'ServingFrequency' != frequency_param:
-        # system = judge_freq_relation_by_filename(command, frequency_param)
-        if system == '5G':
-            df[frequency_param] = df[frequency_param].apply(zte_5g_map_band)
-        elif system == '4G':
+        all_freq = df[frequency_param].unique().tolist()
+        # 爱立信5G频点与其他两家厂商不同，先判断是否4G频点
+        if is_4g_freq(all_freq, g4_freq_band_dict):
+
             df[frequency_param] = df[frequency_param].apply(zte_4g_map_band)
+        else:
+            # n1是指其他厂商的
+            df[frequency_param] = df[frequency_param].map(zte_5g_map_band)
+        return df[(df[frequency_param] != '其他频段')]
+        # # system = judge_freq_relation_by_filename(command, frequency_param)
+        # all_freq = df[frequency_param].unique().tolist()
+        # if system == '5G':
+        #     df[frequency_param] = df[frequency_param].apply(zte_5g_map_band)
+        # elif system == '4G':
+        #     df[frequency_param] = df[frequency_param].apply(zte_4g_map_band)
     return df
 
 
@@ -57,7 +59,7 @@ def zte_5g_map_band(x):
     elif 4804 < x <= 4920:
         return '4.9G'
     else:
-        return '未知频段'
+        return '其他频段'
 
 
 def zte_4g_map_band(x):
@@ -77,7 +79,7 @@ def zte_4g_map_band(x):
     elif 934 < x <= 949 or x == 8:
         return 'FDD900'
     else:
-        return '未知频段'
+        return '其他频段'
 
 
 def _depart_voice_param(row):
@@ -150,6 +152,7 @@ def parse_node_id(node_id):
         node_id_list.remove('00')
         if len(node_id_list) == 1:
             node_id = node_id_list[0]
+        return str(int(float(node_id)))
     return str(int(float(node_id)))
 
 
@@ -161,8 +164,8 @@ def add_cgi(df, filename):
     df[composition[0]] = df[composition[0]].apply(parse_node_id)
     # node_id = df[composition[0]].iloc[0]
     # node_id = parse_node_id(node_id)
-    df['CGI'] = '460-00-' + df[composition[0]].astype(float).astype(int).astype(str) + '-' +\
-           df[composition[1]].astype(float).astype(int).astype(str)
+    df['CGI'] = '460-00-' + df[composition[0]].astype(float).astype(int).astype(str) + '-' + \
+                df[composition[1]].astype(float).astype(int).astype(str)
     # if not str(df[composition[0]].iloc[0]).startswith('46'):
     #     df['CGI'] = '460-00' + '-' + df[composition[0]].astype(float).astype(int).astype(str) + \
     #                 '-' + df[composition[1]].astype(float).astype(int).astype(str)

@@ -108,7 +108,7 @@ class HuaweiRawDataFile(Reader):
     def read_huawei_txt(self):
         return_code = -1
         phases = self.fail_phases
-        with open(self.raw_data_inpath, 'r') as f:
+        with open(self.raw_data_inpath, 'r', encoding='gb18030') as f:
             line = f.readline()
             while line:
                 print(line)

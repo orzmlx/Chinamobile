@@ -142,11 +142,11 @@ class DataWatcher:
         return self.get_4g_common_df() if self.system == '4G' else \
             self.get_5g_common_df()
 
-    def g4_prepare(self):
-        # g4_common_table = self.get_4g_common_df()
-        g4_common_df = self.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
-        g4_freq_band_dict, g4_band_list = common_utils.generate_4g_frequency_band_dict(g4_common_df)
-        return g4_freq_band_dict, g4_band_list
+    # def g4_prepare(self):
+    #     # g4_common_table = self.get_4g_common_df()
+    #     g4_common_df = self.get_4g_common_df()[['中心载频信道号', '工作频段', '频率偏置']]
+    #     g4_freq_band_dict, g4_band_list = common_utils.generate_4g_frequency_band_dict(g4_common_df)
+    #     return g4_freq_band_dict, g4_band_list
 
     def get_base_info(self, f_name):
         if self.manufacturer == '华为':

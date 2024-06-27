@@ -22,7 +22,7 @@ class EricssonProcessor(Processor, ABC):
         evaluate = Evaluation(raw_files_dir, watcher, freq_config_df=freq_config_df,
                               cell_config_df=cell_config_df, used_commands=[])
         copy_base_cols = copy.deepcopy(base_cols)
-        cell_class_dict, freq_class_dict = evaluate.generate_report('cell', copy_base_cols)
+        cell_class_dict, freq_class_dict = evaluate.generate_report('freq', copy_base_cols)
         # self.valueChanged.emit(index + 1)
         return cell_class_dict, freq_class_dict
 
@@ -97,6 +97,21 @@ class EricssonProcessor(Processor, ABC):
         qcia1a2throffsets_qci1.to_csv(qci_1_path, index=False, encoding='utf_8_sig')
         qcia1a2throffsets_qci9.to_csv(qci_9_path, index=False, encoding='utf_8_sig')
 
+    def EUtranFrqRelation(self, dataWatcher:DataWatcher):
+        raw_dir = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
+                               dataWatcher.system, 'kget', 'raw_result')
+
+        raw_files = common_utils.find_file(raw_dir, '.csv')
+        for f in raw_files:
+            to_checked_f = common_utils.remove_date_number(os.path.basename(f))
+            to_checked_f = to_checked_f.replace('.csv', '')
+            if to_checked_f.lower() == 'EUtranFreqRelation':
+                g4_common_df = dataWatcher.get_eri_4g_base_info()
+                g4_common_df = g4_common_df[['CGI', '中心载频信道号', 'cellName']]
+                df = pd.read_csv(f, on_bad_lines='skip', low_memory=False)
+                df = df.merge(g4_common_df[['CGI', '中心载频信道号', 'cellName']], on=['cellName'])
+                self.EUtranFrqRelation(df,raw_dir)
+
     def EUtranFrqRelation(self, eutranFrqRelation_df, raw_dir):
         """
         分为对端和本端,这里需要利用到4G工参表
@@ -109,9 +124,9 @@ class EricssonProcessor(Processor, ABC):
         eutranFrqRelation_end_df.drop('中心载频信道号', axis=1, inplace=True)
         eutranFrqRelation_self_end_df.drop('中心载频信道号', axis=1, inplace=True)
 
-        eutranFrqRelation_self_end_path = os.path.join(str(raw_dir), 'EutranFrqRelation_self_end.csv')
-        eutranFrqRelation_end_path = os.path.join(raw_dir, 'EutranFrqRelation_end.csv')
-        eutranFrqRelation_path = os.path.join(raw_dir, 'EutranFrqRelation.csv')
+        eutranFrqRelation_self_end_path = os.path.join(str(raw_dir), 'EUtranFrqRelation_self_end.csv')
+        eutranFrqRelation_end_path = os.path.join(raw_dir, 'EUtranFreqRelation_end.csv')
+        eutranFrqRelation_path = os.path.join(raw_dir, 'EUtranFreqRelation.csv')
         eutranFrqRelation_self_end_df.to_csv(eutranFrqRelation_self_end_path, index=False, encoding='utf_8_sig')
         eutranFrqRelation_end_df.to_csv(eutranFrqRelation_end_path, index=False, encoding='utf_8_sig')
         eutranFrqRelation_df.to_csv(eutranFrqRelation_path, index=False, encoding='utf_8_sig')
@@ -139,10 +154,10 @@ class EricssonProcessor(Processor, ABC):
                                         dataWatcher.system, 'kget', 'raw_result')
                 if not os.path.exists(dest_dir):
                     os.makedirs(dest_dir)
-                # for csv in all_raw_datas:
-                #     shutil.copy2(csv, dest_dir)
-                #     dest_file = os.path.join(dest_dir, os.path.basename(csv))
-                #     res.append(dest_dir)
+                for csv in all_raw_datas:
+                    shutil.copy2(csv, dest_dir)
+                    dest_file = os.path.join(dest_dir, os.path.basename(csv))
+                    res.append(dest_dir)
         return [dataWatcher.raw_data_dir]
 
     def parse_raw_data(self, item, dataWatcher: DataWatcher):
@@ -152,8 +167,9 @@ class EricssonProcessor(Processor, ABC):
                                 dataWatcher.system, 'kget', 'raw_result')
         reader = EricssonDataReader(str(item), out_path, eri_config, dataWatcher)
         if dataWatcher.system == '5G':
-            self.process_by_config(out_path, reader)
+            self.process_by_config(dataWatcher.get_rawdata_path(), reader)
             self.NRCell(dataWatcher)
+            self.EUtranFrqRelation(dataWatcher)
         elif dataWatcher.system == '4G':
             self.attach_cgi(dataWatcher)
             self.process_by_config(out_path, reader)

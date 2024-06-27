@@ -3,6 +3,7 @@
 from pandas import DataFrame
 
 # from configuration import huawei_configuration, zte_configuration, ericsson_configuration
+from utils import common_utils
 
 g4_band_dict = {
     'FDD1800': {'1300', '1250', '1350', '1301', '1425', '1400', '1375', '1275', '1475', '1450', '1506', '1825', '1650',
@@ -34,8 +35,12 @@ def is_4g_freq(all_freq, g4_freq_band_dict):
     judge_number = 100 if len(all_freq) >= 100 else len(all_freq)
     for index, f in enumerate(all_freq):
         for key, item in g4_freq_band_dict.items():
+            if 'nan' == str(f):
+                continue
             if not str(f) in item and index >= judge_number - 1:  # 证明该频段是4G频段
                 return False
+            if common_utils.is_float(str(f)):
+                f = str(int(float(f)))
             if str(f) in item:
                 return True
         judge_number = judge_number + 1
