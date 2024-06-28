@@ -208,7 +208,7 @@ def zte_extra_manage(path):
         df.apply(coverMobilityCtrl_interFRatA2Strategy, axis=1)
         df.loc[0] = first
         df = pd.concat([first, df], axis=1).reset_index(drop=True)
-        df.to_csv(path, index=False)
+        df.to_csv(path, index=False,encoding='utf_8_sig')
         # extra_param = ['InterFHoA1A2_rsrpThresholdA1', 'InterFHoA1A2_rsrpThresholdA2', 'InterRatHoA1A2_rsrpThresholdA1',
     #                'InterRatHoA1A2_rsrpThresholdA2']
     # if param in extra_param:

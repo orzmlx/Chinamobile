@@ -52,10 +52,10 @@ class EricssonDataReader(ZteRawDataReader):
         on_dict = self.__parse_on_element(cell_cu_df, Ref_cols)
         self.__update_mo(all_raw_files, on_dict)
         for ref in Ref_cols:
-            cell_cu_df.rename(columns={ref: ref.lower()}, inplace=True)
+            cell_cu_df.rename(columns={ref: ref.lower()}, inplace=True, encoding='utf_8_sig')
         # 去掉日期
         cell_cu = self.__remove_digtal(cell_cu.name)
-        cell_cu_df.to_csv(os.path.join(raw_dir, cell_cu), index=False)
+        cell_cu_df.to_csv(os.path.join(raw_dir, cell_cu), index=False, encoding='utf_8_sig')
 
     def __remove_digtal(self, file_path):
         '''

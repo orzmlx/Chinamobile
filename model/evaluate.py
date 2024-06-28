@@ -303,7 +303,7 @@ class Evaluation:
         #这里这个premise_param有可能不存，因为它也是需要核查的参数，后面带有|
         if premise_param not in df_cols:
             premise_params = [x for x in df_cols if x.find(premise_param) >= 0 and x.find('#') < 0]
-            if len(premise_params) != 1:
+            if len(premise_params) == 0:
                 raise Exception("同一张表有多少相同参数存在或者完全不存在，导致参数计算失败，重复参数名称:" + premise_param)
             premise_param = premise_params[0]
         df[premise_param].fillna(value=0, inplace=True)
@@ -363,8 +363,8 @@ class Evaluation:
 
     def check_params(self, config_df):
         copy_config_df = config_df.copy(deep=True)
-        copy_config_df['主命令'] = copy_config_df['主命令'].str.strip().tolist()
-        self.cal_rule['主命令'] = self.cal_rule['主命令'].str.strip().tolist()
+        copy_config_df['主命令'] = copy_config_df['主命令'].tolist()
+        self.cal_rule['主命令'] = self.cal_rule['主命令'].tolist()
         if self.cal_rule.empty:
             return copy_config_df
         # 如果某些参数的计算前提是必须有其他参数存在，则需要检查前置参数是否存在
@@ -795,8 +795,7 @@ class Evaluation:
                 d.dropna(subset=['地市'], how='any', inplace=True)
                 # d.drop_duplicates(keep="first", inplace=True)
                 self.drop_duplicates_by_type(d, check_type)
-                d.to_csv(os.path.join(out, df[1] + '_freq.csv'),
-                         index=False, encoding='utf_8_sig')
+                d.to_csv(os.path.join(out, df[1] + '_freq.csv'), index=False, encoding='utf_8_sig')
         return freq_class_dict
 
     def drop_duplicates_by_type(self, df, check_type):

@@ -22,7 +22,7 @@ class EricssonProcessor(Processor, ABC):
         evaluate = Evaluation(raw_files_dir, watcher, freq_config_df=freq_config_df,
                               cell_config_df=cell_config_df, used_commands=[])
         copy_base_cols = copy.deepcopy(base_cols)
-        cell_class_dict, freq_class_dict = evaluate.generate_report('freq', copy_base_cols)
+        cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
         # self.valueChanged.emit(index + 1)
         return cell_class_dict, freq_class_dict
 
@@ -97,7 +97,7 @@ class EricssonProcessor(Processor, ABC):
         qcia1a2throffsets_qci1.to_csv(qci_1_path, index=False, encoding='utf_8_sig')
         qcia1a2throffsets_qci9.to_csv(qci_9_path, index=False, encoding='utf_8_sig')
 
-    def EUtranFrqRelation(self, dataWatcher:DataWatcher):
+    def _EUtranFrqRelation(self, dataWatcher:DataWatcher):
         raw_dir = os.path.join(dataWatcher.work_dir, dataWatcher.manufacturer, dataWatcher.date,
                                dataWatcher.system, 'kget', 'raw_result')
 
@@ -105,12 +105,14 @@ class EricssonProcessor(Processor, ABC):
         for f in raw_files:
             to_checked_f = common_utils.remove_date_number(os.path.basename(f))
             to_checked_f = to_checked_f.replace('.csv', '')
-            if to_checked_f.lower() == 'EUtranFreqRelation':
-                g4_common_df = dataWatcher.get_eri_4g_base_info()
-                g4_common_df = g4_common_df[['CGI', '中心载频信道号', 'cellName']]
+            if to_checked_f.lower() == 'EUtranFreqRelation'.lower():
+                # g4_common_df = dataWatcher.get_eri_4g_base_info()
+                # g4_common_df = g4_common_df[['CGI', '中心载频信道号', 'cellName']]
                 df = pd.read_csv(f, on_bad_lines='skip', low_memory=False)
-                df = df.merge(g4_common_df[['CGI', '中心载频信道号', 'cellName']], on=['cellName'])
-                self.EUtranFrqRelation(df,raw_dir)
+                eutranFrqRelation_path = os.path.join(raw_dir, 'EUtranFreqRelation.csv')
+                df.to_csv(eutranFrqRelation_path, index=False, encoding='utf_8_sig')
+                # df = df.merge(g4_common_df,how='left', on=['cellName'])
+                # self.EUtranFrqRelation(df,raw_dir)
 
     def EUtranFrqRelation(self, eutranFrqRelation_df, raw_dir):
         """
@@ -142,7 +144,7 @@ class EricssonProcessor(Processor, ABC):
         cudf = pd.read_csv(nrcellcu_path)
         dudf = pd.read_csv(nrcelldu_path, usecols=['CGI', 'qRxLevMin'])
         cudf = cudf.merge(dudf, how='left', on=['CGI'])
-        cudf.to_csv(nrcellcu_path, index=False)
+        cudf.to_csv(nrcellcu_path, index=False,encoding='utf_8_sig')
 
     def before_parse_raw_data(self, dataWatcher: DataWatcher):
         # common_utils.unzip_all_files(dataWatcher.raw_data_dir, zipped_file=[], suffix='tar.gz')
@@ -169,7 +171,7 @@ class EricssonProcessor(Processor, ABC):
         if dataWatcher.system == '5G':
             self.process_by_config(dataWatcher.get_rawdata_path(), reader)
             self.NRCell(dataWatcher)
-            self.EUtranFrqRelation(dataWatcher)
+            self._EUtranFrqRelation(dataWatcher)
         elif dataWatcher.system == '4G':
             self.attach_cgi(dataWatcher)
             self.process_by_config(out_path, reader)

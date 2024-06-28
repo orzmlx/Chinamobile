@@ -48,7 +48,7 @@ class ZteProcessor(Processor, ABC):
         evaluate = Evaluation(file, watcher, used_commands=[], cell_config_df=cell_config_df,
                               freq_config_df=freq_config_df)
         copy_base_cols = copy.deepcopy(base_cols)
-        cell_class_dict, freq_class_dict = evaluate.generate_report('freq', copy_base_cols)
+        cell_class_dict, freq_class_dict = evaluate.generate_report('all', copy_base_cols)
         return cell_class_dict, freq_class_dict
 
     def parse_raw_data(self, item, dataWatcher: DataWatcher) -> None:

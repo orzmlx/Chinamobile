@@ -76,7 +76,7 @@ class CheckThread(QThread):
         self.watcher.set_files_number(1)
         # self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为5G参数20240326')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\华为\\数据')
-        self.watcher.setDate('20240627')
+        self.watcher.setDate('20240515')
         self.watcher.set_huawei_command_path(
             'C:\\Users\\orzmlx\\Desktop\\chinamobile\\华为5G异频异系统切换重选语音数据-全量.txt')
 
@@ -86,7 +86,7 @@ class CheckThread(QThread):
         self.watcher.setSystem('4G')
         self.watcher.setWorkDir('C:\\Users\\orzmlx\\Desktop\\chinamobile')
         self.watcher.set_files_number(1)
-        self.watcher.setDate('20240627')
+        self.watcher.setDate('20240515')
         self.watcher.setRawDataDir('C:\\Users\\No.1\\Desktop\\界面测试\\中兴\\数据\\4G')
         self.watcher.set_huawei_command_path(
             'C:\\Users\\orzmlx\\Desktop\\chinamobile\\华为4G异频异系统切换重选语音数据-全量.txt')
