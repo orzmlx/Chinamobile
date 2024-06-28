@@ -5,6 +5,7 @@ import re
 import pandas as pd
 from pandas import DataFrame
 import os
+from python_calamine.pandas import pandas_monkeypatch
 
 from configuration.common_configuration import is_4g_freq, g4_band_dict
 from utils import common_utils
@@ -15,10 +16,6 @@ G4_CELL_IDENTITY = None
 G5_CELL_IDENTITY = "CGI"
 g5_base_cols = ['地市', 'CGI', '工作频段', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
 g4_base_cols = ['地市', 'CGI', '频段', '厂家', '共址类型', '覆盖类型', '覆盖场景', '区域类别', '物理站编号']
-
-
-
-
 
 
 def judge_freq_relation_by_filename(filename, freq_param):
@@ -39,12 +36,7 @@ def map_zte_freq_pt(df, g4_freq_band_dict, frequency_param):
             # n1是指其他厂商的
             df[frequency_param] = df[frequency_param].map(zte_5g_map_band)
         return df[(df[frequency_param] != '其他频段')]
-        # # system = judge_freq_relation_by_filename(command, frequency_param)
-        # all_freq = df[frequency_param].unique().tolist()
-        # if system == '5G':
-        #     df[frequency_param] = df[frequency_param].apply(zte_5g_map_band)
-        # elif system == '4G':
-        #     df[frequency_param] = df[frequency_param].apply(zte_4g_map_band)
+
     return df
 
 
@@ -138,8 +130,10 @@ def depart_params(df: DataFrame):
         df.apply(_depart_params, axis=1, result_type='expand')
 
 
-def parse_node_id(node_id):
+def parse_node_id(data, supplementary_cgi_df):
     node_id_list = []
+    node_id = data[0]
+    network_id = data[1]
     if node_id.find('-') >= 0:
         node_splits = node_id.split('-')
         for sp in node_splits:
@@ -152,46 +146,49 @@ def parse_node_id(node_id):
         node_id_list.remove('00')
         if len(node_id_list) == 1:
             node_id = node_id_list[0]
-        return str(int(float(node_id)))
-    return str(int(float(node_id)))
+    node_id = str(int(float(node_id)))
+    if '1' == node_id:
+        network_id = str(int(float(network_id))) if common_utils.is_float(network_id) else network_id
+        identity = supplementary_cgi_df[supplementary_cgi_df['网元ID'] == network_id]['eNodeB标识'].iloc[0]
+        return identity
+    return node_id
 
 
-def add_cgi(df, filename):
+def add_cgi(df, filename, supplementary_cgi_df):
     composition_dict = zte_4g_composition()
     composition = composition_dict[filename]
     if composition is None:
         raise Exception(filename + "没有配置如何配置CGI列")
-    df[composition[0]] = df[composition[0]].apply(parse_node_id)
+    df[composition[0]] = df[[composition[0], composition[2]]].apply(parse_node_id, args=(supplementary_cgi_df,), axis=1)
     # node_id = df[composition[0]].iloc[0]
     # node_id = parse_node_id(node_id)
     df['CGI'] = '460-00-' + df[composition[0]].astype(float).astype(int).astype(str) + '-' + \
                 df[composition[1]].astype(float).astype(int).astype(str)
-    # if not str(df[composition[0]].iloc[0]).startswith('46'):
-    #     df['CGI'] = '460-00' + '-' + df[composition[0]].astype(float).astype(int).astype(str) + \
-    #                 '-' + df[composition[1]].astype(float).astype(int).astype(str)
-    # else:
-    #     df['CGI'] = df[composition[0]].str.replace('_', '-').astype(str) + '-' + df[composition[1]].astype(
-    #         float).astype(int).astype(str)
 
 
 def zte_4g_composition():
+    '''
+        第三列用来获取补充CGI
+    '''
     return {
         "l_itran_selection_headline": ('ldn',
-                                       'Scell&CUEUtranCellFDDLTE/CUEUtranCellTDDLTE&cellLocalId&小区标识'),
+                                       'Scell&CUEUtranCellFDDLTE/CUEUtranCellTDDLTE&cellLocalId&小区标识',),
         'l_itran_reselection_headline': ('ldn',
-                                         'Scell&CUEUtranCellFDDLTE/CUEUtranCellTDDLTE&cellLocalId&小区标识'
+                                         'Scell&CUEUtranCellFDDLTE/CUEUtranCellTDDLTE&cellLocalId&小区标识',
+                                         'Scell&CUEUtranCellFDDLTE/CUEUtranCellTDDLTE&ManagedElement&网元ID'
                                          ),
         'l_itran_handover_headline': ('ldn',
-                                      'Scell&CUEUtranCellFDDLTE&cellLocalId&小区标识'),
+                                      'Scell&CUEUtranCellFDDLTE&cellLocalId&小区标识',
+                                      'Scell&CUEUtranCellFDDLTE&ManagedElement&网元ID'),
         'l_u31_selection_headline': (
             'Scell&EUtranCellFDD/EUtranCellTDD&ENBFunctionFDD/ENBFunctionTDD&LTEFDDID/LTETDDID',
             'Scell&EUtranCellFDD/EUtranCellTDD&cellLocalId&小区标识'),
         'l_u31_reselection_headline': (
             'Scell&EUtranCellFDD/EUtranCellTDD&ENBFunctionFDD/ENBFunctionTDD&LTEFDDID/LTETDDID',
-            'Scell&EUtranCellFDD/EUtranCellTDD&cellLocalId&小区标识'),
+            'Scell&EUtranCellFDD/EUtranCellTDD&cellLocalId&小区标识', 'Scell&EUtranCellFDD/EUtranCellTDD&MEID&网元ID'),
         'l_u31_handover_headline': (
             'Scell&EUtranCellFDD/EUtranCellTDD&ENBFunctionFDD/ENBFunctionTDD&LTEFDDID/TD-LTEID',
-            'Scell&EUtranCellFDD/EUtranCellTDD&cellLocalId&小区标识')
+            'Scell&EUtranCellFDD/EUtranCellTDD&cellLocalId&小区标识', 'Scell&EUtranCellFDD/EUtranCellTDD&MEID&网元ID')
     }
 
 
@@ -208,10 +205,8 @@ def zte_extra_manage(path):
         df.apply(coverMobilityCtrl_interFRatA2Strategy, axis=1)
         df.loc[0] = first
         df = pd.concat([first, df], axis=1).reset_index(drop=True)
-        df.to_csv(path, index=False,encoding='utf_8_sig')
-        # extra_param = ['InterFHoA1A2_rsrpThresholdA1', 'InterFHoA1A2_rsrpThresholdA2', 'InterRatHoA1A2_rsrpThresholdA1',
-    #                'InterRatHoA1A2_rsrpThresholdA2']
-    # if param in extra_param:
+        df.to_csv(path, index=False, encoding='utf_8_sig')
+
 
 
 def if_judge(if_param, main_param, else_param, row):

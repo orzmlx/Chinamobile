@@ -76,7 +76,7 @@ class ZteProcessor(Processor, ABC):
             reader.setRawFile(str(csv_f))
             reader.output_format_data()
 
-    def merge_zte_4g_raw_header(self, file, config_path, copy_dest_dir) -> []:
+    def merge_zte_4g_raw_header(self, file, config_path, copy_dest_dir, raw_directory) -> []:
         pandas_monkeypatch()
         # 获取所有用到的表
         cell_commands = pd.read_excel(config_path, usecols=['厂家', '制式', '主命令'], sheet_name='小区级别核查配置',
@@ -106,24 +106,36 @@ class ZteProcessor(Processor, ABC):
             raw_df.drop([0, 1, 2, 3], inplace=True, axis=0)
             raw_df.columns = header_list
             zte_configuration.depart_params(raw_df)
-            zte_configuration.add_cgi(raw_df, sheet)
+            # 读取CGI补充数据，部分CGI中间的标识号为1，需要补充数据
+            supplementary_cgi_df = self.get_supplementary_cgi(raw_directory)
+            zte_configuration.add_cgi(raw_df, sheet, supplementary_cgi_df)
             raw_df = raw_df.astype(str)
             out_path = os.path.join(copy_dest_dir, sheet + '.csv')
             res_raw_files.append(out_path)
             raw_df.to_csv(out_path, index=False, encoding='utf_8_sig')
         return res_raw_files
 
+    def get_supplementary_cgi(self, raw_directory):
+        raw_directory = os.path.dirname(os.path.dirname(raw_directory))
+        supplementary_cgi_files = common_utils.find_file(raw_directory, 'ENBCUCPFunction.xlsx')
+        if len(supplementary_cgi_files) != 1:
+            raise Exception("找到多个或者没有找打中兴CGI补充文件")
+        supplementary_cgi_file = supplementary_cgi_files[0]
+        supplementary_cgi_df = pd.read_excel(supplementary_cgi_file, engine='calamine', header=1)
+        supplementary_cgi_df.drop(index=[0, 1, 2], inplace=True)
+        return supplementary_cgi_df[['网元ID', 'eNodeB标识']]
+
     def before_parse_4g_raw_data(self, raw_directory, dirs, config_path) -> []:
         copy_dest_dir = os.path.join(raw_directory, 'kget', 'raw_result')
         if not os.path.exists(copy_dest_dir):
             os.makedirs(copy_dest_dir)
-        #如果有zip文件需要解压
+        # 如果有zip文件需要解压
         common_utils.unzip_all_files(dirs)
         raw_files = []
         for file_path in dirs.glob('**/*'):
             if file_path.name.endswith('.xlsx'):
                 logging.info('==============开始预处理文件:' + file_path.name + '==============')
-                res_raw_files = self.merge_zte_4g_raw_header(file_path, config_path, copy_dest_dir)
+                res_raw_files = self.merge_zte_4g_raw_header(file_path, config_path, copy_dest_dir, raw_directory)
                 raw_files.extend(res_raw_files)
         return raw_files
 
