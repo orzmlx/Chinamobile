@@ -1,13 +1,13 @@
 # -*- coding:utf-8 -*-
-import math
 import logging
+import math
+import os
 import re
+
 import pandas as pd
 from pandas import DataFrame
-import os
-from python_calamine.pandas import pandas_monkeypatch
 
-from configuration.common_configuration import is_4g_freq, g4_band_dict
+from configuration.common_configuration import is_4g_freq
 from utils import common_utils
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
@@ -206,7 +206,6 @@ def zte_extra_manage(path):
         df.loc[0] = first
         df = pd.concat([first, df], axis=1).reset_index(drop=True)
         df.to_csv(path, index=False, encoding='utf_8_sig')
-
 
 
 def if_judge(if_param, main_param, else_param, row):

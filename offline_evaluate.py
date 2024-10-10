@@ -1,7 +1,6 @@
 import os
 import pathlib
 import pandas as pd
-
 from exception.read_raw_exception import ReadRawException
 from param_selector import param_selector
 from reader.huawei_raw_datareader import HuaweiRawDataFile

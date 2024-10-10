@@ -32,18 +32,3 @@ class RadioButtonGp(QWidget):
             self.radioBtns[1].clicked.connect(lambda: self.watcher.setSystem('4G'))
 
 
-    # def setManufacturer(self,manufacturer):
-    #     self.watcher.setManufacturer(manufacturer)
-    #
-    # def setSystem(self,system):
-    #     self.watcher.setSystem(system)
-
-    # def on_radio_button_toggled(self):
-    #     for btn in self.radioBtns:
-    #         if btn.isChecked():
-    #             text = btn.text()
-    #             if self.name == 'manufacturers':
-    #                 self.watcher.setManufacturer(text)
-    #             elif self.name == 'systems':
-    #                 self.watcher.setSystem(text)
-    #             break

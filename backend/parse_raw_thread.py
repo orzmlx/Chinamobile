@@ -1,16 +1,11 @@
 # -*- coding:utf-8 -*-
-import itertools
 import logging
 import traceback
 from datetime import datetime
-
 from PyQt5.QtCore import QThread, pyqtSignal
-
-from configuration import huawei_configuration
 from model.data_watcher import DataWatcher
 from model.signal_message import message
 from processor.process_util import ProcessUtils
-from utils import common_utils
 
 logging.basicConfig(format='%(asctime)s : %(message)s', datefmt='%m/%d/%Y %I:%M:%S', level=logging.INFO)
 

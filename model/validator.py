@@ -4,9 +4,6 @@ import os
 
 from utils import common_utils
 
-
-
-
 def is_input_valid(df, check_columns, value_check_column, valid_values):
     if df.empty:
         return False
